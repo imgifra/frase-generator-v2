@@ -381,8 +381,8 @@
     function drawWatermark() {
       ctx.save();
       ctx.globalAlpha = 0.08;
-      ctx.fillStyle = "#000";
-      ctx.font = "260px 'Arial Narrow', sans-serif";
+      ctx.fillStyle = getContrastColor(bgColorInput.value);
+      ctx.font = "200px 'Arial Narrow', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
