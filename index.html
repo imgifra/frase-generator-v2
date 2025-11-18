@@ -9,7 +9,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Felt Tip Roman (Bold por defecto) -->
+    <!-- Felt Tip Roman -->
     <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
 
     <style>
@@ -44,7 +44,6 @@
             max-height: 90vw;
             aspect-ratio: 1 / 1;
             width: min(90vw, 90vh);
-            cursor: pointer;
         }
 
         .control-panel {
@@ -66,21 +65,14 @@
             cursor: pointer;
             box-shadow: 0 0 0 3px white, 0 0 0 4px #4b5563;
         }
-
-        #bgColorInput::-webkit-color-swatch {
-            border: none;
-            border-radius: 50%;
-        }
     </style>
 </head>
 <body>
 
-    <!-- Vista -->
     <div class="preview-container">
         <canvas id="previewCanvas" width="1080" height="1080"></canvas>
     </div>
 
-    <!-- Controles -->
     <div class="control-panel flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4">
 
         <div class="w-full md:w-3/5">
@@ -102,7 +94,6 @@
                 Descargar PNG
             </button>
         </div>
-
     </div>
 
     <script>
@@ -122,9 +113,7 @@
 
         const FELT_FONT = "'Felt Tip Roman', cursive";
 
-        /* ---------------------------------------------------------
-           UTILIDADES
-        --------------------------------------------------------- */
+        /* UTILIDADES */
 
         function hexToRgb(hex) {
             const bigint = parseInt(hex.slice(1), 16);
@@ -137,7 +126,7 @@
             return luminance < 0.55;
         }
 
-        /* Word wrap usando el font-size final */
+        /* Word wrap real */
         function wrapText(text, maxWidth, fontSize) {
             ctx.font = `${fontSize}px ${FELT_FONT}`;
             const words = text.split(" ");
@@ -157,7 +146,7 @@
             return lines;
         }
 
-        /* Outline + Fill para máxima legibilidad */
+        /* Outline + fill para legibilidad máxima */
         function drawTextWithOutline(line, x, y, fontSize, textColor) {
             ctx.lineWidth = Math.max(4, fontSize * 0.06);
             ctx.strokeStyle = "rgba(0,0,0,0.35)";
@@ -167,9 +156,25 @@
             ctx.fillText(line, x, y);
         }
 
-        /* ---------------------------------------------------------
-           DIBUJO PRINCIPAL
-        --------------------------------------------------------- */
+        /* MARCA DE AGUA diagonal detrás del texto */
+        function drawWatermark() {
+            ctx.save();
+
+            ctx.globalAlpha = 0.09; 
+            ctx.fillStyle = "#000000"; 
+            ctx.font = `240px ${FELT_FONT}`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            ctx.translate(CANVAS_SIZE/2, CANVAS_SIZE/2);
+            ctx.rotate(-Math.PI / 6); // -30°
+
+            ctx.fillText("@nachozorra", 0, 0);
+
+            ctx.restore();
+        }
+
+        /* DIBUJO PRINCIPAL */
 
         function drawText() {
             const text = textInput.value.trim();
@@ -177,6 +182,9 @@
 
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            /* DIBUJAR MARCA DE AGUA */
+            drawWatermark();
 
             if (!text) {
                 ctx.fillStyle = "#777";
@@ -216,9 +224,7 @@
             ctx.globalAlpha = 1;
         }
 
-        /* ---------------------------------------------------------
-           DESCARGA
-        --------------------------------------------------------- */
+        /* DESCARGA */
 
         function downloadImage() {
             drawText();
@@ -229,15 +235,12 @@
             link.click();
         }
 
-        /* ---------------------------------------------------------
-           EVENTOS
-        --------------------------------------------------------- */
+        /* EVENTOS */
 
         textInput.addEventListener("input", drawText);
         bgColorInput.addEventListener("input", drawText);
         downloadBtn.addEventListener("click", downloadImage);
 
-        /* Esperar a que la fuente Felt Tip Roman esté lista */
         window.onload = async () => {
             if (document.fonts && document.fonts.load) {
                 await document.fonts.load(`60px ${FELT_FONT}`);
