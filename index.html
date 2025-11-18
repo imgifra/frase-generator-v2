@@ -177,6 +177,18 @@
     });
     downloadBtn.addEventListener("click", downloadPNG);
 
+    /* Crear botón para generar múltiples */
+    const multiBtn = document.createElement("button");
+    multiBtn.innerText = "Generar múltiples";
+    multiBtn.className =
+      "px-4 py-2 bg-pink-600 text-white text-sm rounded-lg shadow-md hover:bg-pink-700 active:bg-pink-800";
+    multiBtn.onclick = generateMultiple;
+
+    /* Insertarlo dentro del panel de controles */
+    document.querySelector(".control-panel").appendChild(multiBtn);
+
+
+
     function draw() {
       const text = input.value.trim();
       const bg = bgColorInput.value;
@@ -413,6 +425,47 @@
       link.href = canvas.toDataURL("image/png");
       link.click();
     }
+
+    function generateMultiple() {
+      const raw = input.value;
+      const phrases = raw.split(";").map(t => t.trim()).filter(t => t.length > 0);
+
+      if (phrases.length <= 1) {
+        alert("Escribe varias frases separadas por ;");
+        return;
+      }
+
+      let index = 0;
+      const original = raw;
+
+      function next() {
+        if (index >= phrases.length) {
+          input.value = original;
+          draw();
+          alert("Listo: todas las imágenes fueron generadas.");
+          return;
+        }
+
+        const phrase = phrases[index];
+        input.value = phrase;
+        draw();
+
+        // Esperamos 200ms para asegurar que el texto ya está renderizado
+        setTimeout(() => {
+          const link = document.createElement("a");
+          link.download = "frase_" + (index + 1) + ".png";
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+
+          index++;
+          next();
+        }, 250);
+      }
+
+      next();
+    }
+
+    
   </script>
 
 </body>
