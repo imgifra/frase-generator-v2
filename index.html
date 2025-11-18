@@ -237,54 +237,6 @@
       ctx.restore();
     }
 
-    function drawBrat(text, bg) {
-      ctx.save();
-      const textColor = getContrastColor(bg);
-
-      const innerWidth = CANVAS_SIZE - 2 * PADDING;
-      const maxHeight = CANVAS_SIZE * 0.75;
-      const maxFont = 200, minFont = 40;
-
-      let low = minFont, high = maxFont, bestFont = minFont, bestLines = [];
-
-      // Búsqueda binaria del tamaño de letra
-      while (low <= high) {
-        const mid = (low + high) >> 1;
-        ctx.font = mid + "px 'Arial Narrow'";
-        const candidate = wrapWordsToLines(text, innerWidth, ctx);
-        const th = candidate.length * mid * 1.1;
-
-        if (th <= maxHeight) {
-          bestFont = mid;
-          bestLines = candidate;
-          low = mid + 4;
-        } else {
-          high = mid - 4;
-        }
-      }
-
-      ctx.font = bestFont + "px 'Arial Narrow'";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = textColor;
-      const lineHeight = bestFont * 1.1;
-
-      // 👇 En lugar de centrar vertical, arrancamos arriba
-      let y = PADDING;
-
-      bestLines.forEach(words => {
-        drawJustifiedLine(words, PADDING, y, innerWidth, ctx);
-        y += lineHeight;
-      });
-
-      ctx.restore();
-    }
-
-
-
-
-
-
-
     /* ========= UTILIDADES DE TEXTO ========= */
 
     function wrapText(text, maxWidth, ctxLocal) {
@@ -327,6 +279,49 @@
       return lines;
     }
 
+    function drawBrat(text, bg) {
+      ctx.save();
+      const textColor = getContrastColor(bg);
+
+      const innerWidth = CANVAS_SIZE - 2 * PADDING;
+      const maxHeight = CANVAS_SIZE * 0.75;
+      const maxFont = 200, minFont = 40;
+
+      let low = minFont, high = maxFont, bestFont = minFont, bestLines = [];
+
+      // Búsqueda binaria del tamaño de letra
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        ctx.font = `${mid}px ${BRAT_FONT_FAMILY}`;
+        const candidate = wrapWordsToLines(text, innerWidth, ctx);
+        const th = candidate.length * mid * 1.1;
+
+        if (th <= maxHeight) {
+          bestFont = mid;
+          bestLines = candidate;
+          low = mid + 4;
+        } else {
+          high = mid - 4;
+        }
+      }
+
+      ctx.font = `${bestFont}px ${BRAT_FONT_FAMILY}`;
+      ctx.textBaseline = "top";
+      ctx.fillStyle = textColor;
+      const lineHeight = bestFont * 1.1;
+
+      // Arrancamos desde arriba del bloque
+      let y = PADDING;
+
+      bestLines.forEach(words => {
+        drawJustifiedLine(words, PADDING, y, innerWidth, ctx);
+        y += lineHeight;
+      });
+
+      ctx.restore();
+    }
+
+    // Todas las líneas justificadas (como brat)
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words.length) return;
 
@@ -349,8 +344,7 @@
       });
 
       ctx.filter = "none";
-    }
-
+    }    
     
     /* ========= WATERMARK DIAGONAL ========= */
     function drawWatermark() {
