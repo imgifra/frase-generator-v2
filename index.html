@@ -1,228 +1,250 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NachoZorra Generator 🦊</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Fuente Felt Tip Roman Bold -->
-  <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
+    <title>NachoZorra Generator 🦊</title>
 
-  <style>
-    :root {
-      --controls-h: 100px; /* altura de los controles fijos */
-    }
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    body {
-      background: #111;
-      color: #fff;
-      margin: 0;
-      font-family: 'Felt Tip Roman', cursive;
-      font-weight: 700;
-    }
+    <!-- Felt Tip Roman (Bold por defecto) -->
+    <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
 
-    /* Área central para centrar el cuadro */
-    #stage {
-      min-height: calc(100vh - var(--controls-h));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    <style>
+        :root {
+            --felt-font: 'Felt Tip Roman', cursive;
+        }
 
-    /* PREVIEW visible (más pequeño, centrado) */
-    #previewBox .card {
-      width: 540px;
-      height: 540px;
-      background: #fff;
-      color: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 100px;
-      overflow: hidden;
-      text-align: center;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-    }
+        body {
+            font-family: var(--felt-font);
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-    #previewBox .text {
-      width: 100%;
-      font-size: 60px;
-      line-height: 1;
-      word-break: break-word;
-      white-space: pre-line;
-    }
+        .preview-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-    /* EXPORT oculto (tamaño real 1080x1080) */
-    #exportBox {
-      position: absolute;
-      left: -99999px;
-      top: -99999px;
-    }
+        #previewCanvas {
+            box-shadow: 0 10px 25px -3px rgba(0,0,0,0.25);
+            border-radius: 1rem;
+            max-width: 90vh;
+            max-height: 90vw;
+            aspect-ratio: 1 / 1;
+            width: min(90vw, 90vh);
+            cursor: pointer;
+        }
 
-    #exportBox .card-1080 {
-      width: 1080px;
-      height: 1080px;
-      background: #fff;
-      color: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 0%;
-      overflow: hidden;
-      text-align: center;
-    }
+        .control-panel {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            z-index: 10;
+        }
 
-    #exportBox .text-1080 {
-      width: 90%;
-      font-size: 80px;
-      line-height: 1.2;
-      word-break: break-word;
-      white-space: pre-line;
-    }
+        #bgColorInput {
+            appearance: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 0 3px white, 0 0 0 4px #4b5563;
+        }
 
-    /* Controles */
-    .controls {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: var(--controls-h);
-      background: rgba(0, 0, 0, 0.9);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      border-top: 1px solid #333;
-    }
-
-    input[type="text"] {
-      width: 80%;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      outline: none;
-      font-size: 1.2em;
-      text-align: center;
-      font-family: 'Felt Tip Roman', cursive;
-      font-weight: 700;
-    }
-
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    input[type="color"] {
-      width: 40px;
-      height: 30px;
-      border: none;
-      cursor: pointer;
-    }
-
-    button {
-      background: #ff7b00;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 20px;
-      font-size: 1em;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    button:hover {
-      background: #ff9b33;
-    }
-  </style>
+        #bgColorInput::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+    </style>
 </head>
 <body>
-  <main id="stage">
-    <!-- Cuadro visible (preview) -->
-    <div id="previewBox">
-      <div class="card">
-        <div class="text" id="previewText">NachoZorra Generator 🦊</div>
-      </div>
+
+    <!-- Vista -->
+    <div class="preview-container">
+        <canvas id="previewCanvas" width="1080" height="1080"></canvas>
     </div>
 
-    <!-- Cuadro oculto para exportar -->
-    <div id="exportBox">
-      <div class="card-1080">
-        <div class="text-1080" id="exportText">NachoZorra Generator 🦊</div>
-      </div>
+    <!-- Controles -->
+    <div class="control-panel flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4">
+
+        <div class="w-full md:w-3/5">
+            <input type="text" id="textInput" placeholder="Escribe tu frase aquí..."
+                   value="NachoZorra Generator 🦊"
+                   class="w-full p-3 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-600 
+                          text-gray-700 shadow-inner placeholder-gray-400 focus:outline-none">
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2">
+                <label class="text-sm font-semibold text-gray-700">Fondo:</label>
+                <input type="color" id="bgColorInput" value="#ffffff">
+            </div>
+
+            <button id="downloadBtn"
+                    class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg
+                           hover:bg-indigo-700 active:bg-indigo-800 transition duration-150 transform hover:scale-105">
+                Descargar PNG
+            </button>
+        </div>
+
     </div>
-  </main>
 
-  <!-- Controles -->
-  <div class="controls">
-    <input id="textInput" type="text" placeholder="Escribe tu frase..." />
-    <div class="row">
-      <label for="bgColor">Color del fondo:</label>
-      <input type="color" id="bgColor" value="#ffffff">
-      <button id="downloadBtn">⬇️ Descargar PNG (1080×1080)</button>
-    </div>
-  </div>
+    <script>
+        const canvas = document.getElementById("previewCanvas");
+        const ctx = canvas.getContext("2d");
 
-  <!-- Librería html2canvas -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        const textInput = document.getElementById("textInput");
+        const bgColorInput = document.getElementById("bgColorInput");
+        const downloadBtn = document.getElementById("downloadBtn");
 
-  <script>
-    const input = document.getElementById('textInput');
-    const color = document.getElementById('bgColor');
+        const CANVAS_SIZE = 1080;
+        const PADDING = 100;
 
-    const previewCard = document.querySelector('#previewBox .card');
-    const previewText = document.getElementById('previewText');
+        const MAX_FONT_SIZE = 180;
+        const MIN_FONT_SIZE = 60;
+        const MAX_WORDS = 20;
 
-    const exportCard = document.querySelector('#exportBox .card-1080');
-    const exportText = document.getElementById('exportText');
+        const FELT_FONT = "'Felt Tip Roman', cursive";
 
-    // Actualizar texto en ambos cuadros
-    input.addEventListener('input', () => {
-      const v = input.value || ' ';
-      previewText.textContent = v;
-      exportText.textContent = v;
-    });
+        /* ---------------------------------------------------------
+           UTILIDADES
+        --------------------------------------------------------- */
 
-    // Cambiar color de fondo y contraste del texto
-    color.addEventListener('input', () => {
-      previewCard.style.backgroundColor = color.value;
-      exportCard.style.backgroundColor = color.value;
+        function hexToRgb(hex) {
+            const bigint = parseInt(hex.slice(1), 16);
+            return [(bigint>>16)&255, (bigint>>8)&255, bigint&255];
+        }
 
-      const txtColor = getContrastColor(color.value);
-      previewText.style.color = txtColor;
-      exportText.style.color = txtColor;
-    });
+        function isDarkColor(hex) {
+            const [r,g,b] = hexToRgb(hex);
+            const luminance = (0.2126*r + 0.7152*g + 0.0722*b)/255;
+            return luminance < 0.55;
+        }
 
-    // Descargar PNG 1080x1080
-    document.getElementById('downloadBtn').addEventListener('click', async () => {
-      await document.fonts?.ready?.catch(() => {});
-      const node = document.querySelector('#exportBox .card-1080');
+        /* Word wrap usando el font-size final */
+        function wrapText(text, maxWidth, fontSize) {
+            ctx.font = `${fontSize}px ${FELT_FONT}`;
+            const words = text.split(" ");
+            let line = "";
+            const lines = [];
 
-      const canvas = await html2canvas(node, {
-        backgroundColor: null,
-        scale: 1,
-        width: 1080,
-        height: 1080
-      });
+            for (let w of words) {
+                const test = line + w + " ";
+                if (ctx.measureText(test).width > maxWidth && line !== "") {
+                    lines.push(line.trim());
+                    line = w + " ";
+                } else {
+                    line = test;
+                }
+            }
+            if (line.trim()) lines.push(line.trim());
+            return lines;
+        }
 
-      const link = document.createElement('a');
-      link.download = 'nachozorra_1080x1080.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    });
+        /* Outline + Fill para máxima legibilidad */
+        function drawTextWithOutline(line, x, y, fontSize, textColor) {
+            ctx.lineWidth = Math.max(4, fontSize * 0.06);
+            ctx.strokeStyle = "rgba(0,0,0,0.35)";
+            ctx.strokeText(line, x, y);
 
-    // Contraste automático (texto blanco o negro según fondo)
-    function getContrastColor(hex) {
-      hex = hex.replace('#', '');
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-      return brightness > 150 ? '#000' : '#fff';
-    }
-  </script>
+            ctx.fillStyle = textColor;
+            ctx.fillText(line, x, y);
+        }
+
+        /* ---------------------------------------------------------
+           DIBUJO PRINCIPAL
+        --------------------------------------------------------- */
+
+        function drawText() {
+            const text = textInput.value.trim();
+            const bgColor = bgColorInput.value;
+
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            if (!text) {
+                ctx.fillStyle = "#777";
+                ctx.font = `40px ${FELT_FONT}`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Escribe algo abajo...", CANVAS_SIZE/2, CANVAS_SIZE/2);
+                return;
+            }
+
+            const words = text.split(/\s+/);
+            const count = Math.min(words.length, MAX_WORDS);
+            const ratio = count / MAX_WORDS;
+
+            const fontSize = MAX_FONT_SIZE - ratio * (MAX_FONT_SIZE - MIN_FONT_SIZE);
+            const opacity = 1 - ratio * 0.3;
+
+            ctx.globalAlpha = opacity;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.font = `${fontSize}px ${FELT_FONT}`;
+
+            const textColor = isDarkColor(bgColor) ? "#ffffff" : "#111111";
+
+            const maxWidth = CANVAS_SIZE - PADDING * 2;
+            const lines = wrapText(text, maxWidth, fontSize);
+            const lineHeight = fontSize * 1.2;
+
+            const totalHeight = lines.length * lineHeight;
+            let y = (CANVAS_SIZE - totalHeight) / 2;
+
+            for (let line of lines) {
+                drawTextWithOutline(line, CANVAS_SIZE/2, y, fontSize, textColor);
+                y += lineHeight;
+            }
+
+            ctx.globalAlpha = 1;
+        }
+
+        /* ---------------------------------------------------------
+           DESCARGA
+        --------------------------------------------------------- */
+
+        function downloadImage() {
+            drawText();
+            const url = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "nachozorra_" + Date.now() + ".png";
+            link.click();
+        }
+
+        /* ---------------------------------------------------------
+           EVENTOS
+        --------------------------------------------------------- */
+
+        textInput.addEventListener("input", drawText);
+        bgColorInput.addEventListener("input", drawText);
+        downloadBtn.addEventListener("click", downloadImage);
+
+        /* Esperar a que la fuente Felt Tip Roman esté lista */
+        window.onload = async () => {
+            if (document.fonts && document.fonts.load) {
+                await document.fonts.load(`60px ${FELT_FONT}`);
+            }
+            drawText();
+        };
+    </script>
+
 </body>
 </html>
