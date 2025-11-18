@@ -64,25 +64,27 @@
       width: 55px;
       height: 28px;
     }
-    .switch input { display:none; }
+    .switch input {
+      display: none;
+    }
     .slider {
       position: absolute;
-      cursor: pointer;
       inset: 0;
+      cursor: pointer;
       background-color: #555;
-      transition: .3s;
       border-radius: 34px;
+      transition: .3s;
     }
     .slider:before {
       content: "";
       position: absolute;
-      height: 22px;
       width: 22px;
+      height: 22px;
       left: 3px;
       bottom: 3px;
       background: #fff;
-      transition: .3s;
       border-radius: 50%;
+      transition: .3s;
     }
     input:checked + .slider {
       background-color: #22c55e;
@@ -100,10 +102,7 @@
       border: none;
       overflow: hidden;
     }
-    #bgColor::-webkit-color-swatch {
-      border: none;
-      border-radius: 999px;
-    }
+    #bgColor::-webkit-color-swatch,
     #bgColor::-moz-color-swatch {
       border: none;
       border-radius: 999px;
@@ -159,26 +158,46 @@
     const bgColorInput = document.getElementById("bgColor");
     const toggle = document.getElementById("modeToggle");
     const modeLabel = document.getElementById("modeLabel");
+    const downloadBtn = document.getElementById("downloadBtn");
 
     const CANVAS_SIZE = 1080;
     const PADDING = 80;
 
-    // Asegurarnos de que las fuentes estén listas antes de dibujar
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(() => draw());
-    } else {
-      window.onload = draw;
+    let fontsReady = false;
+
+    // Esperar a que las fuentes estén listas ANTES de dibujar
+    (async function init() {
+      await waitForFonts();
+      fontsReady = true;
+      draw(); // primer render ya con fuentes
+
+      // Listeners después de que las fuentes están listas
+      input.addEventListener("input", draw);
+      bgColorInput.addEventListener("input", draw);
+      toggle.addEventListener("change", () => {
+        modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
+        draw();
+      });
+      downloadBtn.addEventListener("click", downloadPNG);
+    })();
+
+    async function waitForFonts() {
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {
+          // fallback si algo falla
+          await new Promise(res => setTimeout(res, 500));
+        }
+      } else {
+        // Navegadores sin document.fonts: pequeño delay
+        await new Promise(res => setTimeout(res, 500));
+      }
     }
 
-    input.addEventListener("input", draw);
-    bgColorInput.addEventListener("input", draw);
-    toggle.addEventListener("change", () => {
-      modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
-      draw();
-    });
-    document.getElementById("downloadBtn").addEventListener("click", downloadPNG);
-
     function draw() {
+      if (!fontsReady) return;
+
       const text = input.value.trim();
       const bg = bgColorInput.value;
 
@@ -186,7 +205,7 @@
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // Watermark siempre al centro
+      // Marca de agua primero (queda detrás)
       drawWatermark();
 
       if (!text) {
@@ -209,25 +228,22 @@
       ctx.textBaseline = "middle";
       ctx.fillStyle = getContrastColor(bg);
 
-      // Calculamos font size aproximado según longitud
       const maxFont = 80;
       const minFont = 36;
-      let fontSize = maxFont;
-
       const maxWidth = CANVAS_SIZE - 2 * PADDING;
+      let fontSize = maxFont;
+      let lines = [];
 
       while (fontSize > minFont) {
-        ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
-        const lines = wrapText(text, maxWidth, ctx);
+        ctx.font = fontSize + 'px "Felt Tip Roman"';
+        lines = wrapText(text, maxWidth, ctx);
         const totalHeight = lines.length * fontSize * 1.2;
-        if (totalHeight <= CANVAS_SIZE - 2 * PADDING) {
-          break;
-        }
+        if (totalHeight <= CANVAS_SIZE - 2 * PADDING) break;
         fontSize -= 4;
       }
 
-      ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
-      const lines = wrapText(text, maxWidth, ctx);
+      ctx.font = fontSize + 'px "Felt Tip Roman"';
+      lines = wrapText(text, maxWidth, ctx);
       const totalHeight = lines.length * fontSize * 1.2;
       let y = CANVAS_SIZE / 2 - totalHeight / 2 + fontSize * 0.1;
 
@@ -239,14 +255,13 @@
       ctx.restore();
     }
 
-    /* ===== MODO BRAT (Arial Narrow, izq + justificado + blur) ===== */
+    /* ===== MODO BRAT (Arial Narrow, bloque centrado + justificado + blur) ===== */
     function drawBrat(text, bg) {
       ctx.save();
 
       const textColor = getContrastColor(bg);
-
       const innerWidth = CANVAS_SIZE - 2 * PADDING;
-      const maxHeight = CANVAS_SIZE * 0.75; // altura permitida del bloque
+      const maxHeight = CANVAS_SIZE * 0.75;
       const maxFont = 200;
       const minFont = 40;
 
@@ -255,11 +270,10 @@
       let bestFont = minFont;
       let bestLines = [];
 
-      // Búsqueda binaria para encontrar el tamaño de fuente ideal
+      // Búsqueda binaria para hallar tamaño de fuente máximo que cabe
       while (low <= high) {
         const mid = (low + high) >> 1;
-        ctx.font = mid + "px 'Arial Narrow', sans-serif";
-
+        ctx.font = mid + 'px "Arial Narrow"';
         const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1;
 
@@ -272,25 +286,23 @@
         }
       }
 
-  ctx.font = bestFont + "px 'Arial Narrow', sans-serif";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = textColor;
-  const lineHeight = bestFont * 1.1;
+      ctx.font = bestFont + 'px "Arial Narrow"';
+      ctx.textBaseline = "top";
+      ctx.fillStyle = textColor;
+      const lineHeight = bestFont * 1.1;
 
-  // 🔥 CENTRAR BLOQUE VERTICALMENTE
-  const blockHeight = bestLines.length * lineHeight;
-  let y = (CANVAS_SIZE - blockHeight) / 2;
+      // Centrar verticalmente el bloque de texto
+      const blockHeight = bestLines.length * lineHeight;
+      let y = (CANVAS_SIZE - blockHeight) / 2;
 
-  // Dibujar líneas justificado + blur
-  bestLines.forEach((words, idx) => {
-    const isLast = idx === bestLines.length - 1;
-    drawJustifiedLine(words, PADDING, y, innerWidth, isLast, ctx);
-    y += lineHeight;
-  });
+      bestLines.forEach((words, idx) => {
+        const isLast = idx === bestLines.length - 1;
+        drawJustifiedLine(words, PADDING, y, innerWidth, isLast, ctx);
+        y += lineHeight;
+      });
 
-  ctx.restore();
-}
-    
+      ctx.restore();
+    }
 
     /* ===== UTILIDADES DE TEXTO ===== */
 
@@ -335,14 +347,14 @@
       return lines;
     }
 
-    // Dibuja una línea justificada real (palabra por palabra)
+    // Dibuja una línea justificada real (palabra por palabra) con blur
     function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
       if (words.length === 0) return;
 
       const baseSpace = ctx.measureText(" ").width;
 
       if (isLast || words.length === 1) {
-        // Última línea: normal
+        // Última línea: normal (no estirar demasiado)
         let cursorX = x;
         ctx.filter = "blur(3px)";
         for (let i = 0; i < words.length; i++) {
@@ -377,15 +389,18 @@
       ctx.filter = "none";
     }
 
-    /* ===== WATERMARK ===== */
+    /* ===== WATERMARK DIAGONAL ===== */
     function drawWatermark() {
       ctx.save();
-      ctx.globalAlpha = 0.09;
+      ctx.globalAlpha = 0.08;
       ctx.fillStyle = "#000";
-      ctx.font = "240px 'Arial Narrow', sans-serif";
+      ctx.font = '260px "Arial Narrow"';
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("@nachozorra", CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      ctx.rotate(-0.6);
+      ctx.filter = "blur(3px)";
+      ctx.fillText("@nachozorra", 0, 0);
       ctx.restore();
     }
 
@@ -393,11 +408,11 @@
     function drawPlaceholder() {
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.35)";
-      ctx.font = "42px 'Felt Tip Roman', cursive";
+      ctx.font = '42px "Felt Tip Roman"';
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "Escribe algo abajo para generar tu frase 🦊",
+        "Escribe algo abajo para generar 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -417,7 +432,8 @@
     /* ===== DESCARGAR ===== */
     function downloadPNG() {
       const link = document.createElement("a");
-      link.download = "nachozorra_" + Date.now() + ".png";
+      const mode = toggle.checked ? "brat" : "normal";
+      link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     }
