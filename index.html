@@ -248,7 +248,7 @@
       while (fontSize > minFont) {
         ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
         lines = wrapText(text, maxWidth, ctx);
-        const totalHeight = lines.length * fontSize * 1.2;
+        const totalHeight = lines.length * fontSize * 1.1;
         if (totalHeight <= CANVAS_SIZE - 2 * PADDING) {
           break;
         }
@@ -257,7 +257,7 @@
 
       ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
       lines = wrapText(text, maxWidth, ctx);
-      const totalHeight = lines.length * fontSize * 1.2;
+      const totalHeight = lines.length * fontSize * 1.1;
       let y = CANVAS_SIZE / 2 - totalHeight / 2 + fontSize * 0.1;
 
       for (const line of lines) {
@@ -274,7 +274,7 @@
 
       const textColor = getContrastColor(bg);
       const innerWidth = CANVAS_SIZE - 2 * PADDING;
-      const maxHeight = CANVAS_SIZE - PADDING * 2; // altura permitida del bloque
+      const maxHeight = CANVAS_SIZE - 2 * PADDING; // altura permitida del bloque
       const maxFont = 200;
       const minFont = 40;
 
@@ -283,39 +283,39 @@
       let bestFont = minFont;
       let bestLines = [];
 
-      // Búsqueda binaria para encontrar el tamaño de fuente ideal
+      // 🔍 Búsqueda binaria para encontrar el tamaño de fuente ideal
       while (low <= high) {
-        const mid = (low + high) >> 1;
-        ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
-
+        const mid = (low + high) >> 1; // (low + high) / 2 truncado
+        ctx.font = `${mid}px arial_narrowregular, 'Arial Narrow', sans-serif`;
 
         const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1;
 
         if (totalHeight <= maxHeight) {
+          // Cabe → probamos más grande
           bestFont = mid;
           bestLines = candidateLines;
-          low = mid + 4;
+          low = mid + 2; // paso de 2px para no tardar tanto
         } else {
-          high = mid - 4;
+          // No cabe → reducimos
+          high = mid - 2;
         }
       }
 
-
+      // Usamos el mejor tamaño encontrado
       ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
-
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
-      const lineHeight = bestFont * 1.02;
 
-      // 🔥 CENTRAR BLOQUE VERTICALMENTE
+      const lineHeight = bestFont * 1.1;
+
+      // 🔥 Centrar verticalmente el bloque
       const blockHeight = bestLines.length * lineHeight;
       let y = (CANVAS_SIZE - blockHeight) / 2;
 
-      // Dibujar líneas justificado + blur
-      bestLines.forEach((words, idx) => {
-        const isLast = idx === bestLines.length - 1;
-        drawJustifiedLine(words, PADDING, y, innerWidth, isLast, ctx);
+      // Dibujar líneas justificadas con blur
+      bestLines.forEach((words) => {
+        drawJustifiedLine(words, PADDING, y, innerWidth, ctx);
         y += lineHeight;
       });
 
@@ -364,7 +364,7 @@
       return lines;
     }
 
-    function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
+    function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words || words.length === 0) return;
 
       // Si solo hay una palabra, no la estiramos
@@ -385,23 +385,9 @@
       );
 
       const gaps = words.length - 1;
-
-      // Para parecerse más a CSS:
-      // - las líneas intermedias llenan casi todo
-      // - la última línea llena un poco menos
-      const targetWidth = isLast
-        ? lineWidth * 0.92      // última línea menos estirada
-        : lineWidth * 0.98;     // resto casi a ancho completo
-
+      const targetWidth = lineWidth; // llenamos casi todo el ancho
       let extraSpaceTotal = targetWidth - wordsWidth;
       let spaceSize = extraSpaceTotal / gaps;
-
-      // Limitar espacio mínimo y máximo para que no explote
-      const MIN_SPACE = 4;
-      const MAX_SPACE = 40;
-
-      if (spaceSize < MIN_SPACE) spaceSize = MIN_SPACE;
-      if (spaceSize > MAX_SPACE) spaceSize = MAX_SPACE;
 
       let cursorX = x;
 
@@ -416,13 +402,13 @@
       ctx.restore();
     }
 
-    
+        
     /* ========= WATERMARK DIAGONAL ========= */
     function drawWatermark() {
       ctx.save();
       ctx.globalAlpha = 0.07;
       ctx.fillStyle = getContrastColor(bgColorInput.value);
-      ctx.font = "200px 'Archivo Narrow', sans-serif";
+      ctx.font = "200px arial_narrowregular, 'Arial Narrow', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
@@ -440,7 +426,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v7 🦊",
+        "v8 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
