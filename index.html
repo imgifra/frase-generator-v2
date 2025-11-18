@@ -269,7 +269,7 @@
       // Búsqueda binaria para encontrar el tamaño de fuente ideal
       while (low <= high) {
         const mid = (low + high) >> 1;
-        ctx.font = mid + "px 'Archivo Narrow', sans-serif";
+        ctx.font = `600 ${mid}px 'Archivo Narrow', sans-serif`;
 
         const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1;
@@ -283,10 +283,11 @@
         }
       }
 
+
       ctx.font = `600 ${bestFont}px 'Archivo Narrow', sans-serif`;
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
-      const lineHeight = bestFont * 1.06;
+      const lineHeight = bestFont * 1.02;
 
       // 🔥 CENTRAR BLOQUE VERTICALMENTE
       const blockHeight = bestLines.length * lineHeight;
@@ -347,25 +348,43 @@
     function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
       if (!words || words.length === 0) return;
 
-      // Siempre justificar, incluso la última línea (como Bratgenerator)
+      // Si solo hay una palabra, no la estiramos
       if (words.length === 1) {
-        ctx.filter = "blur(5px)";
+        ctx.save();
+        ctx.filter = "blur(2px)";
         ctx.fillText(words[0], x, y);
-        ctx.filter = "none";
+        ctx.restore();
         return;
       }
+
+      ctx.save();
+      ctx.filter = "blur(2px)";
 
       const wordsWidth = words.reduce(
         (acc, w) => acc + ctx.measureText(w).width,
         0
       );
 
-      const totalSpaces = words.length - 1;
-      const extraSpaceTotal = lineWidth - wordsWidth;
-      const spaceSize = extraSpaceTotal / totalSpaces;
+      const gaps = words.length - 1;
+
+      // Para parecerse más a CSS:
+      // - las líneas intermedias llenan casi todo
+      // - la última línea llena un poco menos
+      const targetWidth = isLast
+        ? lineWidth * 0.92      // última línea menos estirada
+        : lineWidth * 0.98;     // resto casi a ancho completo
+
+      let extraSpaceTotal = targetWidth - wordsWidth;
+      let spaceSize = extraSpaceTotal / gaps;
+
+      // Limitar espacio mínimo y máximo para que no explote
+      const MIN_SPACE = 4;
+      const MAX_SPACE = 40;
+
+      if (spaceSize < MIN_SPACE) spaceSize = MIN_SPACE;
+      if (spaceSize > MAX_SPACE) spaceSize = MAX_SPACE;
 
       let cursorX = x;
-      ctx.filter = "blur(5px)";
 
       for (let i = 0; i < words.length; i++) {
         const w = words[i];
@@ -375,9 +394,8 @@
         }
       }
 
-      ctx.filter = "none";
+      ctx.restore();
     }
-
 
     
     /* ========= WATERMARK DIAGONAL ========= */
