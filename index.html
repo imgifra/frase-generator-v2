@@ -330,27 +330,20 @@
       return lines;
     }
 
-    function drawJustifiedLine(words, x, y, lineWidth, isLast, ctxLocal) {
-      if (words.length === 0) return;
+    function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
+      if (!words || words.length === 0) return;
 
-      const baseSpace = ctxLocal.measureText(" ").width;
-
-      if (isLast || words.length === 1) {
-        // Última línea: normal
-        let cursorX = x;
-        ctxLocal.filter = "blur(3px)";
-        for (let i = 0; i < words.length; i++) {
-          const w = words[i];
-          ctxLocal.fillText(w, cursorX, y);
-          cursorX += ctxLocal.measureText(w).width + baseSpace;
-        }
-        ctxLocal.filter = "none";
+      // Si solo hay una palabra, no tiene sentido estirar: se dibuja normal con blur
+      if (words.length === 1) {
+        ctx.filter = "blur(3px)";
+        ctx.fillText(words[0], x, y);
+        ctx.filter = "none";
         return;
       }
 
-      // Líneas intermedias: justificar
+      // TODAS las líneas (incluida la última) se justifican
       const wordsWidth = words.reduce(
-        (acc, w) => acc + ctxLocal.measureText(w).width,
+        (acc, w) => acc + ctx.measureText(w).width,
         0
       );
       const totalSpaces = words.length - 1;
@@ -358,19 +351,20 @@
       const spaceSize = extraSpaceTotal / totalSpaces;
 
       let cursorX = x;
-      ctxLocal.filter = "blur(3px)";
+      ctx.filter = "blur(3px)";
 
       for (let i = 0; i < words.length; i++) {
         const w = words[i];
-        ctxLocal.fillText(w, cursorX, y);
+        ctx.fillText(w, cursorX, y);
         if (i < words.length - 1) {
-          cursorX += ctxLocal.measureText(w).width + spaceSize;
+          cursorX += ctx.measureText(w).width + spaceSize;
         }
       }
 
-      ctxLocal.filter = "none";
+      ctx.filter = "none";
     }
 
+    
     /* ========= WATERMARK DIAGONAL ========= */
     function drawWatermark() {
       ctx.save();
@@ -394,7 +388,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "Escribe algo abajo para generar tu frase 🦊",
+        "V2 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
