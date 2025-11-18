@@ -6,7 +6,7 @@
 
     <title>NachoZorra Generator 🦊</title>
 
-    <!-- Tailwind CSS -->
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Felt Tip Roman -->
@@ -20,42 +20,36 @@
 
         body {
             margin: 0;
-            padding: 0;
-            background-color: #f3f4f6;
+            background: #f3f4f6;
             height: 100vh;
             overflow: hidden;
-            font-family: var(--font-normal);
         }
 
         .preview-container {
             width: 100%;
+            height: calc(100vh - 150px);
             display: flex;
             justify-content: center;
             align-items: center;
-            height: calc(100vh - 150px);
         }
 
         #previewCanvas {
+            width: min(90vw, 90vh);
+            aspect-ratio: 1/1;
             box-shadow: 0 10px 25px -3px rgba(0,0,0,0.25);
             border-radius: 1rem;
-            max-width: 90vh;
-            max-height: 90vw;
-            aspect-ratio: 1 / 1;
-            width: min(90vw, 90vh);
         }
 
         .control-panel {
             position: fixed;
             bottom: 0;
             width: 100%;
+            padding: 1rem;
             background: rgba(255,255,255,0.95);
             backdrop-filter: blur(10px);
             border-top: 1px solid #ddd;
-            padding: 1rem;
-            z-index: 10;
         }
 
-        /* Toggle estilo iPhone */
         .toggle {
             width: 60px;
             height: 30px;
@@ -64,13 +58,13 @@
             padding: 3px;
             cursor: pointer;
             position: relative;
-            transition: background 0.3s;
+            transition: 0.3s;
         }
 
         .toggle-circle {
             width: 24px;
             height: 24px;
-            background: white;
+            background: #fff;
             border-radius: 50%;
             position: absolute;
             top: 3px;
@@ -87,38 +81,31 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="preview-container">
         <canvas id="previewCanvas" width="1080" height="1080"></canvas>
     </div>
 
-    <!-- PANEL DE CONTROL -->
     <div class="control-panel flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4">
 
         <div class="flex items-center space-x-3">
-            <span class="font-bold text-gray-700">Modo:</span>
-            <div id="modeToggle" class="toggle">
-                <div class="toggle-circle"></div>
-            </div>
-            <span id="modeLabel" class="font-semibold text-gray-700">Normal</span>
+            <span class="font-bold">Modo:</span>
+            <div id="modeToggle" class="toggle"><div class="toggle-circle"></div></div>
+            <span id="modeLabel" class="font-semibold">Normal</span>
         </div>
 
-        <div class="w-full md:w-2/5">
-            <input type="text" id="textInput" placeholder="Escribe tu frase aquí..."
-                   value="NachoZorra Generator 🦊"
-                   class="w-full p-3 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-600 
-                          text-gray-700 shadow-inner placeholder-gray-400 focus:outline-none">
-        </div>
+        <input id="textInput" type="text" placeholder="Escribe tu frase..."
+            class="w-full md:w-2/4 p-3 border-2 rounded-xl">
 
         <div class="flex items-center space-x-3">
-            <label class="text-sm font-semibold text-gray-700">Fondo:</label>
-            <input type="color" id="bgColorInput" value="#ffffff" class="w-10 h-10 rounded-full shadow">
+            <span class="font-semibold">Fondo:</span>
+            <input id="bgColorInput" type="color" value="#ffffff" class="w-10 h-10 rounded-full shadow">
         </div>
 
         <button id="downloadBtn"
-                class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg
-                       hover:bg-indigo-700 active:bg-indigo-800 transition duration-150 transform hover:scale-105">
+            class="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">
             Descargar PNG
         </button>
 
@@ -135,44 +122,40 @@
         const modeToggle = document.getElementById("modeToggle");
         const modeLabel = document.getElementById("modeLabel");
 
-        let mode = "normal"; // normal | brat
+        let mode = "normal";
 
         const CANVAS_SIZE = 1080;
         const PADDING = 100;
-
         const MAX_FONT_SIZE = 180;
-        const MIN_FONT_SIZE = 50;
-
-        const FELT_FONT = "'Felt Tip Roman', cursive";
-        const BRAT_FONT = "'Helvetica Neue', Arial, sans-serif";
-
-        /* UTILIDADES */
+        const MIN_FONT_SIZE = 48;
 
         function hexToRgb(hex) {
-            const bigint = parseInt(hex.slice(1), 16);
-            return [(bigint>>16)&255, (bigint>>8)&255, bigint&255];
+            const n = parseInt(hex.slice(1), 16);
+            return [(n>>16)&255, (n>>8)&255, n&255];
         }
 
         function isDarkColor(hex) {
             const [r,g,b] = hexToRgb(hex);
-            const luminance = (0.2126*r + 0.7152*g + 0.0722*b)/255;
-            return luminance < 0.55;
+            const L = (0.2126*r + 0.7152*g + 0.0722*b)/255;
+            return L < 0.55;
         }
 
-        function wrapText(text, maxWidth, fontSize) {
-            ctx.font = `${fontSize}px ${mode === "brat" ? BRAT_FONT : FELT_FONT}`;
+        /* WRAP SIN BLUR */
+        function wrapText(text, maxWidth, fontSize, font) {
+            ctx.filter = "none";
+            ctx.font = `${fontSize}px ${font}`;
 
             const words = text.split(" ");
             let line = "";
             const lines = [];
 
             for (let w of words) {
-                const test = line + w + " ";
-                if (ctx.measureText(test).width > maxWidth && line !== "") {
+                const t = line + w + " ";
+                if (ctx.measureText(t).width > maxWidth && line !== "") {
                     lines.push(line.trim());
                     line = w + " ";
                 } else {
-                    line = test;
+                    line = t;
                 }
             }
             if (line.trim()) lines.push(line.trim());
@@ -180,58 +163,63 @@
             return lines;
         }
 
+        /* JUSTIFY SIN BLUR PARA CALCULAR ESPACIOS */
+        function drawJustified(line, x, y, maxWidth, fontSize, font, textColor) {
 
-
-        function drawJustified(line, x, y, maxWidth, fontSize, textColor) {
-            ctx.fillStyle = textColor;   // ← COLOR CORRECTO
+            ctx.save();
+            ctx.filter = "none";
+            ctx.font = `${fontSize}px ${font}`;
+            ctx.fillStyle = textColor;
 
             const words = line.split(" ");
+
             if (words.length === 1) {
+                ctx.restore();
                 ctx.fillText(line, x, y);
                 return;
             }
 
-            const textWidth = ctx.measureText(line).width;
-            const spaceExtra = (maxWidth - textWidth) / (words.length - 1);
+            const pureWidth = ctx.measureText(line).width;
+            const extra = (maxWidth - pureWidth) / (words.length - 1);
 
-            let currentX = x - maxWidth / 2;
+            let ox = x - maxWidth / 2;
 
-            words.forEach((word, i) => {
-                ctx.fillText(word, currentX, y);
-                currentX += ctx.measureText(word).width + (i < words.length - 1 ? spaceExtra : 0);
+            ctx.restore(); // Vuelve al blur actual pero mantiene coordenadas
+
+            ctx.fillStyle = textColor;
+            ctx.font = `${fontSize}px ${font}`;
+
+            words.forEach((w,i)=>{
+                ctx.fillText(w, ox, y);
+                ox += ctx.measureText(w).width + extra;
             });
         }
 
-
-        /* MARCA DE AGUA NORMAL */
+        /* WATERMARK NORMAL */
         function watermarkNormal() {
             ctx.save();
             ctx.globalAlpha = 0.09;
             ctx.fillStyle = "#000";
-            ctx.font = `220px ${FELT_FONT}`;
+            ctx.font = `220px var(--font-normal)`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-
             ctx.translate(CANVAS_SIZE/2, CANVAS_SIZE/2);
-            ctx.rotate(-Math.PI / 6);
+            ctx.rotate(-Math.PI/6);
             ctx.fillText("@nachozorra", 0, 0);
-
             ctx.restore();
         }
 
-        /* MARCA DE AGUA BRAT */
+        /* WATERMARK BRAT */
         function watermarkBrat() {
             ctx.save();
             ctx.globalAlpha = 0.035;
             ctx.fillStyle = "#000";
-            ctx.font = `320px ${BRAT_FONT}`;
+            ctx.font = `320px var(--font-brat)`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-
             ctx.translate(CANVAS_SIZE/2, CANVAS_SIZE/2);
-            ctx.rotate(-Math.PI / 6);
+            ctx.rotate(-Math.PI/6);
             ctx.fillText("@nachozorra", 0, 0);
-
             ctx.restore();
         }
 
@@ -243,93 +231,77 @@
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-            /* Marca de agua según modo */
+            if (!text) return;
+
             if (mode === "normal") watermarkNormal();
             else watermarkBrat();
 
-            if (!text) return;
+            /* CÁLCULOS SIN BLUR */
+            ctx.filter = "none";
 
-            const fontBase = mode === "brat" ? BRAT_FONT : FELT_FONT;
-
-            /* Cálculo de densidad */
-            const length = text.length;
-            const density = Math.log(1 + length);
-
-            /* Tamaño dependiente del modo */
+            const density = Math.log(1 + text.length);
             let fontSize = MAX_FONT_SIZE / (1 + density * (mode === "brat" ? 0.55 : 0.25));
-            fontSize = Math.max(MIN_FONT_SIZE, fontSize);
+            fontSize = Math.max(fontSize, MIN_FONT_SIZE);
 
-            /* Blur progresivo en modo brat */
+            const font = mode === "brat" ? "var(--font-brat)" : "var(--font-normal)";
+            const maxWidth = CANVAS_SIZE - PADDING * 2;
+
+            ctx.font = `${fontSize}px ${font}`;
+
+            const lines = wrapText(text, maxWidth, fontSize, font);
+            const lineHeight = fontSize * 1.22;
+
+            let y = (CANVAS_SIZE - lines.length * lineHeight) / 2;
+
+            const textColor = isDarkColor(bgColor) ? "#fff" : "#111";
+
+            /* AHORA SÍ ACTIVAMOS BLUR PARA DIBUJAR */
             if (mode === "brat") {
                 ctx.filter = `blur(${density * 0.8}px)`;
             } else {
                 ctx.filter = "none";
             }
 
-            ctx.font = `${fontSize}px ${fontBase}`;
-            ctx.textBaseline = "top";
-            ctx.textAlign = "center";
-
-            const textColor = isDarkColor(bgColor) ? "#ffffff" : "#111";
-
-            const maxWidth = CANVAS_SIZE - PADDING * 2;
-            const lines = wrapText(text, maxWidth, fontSize);
-            const lineHeight = fontSize * 1.2;
-
-            const totalHeight = lines.length * lineHeight;
-            let y = (CANVAS_SIZE - totalHeight) / 2;
+            ctx.fillStyle = textColor;
 
             lines.forEach(line => {
                 if (mode === "brat") {
-                    drawJustified(line, CANVAS_SIZE/2, y, maxWidth, fontSize, textColor);
+                    drawJustified(line, CANVAS_SIZE/2, y, maxWidth, fontSize, font, textColor);
                 } else {
                     /* Outline */
                     ctx.lineWidth = Math.max(4, fontSize*0.06);
                     ctx.strokeStyle = "rgba(0,0,0,0.35)";
                     ctx.strokeText(line, CANVAS_SIZE/2, y);
-                    ctx.fillStyle = textColor;
                     ctx.fillText(line, CANVAS_SIZE/2, y);
                 }
                 y += lineHeight;
             });
-
-            ctx.filter = "none";
         }
 
         /* DESCARGAR */
-        function downloadImage() {
+        downloadBtn.addEventListener("click", () => {
             draw();
             const url = canvas.toDataURL("image/png");
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `nachozorra_${Date.now()}.png`;
-            link.click();
-        }
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "nachozorra_" + Date.now() + ".png";
+            a.click();
+        });
 
         /* SWITCH */
-        modeToggle.addEventListener("click", () => {
+        modeToggle.addEventListener("click", ()=>{
             modeToggle.classList.toggle("active");
-
-            mode = modeToggle.classList.contains("active") ? "brat" : "normal";
-            modeLabel.textContent = mode === "brat" ? "Brat" : "Normal";
-
+            mode = mode === "normal" ? "brat" : "normal";
+            modeLabel.textContent = mode === "normal" ? "Normal" : "Brat";
             draw();
         });
 
-        /* EVENTOS */
         textInput.addEventListener("input", draw);
         bgColorInput.addEventListener("input", draw);
-        downloadBtn.addEventListener("click", downloadImage);
 
-        /* INIT */
-        window.onload = async () => {
-            if (document.fonts && document.fonts.load) {
-                await document.fonts.load("60px " + FELT_FONT);
-                await document.fonts.load("60px " + BRAT_FONT);
-            }
-            draw();
-        };
+        window.onload = draw;
     </script>
 
 </body>
 </html>
+
