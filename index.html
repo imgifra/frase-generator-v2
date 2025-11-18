@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NachoZorra Generator 🦊</title>
 
+  <!-- Fuentes -->
   <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
   <link href="https://fonts.cdnfonts.com/css/arial-narrow" rel="stylesheet">
+
+  <!-- Tailwind para layout de controles -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    :root { --controls-h: 110px; }
+    :root {
+      --controls-h: 110px;
+    }
 
     body {
       background: #111;
@@ -20,6 +25,7 @@
       overflow: hidden;
     }
 
+    /* Área de preview */
     #stage {
       height: calc(100vh - var(--controls-h));
       display: flex;
@@ -33,8 +39,10 @@
       box-shadow: 0 8px 30px rgba(0,0,0,0.35);
       border-radius: 25px;
       background: #fff;
+      display: block;
     }
 
+    /* Panel de control inferior */
     .control-panel {
       position: fixed;
       bottom: 0;
@@ -50,36 +58,52 @@
       padding-bottom: 6px;
     }
 
-    .switch { position: relative; width: 55px; height: 28px; }
-    .switch input { display: none; }
+    /* Switch tipo iPhone */
+    .switch {
+      position: relative;
+      width: 55px;
+      height: 28px;
+    }
+    .switch input { display:none; }
     .slider {
       position: absolute;
-      inset: 0;
       cursor: pointer;
-      background: #555;
-      border-radius: 34px;
+      inset: 0;
+      background-color: #555;
       transition: .3s;
+      border-radius: 34px;
     }
     .slider:before {
       content: "";
       position: absolute;
-      width: 22px;
       height: 22px;
+      width: 22px;
       left: 3px;
       bottom: 3px;
-      background: white;
-      border-radius: 50%;
+      background: #fff;
       transition: .3s;
+      border-radius: 50%;
     }
-    input:checked + .slider { background: #22c55e; }
-    input:checked + .slider:before { transform: translateX(26px); }
+    input:checked + .slider {
+      background-color: #22c55e;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
 
+    /* Input de color */
     #bgColor {
-      width: 34px; height: 34px;
-      border-radius: 999px; border: none;
-      overflow: hidden; padding: 0;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 999px;
+      border: none;
+      overflow: hidden;
     }
-    #bgColor::-webkit-color-swatch,
+    #bgColor::-webkit-color-swatch {
+      border: none;
+      border-radius: 999px;
+    }
     #bgColor::-moz-color-swatch {
       border: none;
       border-radius: 999px;
@@ -92,7 +116,9 @@
     <canvas id="previewCanvas" width="1080" height="1080"></canvas>
   </main>
 
+  <!-- Controles -->
   <div class="control-panel">
+    <!-- Modo -->
     <div class="flex items-center justify-center gap-3 text-sm">
       <span>Modo:</span>
       <label class="switch">
@@ -102,235 +128,300 @@
       <span id="modeLabel">Normal</span>
     </div>
 
+    <!-- Texto + fondo + botón -->
     <div class="flex items-center justify-center gap-3 w-full px-3">
-      <input id="textInput" type="text" placeholder="Escribe tu frase..."
-             class="flex-1 p-2 rounded-lg text-black text-center font-bold text-lg outline-none">
+      <input
+        id="textInput"
+        type="text"
+        placeholder="Escribe tu frase..."
+        class="flex-1 p-2 rounded-lg text-black text-center font-bold text-lg outline-none"
+      >
 
       <div class="flex items-center gap-1 text-sm">
         <span>Fondo:</span>
         <input type="color" id="bgColor" value="#ffffff">
       </div>
 
-      <button id="downloadBtn"
-              class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 active:bg-indigo-800">
+      <button
+        id="downloadBtn"
+        class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 active:bg-indigo-800"
+      >
         Descargar PNG
       </button>
     </div>
   </div>
 
-<script>
-const canvas = document.getElementById("previewCanvas");
-const ctx = canvas.getContext("2d");
-const input = document.getElementById("textInput");
-const bgColorInput = document.getElementById("bgColor");
-const toggle = document.getElementById("modeToggle");
-const modeLabel = document.getElementById("modeLabel");
+  <script>
+    const canvas = document.getElementById("previewCanvas");
+    const ctx = canvas.getContext("2d");
 
-const CANVAS_SIZE = 1080;
-const PADDING = 80;
+    const input = document.getElementById("textInput");
+    const bgColorInput = document.getElementById("bgColor");
+    const toggle = document.getElementById("modeToggle");
+    const modeLabel = document.getElementById("modeLabel");
 
-if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(draw);
-} else window.onload = draw;
+    const CANVAS_SIZE = 1080;
+    const PADDING = 80;
 
-input.addEventListener("input", draw);
-bgColorInput.addEventListener("input", draw);
-toggle.addEventListener("change", () => {
-  modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
-  draw();
-});
-document.getElementById("downloadBtn").addEventListener("click", downloadPNG);
+    // Asegurarnos de que las fuentes estén listas antes de dibujar
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => draw());
+    } else {
+      window.onload = draw;
+    }
 
-function draw() {
-  const text = input.value.trim();
-  const bg = bgColorInput.value;
+    input.addEventListener("input", draw);
+    bgColorInput.addEventListener("input", draw);
+    toggle.addEventListener("change", () => {
+      modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
+      draw();
+    });
+    document.getElementById("downloadBtn").addEventListener("click", downloadPNG);
 
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    function draw() {
+      const text = input.value.trim();
+      const bg = bgColorInput.value;
 
-  drawWatermark();
+      // Fondo
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-  if (!text) {
-    drawPlaceholder();
-    return;
-  }
+      // Watermark siempre al centro
+      drawWatermark();
 
-  if (toggle.checked) drawBrat(text, bg);
-  else drawNormal(text, bg);
-}
+      if (!text) {
+        drawPlaceholder();
+        return;
+      }
 
-function drawNormal(text, bg) {
-  ctx.save();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = getContrastColor(bg);
+      if (toggle.checked) {
+        drawBrat(text, bg);
+      } else {
+        drawNormal(text, bg);
+      }
+    }
 
-  const maxFont = 80, minFont = 36;
-  let fontSize = maxFont;
-  const maxWidth = CANVAS_SIZE - 2 * PADDING;
+    /* ===== MODO NORMAL (centrado, Felt Tip) ===== */
+    function drawNormal(text, bg) {
+      ctx.save();
 
-  while (fontSize > minFont) {
-    ctx.font = fontSize + "px 'Felt Tip Roman'";
-    const lines = wrapText(text, maxWidth, ctx);
-    const th = lines.length * fontSize * 1.2;
-    if (th <= CANVAS_SIZE - 2 * PADDING) break;
-    fontSize -= 4;
-  }
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = getContrastColor(bg);
 
-  ctx.font = fontSize + "px 'Felt Tip Roman'";
-  const lines = wrapText(text, maxWidth, ctx);
-  const totalHeight = lines.length * fontSize * 1.2;
-  let y = CANVAS_SIZE / 2 - totalHeight / 2 + fontSize * 0.1;
+      // Calculamos font size aproximado según longitud
+      const maxFont = 80;
+      const minFont = 36;
+      let fontSize = maxFont;
 
-  for (const line of lines) {
-    ctx.fillText(line, CANVAS_SIZE / 2, y);
-    y += fontSize * 1.2;
-  }
+      const maxWidth = CANVAS_SIZE - 2 * PADDING;
 
-  ctx.restore();
-}
+      while (fontSize > minFont) {
+        ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
+        const lines = wrapText(text, maxWidth, ctx);
+        const totalHeight = lines.length * fontSize * 1.2;
+        if (totalHeight <= CANVAS_SIZE - 2 * PADDING) {
+          break;
+        }
+        fontSize -= 4;
+      }
 
-function drawBrat(text, bg) {
-  ctx.save();
-  const textColor = getContrastColor(bg);
+      ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
+      const lines = wrapText(text, maxWidth, ctx);
+      const totalHeight = lines.length * fontSize * 1.2;
+      let y = CANVAS_SIZE / 2 - totalHeight / 2 + fontSize * 0.1;
 
-  const innerWidth = CANVAS_SIZE - 2 * PADDING;
-  const maxHeight = CANVAS_SIZE * 0.75;
-  const maxFont = 200, minFont = 40;
+      for (const line of lines) {
+        ctx.fillText(line, CANVAS_SIZE / 2, y);
+        y += fontSize * 1.2;
+      }
 
-  let low = minFont, high = maxFont, bestFont = minFont, bestLines = [];
+      ctx.restore();
+    }
 
-  while (low <= high) {
-    const mid = (low + high) >> 1;
-    ctx.font = mid + "px 'Arial Narrow'";
-    const candidate = wrapWordsToLines(text, innerWidth, ctx);
-    const th = candidate.length * mid * 1.1;
+    /* ===== MODO BRAT (Arial Narrow, izq + justificado + blur) ===== */
+    function drawBrat(text, bg) {
+      ctx.save();
 
-    if (th <= maxHeight) {
-      bestFont = mid;
-      bestLines = candidate;
-      low = mid + 4;
-    } else high = mid - 4;
-  }
+      const textColor = getContrastColor(bg);
 
-  ctx.font = bestFont + "px 'Arial Narrow'";
+      const innerWidth = CANVAS_SIZE - 2 * PADDING;
+      const maxHeight = CANVAS_SIZE * 0.75; // altura permitida del bloque
+      const maxFont = 200;
+      const minFont = 40;
+
+      let low = minFont;
+      let high = maxFont;
+      let bestFont = minFont;
+      let bestLines = [];
+
+      // Búsqueda binaria para encontrar el tamaño de fuente ideal
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        ctx.font = mid + "px 'Arial Narrow', sans-serif";
+
+        const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
+        const totalHeight = candidateLines.length * mid * 1.1;
+
+        if (totalHeight <= maxHeight) {
+          bestFont = mid;
+          bestLines = candidateLines;
+          low = mid + 4;
+        } else {
+          high = mid - 4;
+        }
+      }
+
+  ctx.font = bestFont + "px 'Arial Narrow', sans-serif";
   ctx.textBaseline = "top";
   ctx.fillStyle = textColor;
-  const lh = bestFont * 1.1;
+  const lineHeight = bestFont * 1.1;
 
-  const blockH = bestLines.length * lh;
-  let y = (CANVAS_SIZE - blockH) / 2;
+  // 🔥 CENTRAR BLOQUE VERTICALMENTE
+  const blockHeight = bestLines.length * lineHeight;
+  let y = (CANVAS_SIZE - blockHeight) / 2;
 
+  // Dibujar líneas justificado + blur
   bestLines.forEach((words, idx) => {
-    const last = idx === bestLines.length - 1;
-    drawJustifiedLine(words, PADDING, y, innerWidth, last, ctx);
-    y += lh;
+    const isLast = idx === bestLines.length - 1;
+    drawJustifiedLine(words, PADDING, y, innerWidth, isLast, ctx);
+    y += lineHeight;
   });
 
   ctx.restore();
 }
+    
 
-function wrapText(text, maxWidth, ctx) {
-  const words = text.split(/\s+/);
-  const lines = [];
-  let line = "";
+    /* ===== UTILIDADES DE TEXTO ===== */
 
-  for (const w of words) {
-    const test = line ? line + " " + w : w;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = w;
-    } else line = test;
-  }
-  if (line) lines.push(line);
-  return lines;
-}
+    // Divide texto en líneas centradas (para modo normal)
+    function wrapText(text, maxWidth, ctx) {
+      const words = text.split(/\s+/);
+      const lines = [];
+      let line = "";
 
-function wrapWordsToLines(text, maxWidth, ctx) {
-  const words = text.split(/\s+/).filter(Boolean);
-  const lines = [];
-  let cur = [];
+      for (const w of words) {
+        const testLine = line ? line + " " + w : w;
+        const { width } = ctx.measureText(testLine);
+        if (width > maxWidth && line) {
+          lines.push(line);
+          line = w;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
 
-  words.forEach(w => {
-    const test = [...cur, w].join(" ");
-    if (ctx.measureText(test).width > maxWidth && cur.length > 0) {
-      lines.push(cur);
-      cur = [w];
-    } else cur.push(w);
-  });
+    // Para brat: devolvemos array de líneas, cada línea es array de palabras
+    function wrapWordsToLines(text, maxWidth, ctx) {
+      const words = text.split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = [];
 
-  if (cur.length) lines.push(cur);
-  return lines;
-}
+      words.forEach(w => {
+        const test = [...current, w].join(" ");
+        const { width } = ctx.measureText(test);
+        if (width > maxWidth && current.length > 0) {
+          lines.push(current);
+          current = [w];
+        } else {
+          current.push(w);
+        }
+      });
 
-function drawJustifiedLine(words, x, y, width, last, ctx) {
-  const baseSpace = ctx.measureText(" ").width;
+      if (current.length) lines.push(current);
+      return lines;
+    }
 
-  if (last || words.length === 1) {
-    let cx = x;
-    ctx.filter = "blur(3px)";
-    words.forEach(w => {
-      ctx.fillText(w, cx, y);
-      cx += ctx.measureText(w).width + baseSpace;
-    });
-    ctx.filter = "none";
-    return;
-  }
+    // Dibuja una línea justificada real (palabra por palabra)
+    function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
+      if (words.length === 0) return;
 
-  const wordsW = words.reduce((a, w) => a + ctx.measureText(w).width, 0);
-  const spaces = words.length - 1;
-  const extra = width - wordsW;
-  const spaceSize = extra / spaces;
+      const baseSpace = ctx.measureText(" ").width;
 
-  let cx = x;
-  ctx.filter = "blur(3px)";
-  words.forEach((w, i) => {
-    ctx.fillText(w, cx, y);
-    if (i < words.length - 1)
-      cx += ctx.measureText(w).width + spaceSize;
-  });
-  ctx.filter = "none";
-}
+      if (isLast || words.length === 1) {
+        // Última línea: normal
+        let cursorX = x;
+        ctx.filter = "blur(3px)";
+        for (let i = 0; i < words.length; i++) {
+          const w = words[i];
+          ctx.fillText(w, cursorX, y);
+          cursorX += ctx.measureText(w).width + baseSpace;
+        }
+        ctx.filter = "none";
+        return;
+      }
 
-function drawWatermark() {
-  ctx.save();
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = "#000";
-  ctx.font = "260px 'Arial Narrow'";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.translate(CANVAS_SIZE/2, CANVAS_SIZE/2);
-  ctx.rotate(-0.6);
-  ctx.filter = "blur(3px)";
-  ctx.fillText("@nachozorra", 0, 0);
-  ctx.restore();
-}
+      // Líneas intermedias: justificar
+      const wordsWidth = words.reduce(
+        (acc, w) => acc + ctx.measureText(w).width,
+        0
+      );
+      const totalSpaces = words.length - 1;
+      const extraSpaceTotal = lineWidth - wordsWidth;
+      const spaceSize = extraSpaceTotal / totalSpaces;
 
-function drawPlaceholder() {
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
-  ctx.font = "42px 'Felt Tip Roman'";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("Escribe algo abajo para generar 🦊", CANVAS_SIZE/2, CANVAS_SIZE/2);
-  ctx.restore();
-}
+      let cursorX = x;
+      ctx.filter = "blur(3px)";
 
-function getContrastColor(hex) {
-  hex = hex.replace("#","");
-  const r = parseInt(hex.slice(0,2),16);
-  const g = parseInt(hex.slice(2,4),16);
-  const b = parseInt(hex.slice(4,6),16);
-  return ((r*299 + g*587 + b*114)/1000) > 150 ? "#000" : "#fff";
-}
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        ctx.fillText(w, cursorX, y);
+        if (i < words.length - 1) {
+          cursorX += ctx.measureText(w).width + spaceSize;
+        }
+      }
 
-function downloadPNG() {
-  const a = document.createElement("a");
-  a.download = "nachozorra_" + Date.now() + ".png";
-  a.href = canvas.toDataURL();
-  a.click();
-}
-</script>
+      ctx.filter = "none";
+    }
+
+    /* ===== WATERMARK ===== */
+    function drawWatermark() {
+      ctx.save();
+      ctx.globalAlpha = 0.09;
+      ctx.fillStyle = "#000";
+      ctx.font = "240px 'Arial Narrow', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("@nachozorra", CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      ctx.restore();
+    }
+
+    /* ===== PLACEHOLDER ===== */
+    function drawPlaceholder() {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.font = "42px 'Felt Tip Roman', cursive";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        "Escribe algo abajo para generar tu frase 🦊",
+        CANVAS_SIZE / 2,
+        CANVAS_SIZE / 2
+      );
+      ctx.restore();
+    }
+
+    /* ===== CONTRASTE ===== */
+    function getContrastColor(hex) {
+      hex = hex.replace("#", "");
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness > 150 ? "#000000" : "#ffffff";
+    }
+
+    /* ===== DESCARGAR ===== */
+    function downloadPNG() {
+      const link = document.createElement("a");
+      link.download = "nachozorra_" + Date.now() + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  </script>
 
 </body>
 </html>
