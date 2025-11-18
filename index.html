@@ -181,12 +181,28 @@
     const PADDING = window.innerWidth < 600 ? 14 : 20;
 
 
-    // 📌 Igual que tu versión que funciona: esperamos a que carguen las fuentes
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(() => draw());
+    // 💚 Cargar explícitamente las fuentes que usamos en canvas
+    let fontsReadyPromise;
+
+    if (document.fonts && document.fonts.load) {
+      fontsReadyPromise = Promise.all([
+        document.fonts.load("80px 'Felt Tip Roman'"),
+        document.fonts.load("200px arial_narrowregular, 'Arial Narrow', sans-serif")
+      ]);
     } else {
-      window.onload = draw;
+      fontsReadyPromise = Promise.resolve();
     }
+
+    // Dibujar solo cuando las fuentes estén listas
+    fontsReadyPromise.then(() => {
+      draw();
+    });
+
+    // Por si acaso, si algo falla, aseguramos un draw mínimo al cargar la página
+    window.addEventListener("load", () => {
+      draw();
+    });
+
 
     input.addEventListener("input", draw);
     bgColorInput.addEventListener("input", draw);
@@ -269,13 +285,25 @@
     }
 
     /* ========= MODO BRAT (Arial Narrow, bloque centrado + justificado + blur) ========= */
-    function drawBrat(text, bg) {
+    function drawBrat(rawText, bg) {
       ctx.save();
 
+      // Texto en mayúsculas, muy al estilo Brat
+      const text = rawText.trim();
+      if (!text) {
+        ctx.restore();
+        return;
+      }
+
       const textColor = getContrastColor(bg);
-      const innerWidth = CANVAS_SIZE - 2 * PADDING;
-      const maxHeight = CANVAS_SIZE - 2 * PADDING; // altura permitida del bloque
-      const maxFont = 200;
+
+      // Caja interna tipo "textOverlay" del original
+      const boxWidth  = CANVAS_SIZE * 0.8;  // ~80% del ancho
+      const boxHeight = CANVAS_SIZE * 0.55; // algo más bajo que ancho
+      const boxX = (CANVAS_SIZE - boxWidth) / 2;
+      const boxY = (CANVAS_SIZE - boxHeight) / 2;
+
+      const maxFont = 230; // similar al Brat original en pantalla grande
       const minFont = 40;
 
       let low = minFont;
@@ -283,39 +311,36 @@
       let bestFont = minFont;
       let bestLines = [];
 
-      // 🔍 Búsqueda binaria para encontrar el tamaño de fuente ideal
+      // 🔎 Búsqueda binaria de tamaño de fuente que cabe en (boxWidth, boxHeight)
       while (low <= high) {
-        const mid = (low + high) >> 1; // (low + high) / 2 truncado
+        const mid = (low + high) >> 1;
         ctx.font = `${mid}px arial_narrowregular, 'Arial Narrow', sans-serif`;
 
-        const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
+        const candidateLines = wrapWordsToLines(text, boxWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1;
 
-        if (totalHeight <= maxHeight) {
-          // Cabe → probamos más grande
+        if (totalHeight <= boxHeight) {
           bestFont = mid;
           bestLines = candidateLines;
-          low = mid + 2; // paso de 2px para no tardar tanto
+          low = mid + 2;
         } else {
-          // No cabe → reducimos
           high = mid - 2;
         }
       }
 
-      // Usamos el mejor tamaño encontrado
+      // Usar el mejor fontSize encontrado
       ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
 
       const lineHeight = bestFont * 1.1;
-
-      // 🔥 Centrar verticalmente el bloque
       const blockHeight = bestLines.length * lineHeight;
-      let y = (CANVAS_SIZE - blockHeight) / 2;
 
-      // Dibujar líneas justificadas con blur
-      bestLines.forEach((words) => {
-        drawJustifiedLine(words, PADDING, y, innerWidth, ctx);
+      // Centrado vertical del bloque dentro de la caja
+      let y = boxY + (boxHeight - blockHeight) / 2;
+
+      bestLines.forEach(words => {
+        drawJustifiedLine(words, boxX, y, boxWidth, ctx);
         y += lineHeight;
       });
 
@@ -426,7 +451,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v8 🦊",
+        "v9 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
