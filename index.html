@@ -1,241 +1,228 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NachoZorra Generator 🦊</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NachoZorra Generator 🦊</title>
 
-<link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
+  <!-- Fuente Felt Tip Roman Bold -->
+  <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
 
-<style>
-:root {
---controls-h: 100px;
-}
+  <style>
+    :root {
+      --controls-h: 100px; /* altura de los controles fijos */
+    }
 
-body {
-background: #111;
-color: #fff;
-margin: 0;
-/* Dejamos la fuente en el body para elementos fuera de la tarjeta */
-font-family: 'Felt Tip Roman', cursive; 
-font-weight: 700;
-}
+    body {
+      background: #111;
+      color: #fff;
+      margin: 0;
+      font-family: 'Felt Tip Roman', cursive;
+      font-weight: 700;
+    }
 
-/* Área central para centrar el cuadro */
-#stage {
-min-height: calc(100vh - var(--controls-h));
-display: flex;
-align-items: center;
-justify-content: center;
-}
+    /* Área central para centrar el cuadro */
+    #stage {
+      min-height: calc(100vh - var(--controls-h));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-/* 1. CONTENEDOR PADRE DE LA PREVISUALIZACIÓN (Limita el área visible a 540x540) */
-#previewBox {
-width: 540px;
-height: 540px;
-display: flex;
-align-items: center;
-justify-content: center;
-overflow: hidden; 
-}
+    /* PREVIEW visible (más pequeño, centrado) */
+    #previewBox .card {
+      width: 540px;
+      height: 540px;
+      background: #fff;
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 100px;
+      overflow: hidden;
+      text-align: center;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    }
 
-/* 2. PREVIEW visible (AHORA 1080x1080, ESCALADO) */
-#previewBox .card {
-/* El tamaño interno es 1080x1080 para coincidir con la exportación */
-width: 1080px; 
-height: 1080px;
-background: #fff;
-color: #000;
-display: flex;
-align-items: center;
-justify-content: center;
-border-radius: 100px;
-overflow: hidden;
-text-align: center;
-box-shadow: 0 0 30px rgba(0, 0, 0, 0.4); 
+    #previewBox .text {
+      width: 100%;
+      font-size: 60px;
+      line-height: 1;
+      word-break: break-word;
+      white-space: pre-line;
+    }
 
-/* CLAVE: Escalar al 50% para que se vea 540x540 en pantalla */
-transform: scale(0.5); 
-transform-origin: center center; 
-}
+    /* EXPORT oculto (tamaño real 1080x1080) */
+    #exportBox {
+      position: absolute;
+      left: -99999px;
+      top: -99999px;
+    }
 
-/* 3. EXPORT oculto (CORRECCIÓN DE UBICACIÓN Y TAMAÑO) */
-#exportBox {
-/* Ocultación segura para html2canvas */
-position: fixed;
-top: 0;
-left: 0;
-width: 1px;
-height: 1px;
-overflow: hidden;
-opacity: 0; 
-pointer-events: none;
-z-index: -10; 
-}
+    #exportBox .card-1080 {
+      width: 1080px;
+      height: 1080px;
+      background: #fff;
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0%;
+      overflow: hidden;
+      text-align: center;
+    }
 
-#exportBox .card-1080 {
-width: 1080px;
-height: 1080px;
-background: #fff;
-color: #000;
-display: flex;
-align-items: center;
-justify-content: center;
-border-radius: 0%;
-overflow: hidden;
-text-align: center;
-}
+    #exportBox .text-1080 {
+      width: 90%;
+      font-size: 80px;
+      line-height: 1.2;
+      word-break: break-word;
+      white-space: pre-line;
+    }
 
-/* 4. CLASE DE TEXTO UNIFICADA (Aplica tanto a PREVIEW como a EXPORT) */
-.text-1080 {
-width: 90%;
-font-size: 80px;
-line-height: 1.2;
-word-break: break-word;
-white-space: pre-line;
-/* CLAVE: Forzar la fuente para asegurar consistencia en la captura */
-font-family: 'Felt Tip Roman', cursive;
-font-weight: 700;
-}
+    /* Controles */
+    .controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--controls-h);
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-top: 1px solid #333;
+    }
 
-/* Controles */
-.controls {
-position: fixed;
-bottom: 0;
-left: 0;
-right: 0;
-height: var(--controls-h);
-background: rgba(0, 0, 0, 0.9);
-color: #fff;
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-gap: 10px;
-border-top: 1px solid #333;
-}
+    input[type="text"] {
+      width: 80%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      font-size: 1.2em;
+      text-align: center;
+      font-family: 'Felt Tip Roman', cursive;
+      font-weight: 700;
+    }
 
-input[type="text"] {
-width: 80%;
-padding: 12px;
-border-radius: 10px;
-border: none;
-outline: none;
-font-size: 1.2em;
-text-align: center;
-font-family: 'Felt Tip Roman', cursive;
-font-weight: 700;
-}
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-.row {
-display: flex;
-align-items: center;
-gap: 10px;
-}
+    input[type="color"] {
+      width: 40px;
+      height: 30px;
+      border: none;
+      cursor: pointer;
+    }
 
-input[type="color"] {
-width: 40px;
-height: 30px;
-border: none;
-cursor: pointer;
-}
+    button {
+      background: #ff7b00;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 1em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
 
-button {
-background: #ff7b00;
-color: #fff;
-border: none;
-border-radius: 10px;
-padding: 10px 20px;
-font-size: 1em;
-font-weight: 700;
-cursor: pointer;
-transition: background 0.3s ease;
-}
-
-button:hover {
-background: #ff9b33;
-}
-</style>
+    button:hover {
+      background: #ff9b33;
+    }
+  </style>
 </head>
 <body>
-<main id="stage">
-<div id="previewBox">
-<div class="card">
-<div class="text-1080" id="previewText">NachoZorra Generator 🦊</div>
-</div>
-</div>
+  <main id="stage">
+    <!-- Cuadro visible (preview) -->
+    <div id="previewBox">
+      <div class="card">
+        <div class="text" id="previewText">NachoZorra Generator 🦊</div>
+      </div>
+    </div>
 
-<div id="exportBox">
-<div class="card-1080">
-<div class="text-1080" id="exportText">NachoZorra Generator 🦊</div>
-</div>
-</div>
-</main>
+    <!-- Cuadro oculto para exportar -->
+    <div id="exportBox">
+      <div class="card-1080">
+        <div class="text-1080" id="exportText">NachoZorra Generator 🦊</div>
+      </div>
+    </div>
+  </main>
 
-<div class="controls">
-<input id="textInput" type="text" placeholder="Escribe tu frase..." />
-<div class="row">
-<label for="bgColor">Color del fondo:</label>
-<input type="color" id="bgColor" value="#ffffff">
-<button id="downloadBtn">⬇️ Descargar PNG (1080×1080)</button>
-</div>
-</div>
+  <!-- Controles -->
+  <div class="controls">
+    <input id="textInput" type="text" placeholder="Escribe tu frase..." />
+    <div class="row">
+      <label for="bgColor">Color del fondo:</label>
+      <input type="color" id="bgColor" value="#ffffff">
+      <button id="downloadBtn">⬇️ Descargar PNG (1080×1080)</button>
+    </div>
+  </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Librería html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-<script>
-const input = document.getElementById('textInput');
-const color = document.getElementById('bgColor');
+  <script>
+    const input = document.getElementById('textInput');
+    const color = document.getElementById('bgColor');
 
-const previewCard = document.querySelector('#previewBox .card');
-const previewText = document.getElementById('previewText');
+    const previewCard = document.querySelector('#previewBox .card');
+    const previewText = document.getElementById('previewText');
 
-const exportCard = document.querySelector('#exportBox .card-1080');
-const exportText = document.getElementById('exportText');
+    const exportCard = document.querySelector('#exportBox .card-1080');
+    const exportText = document.getElementById('exportText');
 
-// Actualizar texto en ambos cuadros
-input.addEventListener('input', () => {
-const v = input.value || ' ';
-previewText.textContent = v;
-exportText.textContent = v;
-});
+    // Actualizar texto en ambos cuadros
+    input.addEventListener('input', () => {
+      const v = input.value || ' ';
+      previewText.textContent = v;
+      exportText.textContent = v;
+    });
 
-// Cambiar color de fondo y contraste del texto
-color.addEventListener('input', () => {
-previewCard.style.backgroundColor = color.value;
-exportCard.style.backgroundColor = color.value;
+    // Cambiar color de fondo y contraste del texto
+    color.addEventListener('input', () => {
+      previewCard.style.backgroundColor = color.value;
+      exportCard.style.backgroundColor = color.value;
 
-const txtColor = getContrastColor(color.value);
-previewText.style.color = txtColor;
-exportText.style.color = txtColor;
-});
+      const txtColor = getContrastColor(color.value);
+      previewText.style.color = txtColor;
+      exportText.style.color = txtColor;
+    });
 
-// Descargar PNG 1080x1080
-document.getElementById('downloadBtn').addEventListener('click', async () => {
-await document.fonts?.ready?.catch(() => {});
-const node = document.querySelector('#exportBox .card-1080');
+    // Descargar PNG 1080x1080
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+      await document.fonts?.ready?.catch(() => {});
+      const node = document.querySelector('#exportBox .card-1080');
 
-// Se eliminaron width/height para confiar en el nodo HTML 1080x1080
-const canvas = await html2canvas(node, {
-backgroundColor: null,
-scale: 1, // Escala 1:1 para resolución real
-});
+      const canvas = await html2canvas(node, {
+        backgroundColor: null,
+        scale: 1,
+        width: 1080,
+        height: 1080
+      });
 
-const link = document.createElement('a');
-link.download = 'nachozorra_1080x1080.png';
-link.href = canvas.toDataURL('image/png');
-link.click();
-});
+      const link = document.createElement('a');
+      link.download = 'nachozorra_1080x1080.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
 
-// Contraste automático (texto blanco o negro según fondo)
-function getContrastColor(hex) {
-hex = hex.replace('#', '');
-const r = parseInt(hex.slice(0, 2), 16);
-const g = parseInt(hex.slice(2, 4), 16);
-const b = parseInt(hex.slice(4, 6), 16);
-const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-return brightness > 150 ? '#000' : '#fff';
-}
-</script>
+    // Contraste automático (texto blanco o negro según fondo)
+    function getContrastColor(hex) {
+      hex = hex.replace('#', '');
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness > 150 ? '#000' : '#fff';
+    }
+  </script>
 </body>
 </html>
