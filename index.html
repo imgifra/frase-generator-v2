@@ -283,10 +283,10 @@
         }
       }
 
-      ctx.font = bestFont + "px 'Archivo Narrow', sans-serif";
+      ctx.font = `600 ${bestFont}px 'Archivo Narrow', sans-serif`;
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
-      const lineHeight = bestFont * 1.1;
+      const lineHeight = bestFont * 1.06;
 
       // 🔥 CENTRAR BLOQUE VERTICALMENTE
       const blockHeight = bestLines.length * lineHeight;
@@ -403,7 +403,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v5 🦊",
+        "v6 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
