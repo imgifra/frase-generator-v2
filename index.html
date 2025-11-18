@@ -7,7 +7,8 @@
 
   <!-- Fuentes -->
   <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
-  <link href="https://fonts.cdnfonts.com/css/arial-narrow" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 
   <!-- Tailwind para layout de controles -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -160,7 +161,8 @@
     const downloadBtn = document.getElementById("downloadBtn");
 
     const CANVAS_SIZE = 1080;
-    const PADDING = 80;
+    const PADDING = window.innerWidth < 600 ? 14 : 20;
+
 
     // 📌 Igual que tu versión que funciona: esperamos a que carguen las fuentes
     if (document.fonts && document.fonts.ready) {
@@ -255,7 +257,7 @@
 
       const textColor = getContrastColor(bg);
       const innerWidth = CANVAS_SIZE - 2 * PADDING;
-      const maxHeight = CANVAS_SIZE * 0.75; // altura permitida del bloque
+      const maxHeight = CANVAS_SIZE - PADDING * 2; // altura permitida del bloque
       const maxFont = 200;
       const minFont = 40;
 
@@ -267,7 +269,7 @@
       // Búsqueda binaria para encontrar el tamaño de fuente ideal
       while (low <= high) {
         const mid = (low + high) >> 1;
-        ctx.font = mid + "px 'Arial Narrow', sans-serif";
+        ctx.font = mid + "px 'Archivo Narrow', sans-serif";
 
         const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1;
@@ -281,7 +283,7 @@
         }
       }
 
-      ctx.font = bestFont + "px 'Arial Narrow', sans-serif";
+      ctx.font = bestFont + "px 'Archivo Narrow', sans-serif";
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
       const lineHeight = bestFont * 1.1;
@@ -345,25 +347,25 @@
     function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
       if (!words || words.length === 0) return;
 
-      // Si solo hay una palabra, no tiene sentido estirar: se dibuja normal con blur
+      // Siempre justificar, incluso la última línea (como Bratgenerator)
       if (words.length === 1) {
-        ctx.filter = "blur(3px)";
+        ctx.filter = "blur(2px)";
         ctx.fillText(words[0], x, y);
         ctx.filter = "none";
         return;
       }
 
-      // TODAS las líneas (incluida la última) se justifican
       const wordsWidth = words.reduce(
         (acc, w) => acc + ctx.measureText(w).width,
         0
       );
+
       const totalSpaces = words.length - 1;
       const extraSpaceTotal = lineWidth - wordsWidth;
       const spaceSize = extraSpaceTotal / totalSpaces;
 
       let cursorX = x;
-      ctx.filter = "blur(3px)";
+      ctx.filter = "blur(2px)";
 
       for (let i = 0; i < words.length; i++) {
         const w = words[i];
@@ -376,13 +378,14 @@
       ctx.filter = "none";
     }
 
+
     
     /* ========= WATERMARK DIAGONAL ========= */
     function drawWatermark() {
       ctx.save();
-      ctx.globalAlpha = 0.08;
+      ctx.globalAlpha = 0.1;
       ctx.fillStyle = getContrastColor(bgColorInput.value);
-      ctx.font = "200px 'Arial Narrow', sans-serif";
+      ctx.font = "200px 'Archivo Narrow', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
@@ -400,7 +403,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V3 🦊",
+        "v4 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
