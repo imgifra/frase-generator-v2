@@ -1,307 +1,289 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NachoZorra Generator</title>
 
-    <title>NachoZorra Generator 🦊</title>
+<!-- Fuente felt tip -->
+<link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
+<!-- Fuente estilo brat -->
+<link href="https://fonts.googleapis.com/css2?family=Arial+Narrow&display=swap" rel="stylesheet">
 
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
+<style>
+    :root {
+        --felt: 'Felt Tip Roman', cursive;
+        --brat-font: 'Arial Narrow', sans-serif;
+        --brat-green: #8ACF00;
+    }
 
-    <!-- Felt Tip Roman -->
-    <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
+    body {
+        margin: 0;
+        background: #111;
+        color: #fff;
+        font-family: var(--felt);
+        overflow-x: hidden;
+    }
 
-    <style>
-        :root {
-            --font-normal: 'Felt Tip Roman', cursive;
-            --font-brat: 'Helvetica Neue', Arial, sans-serif;
-        }
+    /* CONTROLES */
+    .controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0,0,0,0.85);
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        backdrop-filter: blur(6px);
+        z-index: 1000;
+    }
 
-        body {
-            margin: 0;
-            background: #f3f4f6;
-            height: 100vh;
-            overflow: hidden;
-        }
+    .mode-switch {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
 
-        .preview-container {
-            width: 100%;
-            height: calc(100vh - 150px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 10px;
+        background: #ff7b00;
+        color: #fff;
+        cursor: pointer;
+        font-family: var(--felt);
+        font-size: 18px;
+        font-weight: bold;
+    }
 
-        #previewCanvas {
-            width: min(90vw, 90vh);
-            aspect-ratio: 1/1;
-            box-shadow: 0 10px 25px -3px rgba(0,0,0,0.25);
-            border-radius: 1rem;
-        }
+    button.active {
+        background: #ffc266;
+        color: #000;
+    }
 
-        .control-panel {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            padding: 1rem;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid #ddd;
-        }
+    input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        border-radius: 12px;
+        border: none;
+        outline: none;
+        font-size: 1.3em;
+        text-align: center;
+        font-family: var(--felt);
+    }
 
-        .toggle {
-            width: 60px;
-            height: 30px;
-            background: #ccc;
-            border-radius: 30px;
-            padding: 3px;
-            cursor: pointer;
-            position: relative;
-            transition: 0.3s;
-        }
+    /* AREA PRINCIPAL */
+    #stage {
+        padding-bottom: 170px; 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
 
-        .toggle-circle {
-            width: 24px;
-            height: 24px;
-            background: #fff;
-            border-radius: 50%;
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            transition: transform 0.3s;
-        }
+    /* NORMAL (CANVAS) */
+    #normalBox {
+        display: none;
+    }
 
-        .toggle.active {
-            background: #4ade80;
-        }
+    #normalCanvas {
+        width: 90vw;
+        max-width: 540px;
+        aspect-ratio: 1;
+        border-radius: 40px;
+        background: white;
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
 
-        .toggle.active .toggle-circle {
-            transform: translateX(30px);
-        }
-    </style>
+    /* BRAT MODE */
+    #bratBox {
+        display: none;
+    }
+
+    .brat-container {
+        width: 90vw;
+        max-width: 540px;
+        aspect-ratio: 1;
+        background: var(--brat-green);
+        position: relative;
+        overflow: hidden;
+        padding: 40px;
+    }
+
+    /* Watermark gigante */
+    .brat-watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: var(--brat-font);
+        font-size: 420px;
+        opacity: 0.10;
+        color: #000;
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+        z-index: 1;
+    }
+
+    /* Texto principal estilo brat */
+    .brat-text {
+        position: relative;
+        font-family: var(--brat-font);
+        font-size: 140px;
+        line-height: 0.85;
+        color: black;
+        text-align: justify;
+        text-align-last: justify;
+        filter: blur(2.5px);
+        word-break: break-word;
+        z-index: 10;
+    }
+
+</style>
 </head>
 
 <body>
 
-    <div class="preview-container">
-        <canvas id="previewCanvas" width="1080" height="1080"></canvas>
+<div id="stage">
+
+    <!-- NORMAL MODE -->
+    <div id="normalBox">
+        <canvas id="normalCanvas" width="1080" height="1080"></canvas>
     </div>
 
-    <div class="control-panel flex flex-col md:flex-row items-center justify-center space-y-3 md:space-y-0 md:space-x-4">
-
-        <div class="flex items-center space-x-3">
-            <span class="font-bold">Modo:</span>
-            <div id="modeToggle" class="toggle"><div class="toggle-circle"></div></div>
-            <span id="modeLabel" class="font-semibold">Normal</span>
+    <!-- BRAT MODE -->
+    <div id="bratBox">
+        <div class="brat-container" id="bratContainer">
+            <div class="brat-watermark">@nachozorra</div>
+            <div class="brat-text" id="bratText">brat</div>
         </div>
-
-        <input id="textInput" type="text" placeholder="Escribe tu frase..."
-            class="w-full md:w-2/4 p-3 border-2 rounded-xl">
-
-        <div class="flex items-center space-x-3">
-            <span class="font-semibold">Fondo:</span>
-            <input id="bgColorInput" type="color" value="#ffffff" class="w-10 h-10 rounded-full shadow">
-        </div>
-
-        <button id="downloadBtn"
-            class="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">
-            Descargar PNG
-        </button>
-
     </div>
 
-    <script>
-        const canvas = document.getElementById("previewCanvas");
-        const ctx = canvas.getContext("2d");
+</div>
 
-        const textInput = document.getElementById("textInput");
-        const bgColorInput = document.getElementById("bgColorInput");
-        const downloadBtn = document.getElementById("downloadBtn");
+<!-- CONTROLES -->
+<div class="controls">
+    <input id="textInput" type="text" placeholder="Escribe tu frase..." />
 
-        const modeToggle = document.getElementById("modeToggle");
-        const modeLabel = document.getElementById("modeLabel");
+    <div class="mode-switch">
+        <button id="btnNormal">NORMAL</button>
+        <button id="btnBrat">BRAT</button>
+    </div>
 
-        let mode = "normal";
+    <button id="downloadBtn">⬇️ Descargar PNG</button>
+</div>
 
-        const CANVAS_SIZE = 1080;
-        const PADDING = 100;
-        const MAX_FONT_SIZE = 180;
-        const MIN_FONT_SIZE = 48;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-        function hexToRgb(hex) {
-            const n = parseInt(hex.slice(1), 16);
-            return [(n>>16)&255, (n>>8)&255, n&255];
-        }
+<script>
+/* -------------------------------------------------------------
+   ELEMENTOS
+------------------------------------------------------------- */
+const input = document.getElementById("textInput");
+const btnNormal = document.getElementById("btnNormal");
+const btnBrat = document.getElementById("btnBrat");
 
-        function isDarkColor(hex) {
-            const [r,g,b] = hexToRgb(hex);
-            const L = (0.2126*r + 0.7152*g + 0.0722*b)/255;
-            return L < 0.55;
-        }
+const normalBox = document.getElementById("normalBox");
+const bratBox = document.getElementById("bratBox");
 
-        /* WRAP SIN BLUR */
-        function wrapText(text, maxWidth, fontSize, font) {
-            ctx.filter = "none";
-            ctx.font = `${fontSize}px ${font}`;
+const bratText = document.getElementById("bratText");
+const bratContainer = document.getElementById("bratContainer");
 
-            const words = text.split(" ");
-            let line = "";
-            const lines = [];
+const normalCanvas = document.getElementById("normalCanvas");
+const ctx = normalCanvas.getContext("2d");
 
-            for (let w of words) {
-                const t = line + w + " ";
-                if (ctx.measureText(t).width > maxWidth && line !== "") {
-                    lines.push(line.trim());
-                    line = w + " ";
-                } else {
-                    line = t;
-                }
-            }
-            if (line.trim()) lines.push(line.trim());
+/* -------------------------------------------------------------
+   SWITCH DE MODO
+------------------------------------------------------------- */
+function activateNormal() {
+    normalBox.style.display = "block";
+    bratBox.style.display = "none";
+    btnNormal.classList.add("active");
+    btnBrat.classList.remove("active");
+    drawNormal();
+}
 
-            return lines;
-        }
+function activateBrat() {
+    normalBox.style.display = "none";
+    bratBox.style.display = "block";
+    btnNormal.classList.remove("active");
+    btnBrat.classList.add("active");
+    drawBrat();
+}
 
-        /* JUSTIFY SIN BLUR PARA CALCULAR ESPACIOS */
-        function drawJustified(line, x, y, maxWidth, fontSize, font, textColor) {
+btnNormal.onclick = activateNormal;
+btnBrat.onclick = activateBrat;
 
-            ctx.save();
-            ctx.filter = "none";
-            ctx.font = `${fontSize}px ${font}`;
-            ctx.fillStyle = textColor;
+/* -------------------------------------------------------------
+   ACTUALIZAR TEXTO
+------------------------------------------------------------- */
+input.addEventListener("input", () => {
+    drawNormal();
+    drawBrat();
+});
 
-            const words = line.split(" ");
+/* -------------------------------------------------------------
+   MODO NORMAL (CANVAS)
+------------------------------------------------------------- */
+function drawNormal() {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 1080, 1080);
 
-            if (words.length === 1) {
-                ctx.restore();
-                ctx.fillText(line, x, y);
-                return;
-            }
+    ctx.fillStyle = "#000";
+    ctx.font = "70px 'Felt Tip Roman'";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(input.value, 540, 540);
+}
 
-            const pureWidth = ctx.measureText(line).width;
-            const extra = (maxWidth - pureWidth) / (words.length - 1);
+/* -------------------------------------------------------------
+   MODO BRAT (HTML + CSS)
+------------------------------------------------------------- */
+function drawBrat() {
+    let txt = input.value.trim();
+    if (txt.length === 0) txt = "brat";
 
-            let ox = x - maxWidth / 2;
+    bratText.textContent = txt;
 
-            ctx.restore(); // Vuelve al blur actual pero mantiene coordenadas
+    // ESCALADO DINÁMICO DE FUENTE
+    let base = 140;
+    let long = txt.length;
 
-            ctx.fillStyle = textColor;
-            ctx.font = `${fontSize}px ${font}`;
+    if (long > 20) base -= (long - 20) * 3;
+    if (base < 60) base = 60;
 
-            words.forEach((w,i)=>{
-                ctx.fillText(w, ox, y);
-                ox += ctx.measureText(w).width + extra;
-            });
-        }
+    bratText.style.fontSize = base + "px";
 
-        /* WATERMARK NORMAL */
-        function watermarkNormal() {
-            ctx.save();
-            ctx.globalAlpha = 0.09;
-            ctx.fillStyle = "#000";
-            ctx.font = `220px var(--font-normal)`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.translate(CANVAS_SIZE/2, CANVAS_SIZE/2);
-            ctx.rotate(-Math.PI/6);
-            ctx.fillText("@nachozorra", 0, 0);
-            ctx.restore();
-        }
+    // BLUR dinámico
+    let blur = 2 + Math.min(long / 20, 3);
+    bratText.style.filter = `blur(${blur}px)`;
+}
 
-        /* WATERMARK BRAT */
-        function watermarkBrat() {
-            ctx.save();
-            ctx.globalAlpha = 0.035;
-            ctx.fillStyle = "#000";
-            ctx.font = `320px var(--font-brat)`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.translate(CANVAS_SIZE/2, CANVAS_SIZE/2);
-            ctx.rotate(-Math.PI/6);
-            ctx.fillText("@nachozorra", 0, 0);
-            ctx.restore();
-        }
+/* -------------------------------------------------------------
+   DESCARGA PNG (html2canvas)
+------------------------------------------------------------- */
+document.getElementById("downloadBtn").onclick = async () => {
+    let element = bratBox.style.display === "block"
+        ? bratContainer
+        : normalCanvas;
 
-        /* DIBUJO PRINCIPAL */
-        function draw() {
-            const text = textInput.value.trim();
-            const bgColor = bgColorInput.value;
+    const canvas = await html2canvas(element, {
+        backgroundColor: null,
+        scale: 1
+    });
 
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    const link = document.createElement("a");
+    link.download = "nachozorra.png";
+    link.href = canvas.toDataURL();
+    link.click();
+};
 
-            if (!text) return;
-
-            if (mode === "normal") watermarkNormal();
-            else watermarkBrat();
-
-            /* CÁLCULOS SIN BLUR */
-            ctx.filter = "none";
-
-            const density = Math.log(1 + text.length);
-            let fontSize = MAX_FONT_SIZE / (1 + density * (mode === "brat" ? 0.55 : 0.25));
-            fontSize = Math.max(fontSize, MIN_FONT_SIZE);
-
-            const font = mode === "brat" ? "var(--font-brat)" : "var(--font-normal)";
-            const maxWidth = CANVAS_SIZE - PADDING * 2;
-
-            ctx.font = `${fontSize}px ${font}`;
-
-            const lines = wrapText(text, maxWidth, fontSize, font);
-            const lineHeight = fontSize * 1.22;
-
-            let y = (CANVAS_SIZE - lines.length * lineHeight) / 2;
-
-            const textColor = isDarkColor(bgColor) ? "#fff" : "#111";
-
-            /* AHORA SÍ ACTIVAMOS BLUR PARA DIBUJAR */
-            if (mode === "brat") {
-                ctx.filter = `blur(${density * 0.8}px)`;
-            } else {
-                ctx.filter = "none";
-            }
-
-            ctx.fillStyle = textColor;
-
-            lines.forEach(line => {
-                if (mode === "brat") {
-                    drawJustified(line, CANVAS_SIZE/2, y, maxWidth, fontSize, font, textColor);
-                } else {
-                    /* Outline */
-                    ctx.lineWidth = Math.max(4, fontSize*0.06);
-                    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-                    ctx.strokeText(line, CANVAS_SIZE/2, y);
-                    ctx.fillText(line, CANVAS_SIZE/2, y);
-                }
-                y += lineHeight;
-            });
-        }
-
-        /* DESCARGAR */
-        downloadBtn.addEventListener("click", () => {
-            draw();
-            const url = canvas.toDataURL("image/png");
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "nachozorra_" + Date.now() + ".png";
-            a.click();
-        });
-
-        /* SWITCH */
-        modeToggle.addEventListener("click", ()=>{
-            modeToggle.classList.toggle("active");
-            mode = mode === "normal" ? "brat" : "normal";
-            modeLabel.textContent = mode === "normal" ? "Normal" : "Brat";
-            draw();
-        });
-
-        textInput.addEventListener("input", draw);
-        bgColorInput.addEventListener("input", draw);
-
-        window.onload = draw;
-    </script>
+/* Inicio en modo NORMAL */
+activateNormal();
+</script>
 
 </body>
 </html>
-
