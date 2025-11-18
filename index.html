@@ -9,14 +9,15 @@
 
 <style>
 :root {
---controls-h: 100px; /* altura de los controles fijos */
+--controls-h: 100px;
 }
 
 body {
 background: #111;
 color: #fff;
 margin: 0;
-font-family: 'Felt Tip Roman', cursive;
+/* Dejamos la fuente aquí para el resto de la página */
+font-family: 'Felt Tip Roman', cursive; 
 font-weight: 700;
 }
 
@@ -28,24 +29,20 @@ align-items: center;
 justify-content: center;
 }
 
-/* ************************************************************ */
-/* CAMBIO 1: Contenedor Padre de la Previsualización (540x540) */
-/* ************************************************************ */
+/* 1. CONTENEDOR PADRE DE LA PREVISUALIZACIÓN (Limita el área visible a 540x540) */
 #previewBox {
 width: 540px;
 height: 540px;
-display: flex; /* Aseguramos que el card centrado se mantenga */
+display: flex;
 align-items: center;
 justify-content: center;
 overflow: hidden; 
 }
 
-/* ************************************************************ */
-/* CAMBIO 2: PREVIEW visible (AHORA 1080x1080 ESCALADO)        */
-/* ************************************************************ */
+/* 2. PREVIEW visible (AHORA 1080x1080, ESCALADO) */
 #previewBox .card {
-/* El tamaño interno del card es 1080x1080, idéntico al de exportación */
-width: 1080px;
+/* El tamaño interno es 1080x1080 para coincidir con la exportación */
+width: 1080px; 
 height: 1080px;
 background: #fff;
 color: #000;
@@ -55,30 +52,16 @@ justify-content: center;
 border-radius: 100px;
 overflow: hidden;
 text-align: center;
-box-shadow: 0 0 30px rgba(0, 0, 0, 0.4); /* Sombra ajustada */
+box-shadow: 0 0 30px rgba(0, 0, 0, 0.4); 
 
-/* CLAVE: Escalar el contenido a 50% para que visualmente se vea 540x540 */
-transform: scale(0.5);
-transform-origin: center center; /* Centrar la transformación */
+/* CLAVE: Escalar al 50% para que se vea 540x540 en pantalla */
+transform: scale(0.5); 
+transform-origin: center center; 
 }
 
-/* ************************************************************ */
-/* CAMBIO 3: ELIMINAR ESTILOS DE TEXTO DUPLICADOS               */
-/* ************************************************************ */
-/*
-#previewBox .text {
-width: 100%;
-font-size: 60px;
-line-height: 1;
-word-break: break-word;
-white-space: pre-line;
-}
-*/
-
-/* ************************************************************ */
-/* CAMBIO 4: EXPORT oculto (CORRECCIÓN DE UBICACIÓN Y TAMAÑO)   */
-/* ************************************************************ */
+/* 3. EXPORT oculto (CORRECCIÓN DE UBICACIÓN Y TAMAÑO) */
 #exportBox {
+/* Ocultación segura para html2canvas */
 position: fixed;
 top: 0;
 left: 0;
@@ -103,13 +86,16 @@ overflow: hidden;
 text-align: center;
 }
 
-#exportBox .text-1080 {
-/* Estos estilos ahora controlan TANTO la previsualización como la descarga */
+/* 4. CLASE DE TEXTO UNIFICADA (Aplica tanto a PREVIEW como a EXPORT) */
+.text-1080 {
 width: 90%;
 font-size: 80px;
 line-height: 1.2;
 word-break: break-word;
 white-space: pre-line;
+/* CLAVE: Forzar la fuente para asegurar consistencia en la captura */
+font-family: 'Felt Tip Roman', cursive;
+font-weight: 700;
 }
 
 /* Controles */
@@ -202,7 +188,7 @@ const input = document.getElementById('textInput');
 const color = document.getElementById('bgColor');
 
 const previewCard = document.querySelector('#previewBox .card');
-const previewText = document.getElementById('previewText'); // ¡Ahora con la clase text-1080!
+const previewText = document.getElementById('previewText');
 
 const exportCard = document.querySelector('#exportBox .card-1080');
 const exportText = document.getElementById('exportText');
@@ -229,12 +215,10 @@ document.getElementById('downloadBtn').addEventListener('click', async () => {
 await document.fonts?.ready?.catch(() => {});
 const node = document.querySelector('#exportBox .card-1080');
 
-// ************************************************************
-// CAMBIO 6: html2canvas sin width/height para confiar en el nodo 1080x1080
-// ************************************************************
+// Se eliminaron width/height para confiar en el nodo HTML 1080x1080
 const canvas = await html2canvas(node, {
 backgroundColor: null,
-scale: 1,
+scale: 1, // Escala 1:1 para resolución real
 });
 
 const link = document.createElement('a');
