@@ -237,6 +237,57 @@
       ctx.restore();
     }
 
+    /* ========= MODO BRAT (Arial Narrow, bloque centrado + justificado + blur) ========= */
+    function drawBrat(text, bg) {
+      ctx.save();
+
+      const textColor = getContrastColor(bg);
+      const innerWidth = CANVAS_SIZE - 2 * PADDING;
+      const maxHeight = CANVAS_SIZE * 0.75; // altura permitida del bloque
+      const maxFont = 200;
+      const minFont = 40;
+
+      let low = minFont;
+      let high = maxFont;
+      let bestFont = minFont;
+      let bestLines = [];
+
+      // Búsqueda binaria para encontrar el tamaño de fuente ideal
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        ctx.font = mid + "px 'Arial Narrow', sans-serif";
+
+        const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
+        const totalHeight = candidateLines.length * mid * 1.1;
+
+        if (totalHeight <= maxHeight) {
+          bestFont = mid;
+          bestLines = candidateLines;
+          low = mid + 4;
+        } else {
+          high = mid - 4;
+        }
+      }
+
+      ctx.font = bestFont + "px 'Arial Narrow', sans-serif";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = textColor;
+      const lineHeight = bestFont * 1.1;
+
+      // 🔥 CENTRAR BLOQUE VERTICALMENTE
+      const blockHeight = bestLines.length * lineHeight;
+      let y = (CANVAS_SIZE - blockHeight) / 2;
+
+      // Dibujar líneas justificado + blur
+      bestLines.forEach((words, idx) => {
+        const isLast = idx === bestLines.length - 1;
+        drawJustifiedLine(words, PADDING, y, innerWidth, isLast, ctx);
+        y += lineHeight;
+      });
+
+      ctx.restore();
+    }
+
     /* ========= UTILIDADES DE TEXTO ========= */
 
     function wrapText(text, maxWidth, ctxLocal) {
@@ -279,72 +330,40 @@
       return lines;
     }
 
-    function drawBrat(text, bg) {
-      ctx.save();
-      const textColor = getContrastColor(bg);
+    function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
+      if (!words || words.length === 0) return;
 
-      const innerWidth = CANVAS_SIZE - 2 * PADDING;
-      const maxHeight = CANVAS_SIZE * 0.75;
-      const maxFont = 200, minFont = 40;
-
-      let low = minFont, high = maxFont, bestFont = minFont, bestLines = [];
-
-      // Búsqueda binaria del tamaño de letra
-      while (low <= high) {
-        const mid = (low + high) >> 1;
-        ctx.font = `${mid}px ${BRAT_FONT_FAMILY}`;
-        const candidate = wrapWordsToLines(text, innerWidth, ctx);
-        const th = candidate.length * mid * 1.1;
-
-        if (th <= maxHeight) {
-          bestFont = mid;
-          bestLines = candidate;
-          low = mid + 4;
-        } else {
-          high = mid - 4;
-        }
+      // Si solo hay una palabra, no tiene sentido estirar: se dibuja normal con blur
+      if (words.length === 1) {
+        ctx.filter = "blur(3px)";
+        ctx.fillText(words[0], x, y);
+        ctx.filter = "none";
+        return;
       }
 
-      ctx.font = `${bestFont}px ${BRAT_FONT_FAMILY}`;
-      ctx.textBaseline = "top";
-      ctx.fillStyle = textColor;
-      const lineHeight = bestFont * 1.1;
-
-      // Arrancamos desde arriba del bloque
-      let y = PADDING;
-
-      bestLines.forEach(words => {
-        drawJustifiedLine(words, PADDING, y, innerWidth, ctx);
-        y += lineHeight;
-      });
-
-      ctx.restore();
-    }
-
-    // Todas las líneas justificadas (como brat)
-    function drawJustifiedLine(words, x, y, lineWidth, ctx) {
-      if (!words.length) return;
-
+      // TODAS las líneas (incluida la última) se justifican
       const wordsWidth = words.reduce(
         (acc, w) => acc + ctx.measureText(w).width,
         0
       );
-      const gaps = Math.max(words.length - 1, 1);
-      const extraSpaceTotal = Math.max(lineWidth - wordsWidth, 0);
-      const spaceSize = extraSpaceTotal / gaps;
+      const totalSpaces = words.length - 1;
+      const extraSpaceTotal = lineWidth - wordsWidth;
+      const spaceSize = extraSpaceTotal / totalSpaces;
 
       let cursorX = x;
       ctx.filter = "blur(3px)";
 
-      words.forEach((w, i) => {
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
         ctx.fillText(w, cursorX, y);
         if (i < words.length - 1) {
           cursorX += ctx.measureText(w).width + spaceSize;
         }
-      });
+      }
 
       ctx.filter = "none";
-    }    
+    }
+
     
     /* ========= WATERMARK DIAGONAL ========= */
     function drawWatermark() {
@@ -369,7 +388,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V2 🦊",
+        "V3 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
