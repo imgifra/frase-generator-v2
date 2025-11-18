@@ -180,8 +180,11 @@
             return lines;
         }
 
-        /* JUSTIFICACIÓN estilo bratgenerator */
+
+
         function drawJustified(line, x, y, maxWidth, fontSize, textColor) {
+            ctx.fillStyle = textColor;   // ← COLOR CORRECTO
+
             const words = line.split(" ");
             if (words.length === 1) {
                 ctx.fillText(line, x, y);
@@ -198,6 +201,7 @@
                 currentX += ctx.measureText(word).width + (i < words.length - 1 ? spaceExtra : 0);
             });
         }
+
 
         /* MARCA DE AGUA NORMAL */
         function watermarkNormal() {
