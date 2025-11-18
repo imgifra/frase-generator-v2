@@ -246,8 +246,8 @@
       const textColor = getContrastColor(bg);
 
       const innerWidth = CANVAS_SIZE - 2 * PADDING;
-      const maxHeight = CANVAS_SIZE * 0.5; // solo parte superior
-      const maxFont = 220;
+      const maxHeight = CANVAS_SIZE * 0.75; // altura permitida del bloque
+      const maxFont = 200;
       const minFont = 40;
 
       let low = minFont;
@@ -255,7 +255,7 @@
       let bestFont = minFont;
       let bestLines = [];
 
-      // Binary search para llenar alto/ancho
+      // Búsqueda binaria para encontrar el tamaño de fuente ideal
       while (low <= high) {
         const mid = (low + high) >> 1;
         ctx.font = mid + "px 'Arial Narrow', sans-serif";
@@ -263,12 +263,7 @@
         const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1;
 
-        const fitsHeight = totalHeight <= maxHeight;
-        const fitsWidth = candidateLines.every(line =>
-          ctx.measureText(line.join(" ")).width <= innerWidth
-        );
-
-        if (fitsHeight && fitsWidth) {
+        if (totalHeight <= maxHeight) {
           bestFont = mid;
           bestLines = candidateLines;
           low = mid + 4;
@@ -277,21 +272,25 @@
         }
       }
 
-      ctx.font = bestFont + "px 'Arial Narrow', sans-serif";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = textColor;
-      const lineHeight = bestFont * 1.1;
+  ctx.font = bestFont + "px 'Arial Narrow', sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = textColor;
+  const lineHeight = bestFont * 1.1;
 
-      let y = PADDING;
+  // 🔥 CENTRAR BLOQUE VERTICALMENTE
+  const blockHeight = bestLines.length * lineHeight;
+  let y = (CANVAS_SIZE - blockHeight) / 2;
 
-      bestLines.forEach((words, idx) => {
-        const isLast = idx === bestLines.length - 1;
-        drawJustifiedLine(words, PADDING, y, innerWidth, isLast, ctx);
-        y += lineHeight;
-      });
+  // Dibujar líneas justificado + blur
+  bestLines.forEach((words, idx) => {
+    const isLast = idx === bestLines.length - 1;
+    drawJustifiedLine(words, PADDING, y, innerWidth, isLast, ctx);
+    y += lineHeight;
+  });
 
-      ctx.restore();
-    }
+  ctx.restore();
+}
+    
 
     /* ===== UTILIDADES DE TEXTO ===== */
 
