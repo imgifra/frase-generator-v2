@@ -3,286 +3,317 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NachoZorra Generator</title>
+<title>NachoZorra Generator 🦊</title>
 
-<!-- Fuente felt tip -->
+<!-- Felt Tip Roman (modo normal) -->
 <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
-<!-- Fuente estilo brat -->
-<link href="https://fonts.googleapis.com/css2?family=Arial+Narrow&display=swap" rel="stylesheet">
+
+<!-- Arial Narrow (modo BRAT real) -->
+<link href="https://fonts.cdnfonts.com/css/arial-narrow" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
 
 <style>
     :root {
+        --controls-h: 110px;
         --felt: 'Felt Tip Roman', cursive;
-        --brat-font: 'Arial Narrow', sans-serif;
-        --brat-green: #8ACF00;
+        --brat: 'Arial Narrow', sans-serif;
     }
 
     body {
-        margin: 0;
         background: #111;
+        margin: 0;
         color: #fff;
         font-family: var(--felt);
-        overflow-x: hidden;
+        overflow: hidden;
     }
 
-    /* CONTROLES */
-    .controls {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(0,0,0,0.85);
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        backdrop-filter: blur(6px);
-        z-index: 1000;
-    }
-
-    .mode-switch {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-    }
-
-    button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 10px;
-        background: #ff7b00;
-        color: #fff;
-        cursor: pointer;
-        font-family: var(--felt);
-        font-size: 18px;
-        font-weight: bold;
-    }
-
-    button.active {
-        background: #ffc266;
-        color: #000;
-    }
-
-    input[type="text"] {
-        width: 100%;
-        padding: 12px;
-        border-radius: 12px;
-        border: none;
-        outline: none;
-        font-size: 1.3em;
-        text-align: center;
-        font-family: var(--felt);
-    }
-
-    /* AREA PRINCIPAL */
+    /* Contenedor principal */
     #stage {
-        padding-bottom: 170px; 
+        height: calc(100vh - var(--controls-h));
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
+        padding: 0;
     }
 
-    /* NORMAL (CANVAS) */
-    #normalBox {
-        display: none;
+    /* Canvas 1:1 */
+    #previewCanvas {
+        width: min(90vw, 90vh);
+        height: min(90vw, 90vh);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+        border-radius: 25px;
+        background: #fff;
     }
 
-    #normalCanvas {
-        width: 90vw;
-        max-width: 540px;
-        aspect-ratio: 1;
-        border-radius: 40px;
-        background: white;
-        box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    /* Controles */
+    .control-panel {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        height: var(--controls-h);
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(10px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 8px;
+        z-index: 20;
+        padding-bottom: 8px;
     }
 
-    /* BRAT MODE */
-    #bratBox {
-        display: none;
-    }
-
-    .brat-container {
-        width: 90vw;
-        max-width: 540px;
-        aspect-ratio: 1;
-        background: var(--brat-green);
+    /* Switch tipo iPhone */
+    .switch {
         position: relative;
-        overflow: hidden;
-        padding: 40px;
+        width: 55px;
+        height: 28px;
     }
-
-    /* Watermark gigante */
-    .brat-watermark {
+    .switch input { display:none; }
+    .slider {
         position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-family: var(--brat-font);
-        font-size: 420px;
-        opacity: 0.10;
-        color: #000;
-        white-space: nowrap;
-        pointer-events: none;
-        user-select: none;
-        z-index: 1;
+        cursor: pointer;
+        top:0; left:0; right:0; bottom:0;
+        background-color: #555;
+        transition: .4s;
+        border-radius: 34px;
     }
-
-    /* Texto principal estilo brat */
-    .brat-text {
-        position: relative;
-        font-family: var(--brat-font);
-        font-size: 140px;
-        line-height: 0.85;
-        color: black;
-        text-align: justify;
-        text-align-last: justify;
-        filter: blur(2.5px);
-        word-break: break-word;
-        z-index: 10;
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider {
+        background-color: #22c55e;
+    }
+    input:checked + .slider:before {
+        transform: translateX(26px);
     }
 
 </style>
-</head>
 
+</head>
 <body>
 
-<div id="stage">
+<main id="stage">
+    <canvas id="previewCanvas" width="1080" height="1080"></canvas>
+</main>
 
-    <!-- NORMAL MODE -->
-    <div id="normalBox">
-        <canvas id="normalCanvas" width="1080" height="1080"></canvas>
+<!-- Controles -->
+<div class="control-panel">
+
+    <!-- MODO: Normal / Brat -->
+    <div class="flex items-center justify-center gap-3 text-sm">
+        <span>Modo:</span>
+
+        <label class="switch">
+            <input type="checkbox" id="modeToggle">
+            <span class="slider"></span>
+        </label>
+
+        <span id="modeLabel">Normal</span>
     </div>
 
-    <!-- BRAT MODE -->
-    <div id="bratBox">
-        <div class="brat-container" id="bratContainer">
-            <div class="brat-watermark">@nachozorra</div>
-            <div class="brat-text" id="bratText">brat</div>
-        </div>
-    </div>
+    <!-- Input + fondo + botón -->
+    <div class="flex items-center justify-center gap-3 w-full px-3">
 
+        <input id="textInput"
+               type="text"
+               placeholder="Escribe tu frase..."
+               class="flex-1 p-2 rounded-lg text-black text-center font-bold text-lg outline-none">
+
+        <label class="text-sm">Fondo:</label>
+        <input type="color" id="bgColor" value="#ffffff" class="w-8 h-8">
+
+        <button id="downloadBtn"
+                class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700">
+            Descargar PNG
+        </button>
+    </div>
 </div>
-
-<!-- CONTROLES -->
-<div class="controls">
-    <input id="textInput" type="text" placeholder="Escribe tu frase..." />
-
-    <div class="mode-switch">
-        <button id="btnNormal">NORMAL</button>
-        <button id="btnBrat">BRAT</button>
-    </div>
-
-    <button id="downloadBtn">⬇️ Descargar PNG</button>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
-/* -------------------------------------------------------------
-   ELEMENTOS
-------------------------------------------------------------- */
+/* ========= VARIABLES ========= */
+
+const canvas = document.getElementById("previewCanvas");
+const ctx = canvas.getContext("2d");
+
 const input = document.getElementById("textInput");
-const btnNormal = document.getElementById("btnNormal");
-const btnBrat = document.getElementById("btnBrat");
+const bgColorInput = document.getElementById("bgColor");
+const toggle = document.getElementById("modeToggle");
+const modeLabel = document.getElementById("modeLabel");
 
-const normalBox = document.getElementById("normalBox");
-const bratBox = document.getElementById("bratBox");
+const CANVAS_SIZE = 1080;
+const PADDING = 80;
 
-const bratText = document.getElementById("bratText");
-const bratContainer = document.getElementById("bratContainer");
+/* ========= EVENTOS ========= */
 
-const normalCanvas = document.getElementById("normalCanvas");
-const ctx = normalCanvas.getContext("2d");
-
-/* -------------------------------------------------------------
-   SWITCH DE MODO
-------------------------------------------------------------- */
-function activateNormal() {
-    normalBox.style.display = "block";
-    bratBox.style.display = "none";
-    btnNormal.classList.add("active");
-    btnBrat.classList.remove("active");
-    drawNormal();
-}
-
-function activateBrat() {
-    normalBox.style.display = "none";
-    bratBox.style.display = "block";
-    btnNormal.classList.remove("active");
-    btnBrat.classList.add("active");
-    drawBrat();
-}
-
-btnNormal.onclick = activateNormal;
-btnBrat.onclick = activateBrat;
-
-/* -------------------------------------------------------------
-   ACTUALIZAR TEXTO
-------------------------------------------------------------- */
-input.addEventListener("input", () => {
-    drawNormal();
-    drawBrat();
+input.addEventListener("input", draw);
+bgColorInput.addEventListener("input", draw);
+toggle.addEventListener("change", () => {
+    modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
+    draw();
 });
+window.onload = draw;
 
-/* -------------------------------------------------------------
-   MODO NORMAL (CANVAS)
-------------------------------------------------------------- */
-function drawNormal() {
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, 1080, 1080);
+/* ========= DIBUJAR ========= */
 
-    ctx.fillStyle = "#000";
-    ctx.font = "70px 'Felt Tip Roman'";
+function draw() {
+    const text = input.value.trim() || "";
+    const bg = bgColorInput.value;
+
+    // Fondo
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+    // Watermark suave
+    drawWatermark();
+
+    if (!toggle.checked) {
+        drawNormal(text);
+    } else {
+        drawBrat(text);
+    }
+}
+
+/* ========= MODO NORMAL ========= */
+
+function drawNormal(text) {
+    ctx.font = "80px var(--felt)";
+    ctx.fillStyle = getContrastColor(bgColorInput.value);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(input.value, 540, 540);
+
+    wrapCenter(text, CANVAS_SIZE / 2);
 }
 
-/* -------------------------------------------------------------
-   MODO BRAT (HTML + CSS)
-------------------------------------------------------------- */
-function drawBrat() {
-    let txt = input.value.trim();
-    if (txt.length === 0) txt = "brat";
+/* ========= MODO BRAT REAL (Charli XCX) ========= */
 
-    bratText.textContent = txt;
+function drawBrat(text) {
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
 
-    // ESCALADO DINÁMICO DE FUENTE
-    let base = 140;
-    let long = txt.length;
+    ctx.fillStyle = "#000";
+    ctx.font = "140px var(--brat)";
 
-    if (long > 20) base -= (long - 20) * 3;
-    if (base < 60) base = 60;
+    const lines = justifyText(text, CANVAS_SIZE - PADDING * 2);
 
-    bratText.style.fontSize = base + "px";
+    let y = PADDING;
 
-    // BLUR dinámico
-    let blur = 2 + Math.min(long / 20, 3);
-    bratText.style.filter = `blur(${blur}px)`;
-}
+    lines.forEach((line, i) => {
+        ctx.save();
 
-/* -------------------------------------------------------------
-   DESCARGA PNG (html2canvas)
-------------------------------------------------------------- */
-document.getElementById("downloadBtn").onclick = async () => {
-    let element = bratBox.style.display === "block"
-        ? bratContainer
-        : normalCanvas;
+        // Blur tipo brat
+        ctx.filter = "blur(3px)";
 
-    const canvas = await html2canvas(element, {
-        backgroundColor: null,
-        scale: 1
+        // Dibujar línea
+        ctx.fillText(line, PADDING, y);
+
+        ctx.restore();
+
+        y += 150; // separación entre líneas brat
     });
+}
 
+/* ========= GENERAR JUSTIFICADO ========= */
+
+function justifyText(text, maxWidth) {
+    const words = text.split(" ");
+    let line = "";
+    const lines = [];
+
+    ctx.font = "140px var(--brat)";
+
+    for (let w of words) {
+        const test = line + w + " ";
+        if (ctx.measureText(test).width > maxWidth) {
+            lines.push(justifyLine(line.trim(), maxWidth));
+            line = w + " ";
+        } else {
+            line = test;
+        }
+    }
+    lines.push(line.trim());
+    return lines;
+}
+
+function justifyLine(line, width) {
+    const words = line.split(" ");
+    if (words.length < 2) return line;
+
+    const noSpaceWidth = words.reduce((a,w)=>a+ctx.measureText(w).width,0);
+    const totalSpaces = words.length - 1;
+    const spaceSize = (width - noSpaceWidth) / totalSpaces;
+
+    return words.join(" ".repeat(Math.max(1, Math.floor(spaceSize / 20))));
+}
+
+/* ========= WATERMARK ========= */
+
+function drawWatermark() {
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = "#000";
+    ctx.font = "250px var(--brat)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillText("@nachozorra", CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+    ctx.restore();
+}
+
+/* ========= UTILIDADES ========= */
+
+function wrapCenter(text, centerY) {
+    const words = text.split(" ");
+    let lines = [];
+    let current = "";
+
+    ctx.font = "80px var(--felt)";
+    const maxWidth = CANVAS_SIZE - PADDING * 2;
+
+    words.forEach(w => {
+        const test = current + w + " ";
+        if (ctx.measureText(test).width > maxWidth) {
+            lines.push(current.trim());
+            current = w + " ";
+        } else {
+            current = test;
+        }
+    });
+    lines.push(current.trim());
+
+    const totalHeight = lines.length * 100;
+    let y = centerY - totalHeight / 2;
+
+    lines.forEach(l => {
+        ctx.fillText(l, CANVAS_SIZE / 2, y);
+        y += 100;
+    });
+}
+
+function getContrastColor(hex) {
+    hex = hex.replace("#","");
+    const r=parseInt(hex.substr(0,2),16);
+    const g=parseInt(hex.substr(2,2),16);
+    const b=parseInt(hex.substr(4,2),16);
+    const brightness=(r*299+g*587+b*114)/1000;
+    return brightness>150?"#000":"#fff";
+}
+
+/* ========= DESCARGAR PNG ========= */
+
+document.getElementById("downloadBtn").addEventListener("click", () => {
     const link = document.createElement("a");
     link.download = "nachozorra.png";
-    link.href = canvas.toDataURL();
+    link.href = canvas.toDataURL("image/png");
     link.click();
-};
-
-/* Inicio en modo NORMAL */
-activateNormal();
+});
 </script>
 
 </body>
