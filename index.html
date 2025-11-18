@@ -165,13 +165,13 @@
 
     let fontsReady = false;
 
-    // Esperar a que las fuentes estén listas ANTES de dibujar
-    (async function init() {
-      await waitForFonts();
-      fontsReady = true;
-      draw(); // primer render ya con fuentes
+    document.addEventListener("DOMContentLoaded", init);
 
-      // Listeners después de que las fuentes están listas
+    async function init() {
+      await loadFonts();   // ⬅️ aquí esperamos específicamente las 2 fuentes
+      fontsReady = true;
+      draw();
+
       input.addEventListener("input", draw);
       bgColorInput.addEventListener("input", draw);
       toggle.addEventListener("change", () => {
@@ -179,19 +179,23 @@
         draw();
       });
       downloadBtn.addEventListener("click", downloadPNG);
-    })();
+    }
 
-    async function waitForFonts() {
-      if (document.fonts && document.fonts.ready) {
-        try {
-          await document.fonts.ready;
-        } catch (e) {
-          // fallback si algo falla
-          await new Promise(res => setTimeout(res, 500));
-        }
-      } else {
-        // Navegadores sin document.fonts: pequeño delay
+    async function loadFonts() {
+      if (!document.fonts || !document.fonts.load) {
+        // Fallback si el navegador no soporta document.fonts
         await new Promise(res => setTimeout(res, 500));
+        return;
+      }
+
+      try {
+        const p1 = document.fonts.load('60px "Felt Tip Roman"');
+        const p2 = document.fonts.load('120px "Arial Narrow"');
+        const p3 = document.fonts.ready;
+        await Promise.all([p1, p2, p3]);
+      } catch (e) {
+        // Si algo falla, igual seguimos y el navegador usará fallback
+        console.warn("Error cargando fuentes, usando fallback:", e);
       }
     }
 
@@ -205,7 +209,7 @@
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // Marca de agua primero (queda detrás)
+      // Marca de agua primero (queda detrás de la frase)
       drawWatermark();
 
       if (!text) {
@@ -220,7 +224,7 @@
       }
     }
 
-    /* ===== MODO NORMAL (centrado, Felt Tip) ===== */
+    /* ===== MODO NORMAL (Felt Tip Roman, centrado) ===== */
     function drawNormal(text, bg) {
       ctx.save();
 
@@ -270,7 +274,7 @@
       let bestFont = minFont;
       let bestLines = [];
 
-      // Búsqueda binaria para hallar tamaño de fuente máximo que cabe
+      // Búsqueda binaria para tamaño de fuente
       while (low <= high) {
         const mid = (low + high) >> 1;
         ctx.font = mid + 'px "Arial Narrow"';
@@ -306,7 +310,6 @@
 
     /* ===== UTILIDADES DE TEXTO ===== */
 
-    // Divide texto en líneas centradas (para modo normal)
     function wrapText(text, maxWidth, ctx) {
       const words = text.split(/\s+/);
       const lines = [];
@@ -326,7 +329,7 @@
       return lines;
     }
 
-    // Para brat: devolvemos array de líneas, cada línea es array de palabras
+    // Para brat: cada línea es un array de palabras
     function wrapWordsToLines(text, maxWidth, ctx) {
       const words = text.split(/\s+/).filter(Boolean);
       const lines = [];
@@ -347,28 +350,26 @@
       return lines;
     }
 
-    // Dibuja una línea justificada real (palabra por palabra) con blur
-    function drawJustifiedLine(words, x, y, lineWidth, isLast, ctx) {
+    function drawJustifiedLine(words, x, y, lineWidth, isLast, ctxLocal) {
       if (words.length === 0) return;
 
-      const baseSpace = ctx.measureText(" ").width;
+      const baseSpace = ctxLocal.measureText(" ").width;
 
       if (isLast || words.length === 1) {
-        // Última línea: normal (no estirar demasiado)
+        // Última línea: normal, no hiperjustificar
         let cursorX = x;
-        ctx.filter = "blur(3px)";
+        ctxLocal.filter = "blur(3px)";
         for (let i = 0; i < words.length; i++) {
           const w = words[i];
-          ctx.fillText(w, cursorX, y);
-          cursorX += ctx.measureText(w).width + baseSpace;
+          ctxLocal.fillText(w, cursorX, y);
+          cursorX += ctxLocal.measureText(w).width + baseSpace;
         }
-        ctx.filter = "none";
+        ctxLocal.filter = "none";
         return;
       }
 
-      // Líneas intermedias: justificar
       const wordsWidth = words.reduce(
-        (acc, w) => acc + ctx.measureText(w).width,
+        (acc, w) => acc + ctxLocal.measureText(w).width,
         0
       );
       const totalSpaces = words.length - 1;
@@ -376,17 +377,17 @@
       const spaceSize = extraSpaceTotal / totalSpaces;
 
       let cursorX = x;
-      ctx.filter = "blur(3px)";
+      ctxLocal.filter = "blur(3px)";
 
       for (let i = 0; i < words.length; i++) {
         const w = words[i];
-        ctx.fillText(w, cursorX, y);
+        ctxLocal.fillText(w, cursorX, y);
         if (i < words.length - 1) {
-          cursorX += ctx.measureText(w).width + spaceSize;
+          cursorX += ctxLocal.measureText(w).width + spaceSize;
         }
       }
 
-      ctx.filter = "none";
+      ctxLocal.filter = "none";
     }
 
     /* ===== WATERMARK DIAGONAL ===== */
