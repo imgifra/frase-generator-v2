@@ -5,13 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NachoZorra Generator 🦊</title>
 
-  <!-- Fuentes -->
+  <!-- Felt Tip Roman (modo normal) -->
   <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- Preload de la fuente oficial Brat (Arial Narrow real) -->
+  <link rel="preload" 
+        href="https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-03/arial_narrow-webfont.woff"
+        as="font" 
+        type="font/woff" 
+        crossorigin>
+
+  <!-- Fuente oficial Brat: Arial Narrow REAL -->
+  <style>
+    @font-face {
+      font-family: 'arial_narrowregular';
+      src: url('https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-03/arial_narrow-webfont.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
 
   <!-- Tailwind para layout de controles -->
   <script src="https://cdn.tailwindcss.com"></script>
+
 
   <style>
     :root {
@@ -269,7 +286,8 @@
       // Búsqueda binaria para encontrar el tamaño de fuente ideal
       while (low <= high) {
         const mid = (low + high) >> 1;
-        ctx.font = `600 ${mid}px 'Archivo Narrow', sans-serif`;
+        ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
+
 
         const candidateLines = wrapWordsToLines(text, innerWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1;
@@ -284,7 +302,8 @@
       }
 
 
-      ctx.font = `600 ${bestFont}px 'Archivo Narrow', sans-serif`;
+      ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
+
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
       const lineHeight = bestFont * 1.02;
@@ -421,7 +440,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v6 🦊",
+        "v7 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
