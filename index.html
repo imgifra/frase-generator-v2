@@ -349,7 +349,7 @@
 
       // Siempre justificar, incluso la última línea (como Bratgenerator)
       if (words.length === 1) {
-        ctx.filter = "blur(2px)";
+        ctx.filter = "blur(5px)";
         ctx.fillText(words[0], x, y);
         ctx.filter = "none";
         return;
@@ -365,7 +365,7 @@
       const spaceSize = extraSpaceTotal / totalSpaces;
 
       let cursorX = x;
-      ctx.filter = "blur(2px)";
+      ctx.filter = "blur(5px)";
 
       for (let i = 0; i < words.length; i++) {
         const w = words[i];
@@ -390,7 +390,7 @@
       ctx.textBaseline = "middle";
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
       ctx.rotate(-0.6);
-      ctx.filter = "blur(3px)";
+      ctx.filter = "blur(5px)";
       ctx.fillText("@nachozorra", 0, 0);
       ctx.restore();
     }
@@ -403,7 +403,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v4 🦊",
+        "v5 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
