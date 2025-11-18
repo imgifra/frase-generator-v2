@@ -54,22 +54,28 @@
 
     /* EXPORT oculto (tamaño real 1080x1080) */
     #exportBox {
-      position: absolute;
-      left: -99999px;
-      top: -99999px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0; 
+    pointer-events: none;
+    z-index: -10; /* Aseguramos que esté detrás de todo */
     }
 
     #exportBox .card-1080 {
-      width: 1080px;
-      height: 1080px;
-      background: #fff;
-      color: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 0%;
-      overflow: hidden;
-      text-align: center;
+    width: 1080px;
+    height: 1080px;
+    background: #fff;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0%;
+    overflow: hidden;
+    text-align: center;
     }
 
     #exportBox .text-1080 {
@@ -198,20 +204,24 @@
 
     // Descargar PNG 1080x1080
     document.getElementById('downloadBtn').addEventListener('click', async () => {
-      await document.fonts?.ready?.catch(() => {});
-      const node = document.querySelector('#exportBox .card-1080');
+        // 1. Aseguramos que la fuente esté cargada
+        await document.fonts?.ready?.catch(() => {});
+        
+        // 2. Seleccionamos el nodo 1080x1080
+        const node = document.querySelector('#exportBox .card-1080');
 
-      const canvas = await html2canvas(node, {
-        backgroundColor: null,
-        scale: 1,
-        width: 1080,
-        height: 1080
-      });
+        // 3. Capturamos el nodo. Quitamos width/height de las opciones de html2canvas 
+        //    ya que el nodo ya tiene el tamaño correcto.
+        const canvas = await html2canvas(node, {
+            backgroundColor: null,
+            scale: 1, // La escala 1:1 es vital para la resolución
+        });
 
-      const link = document.createElement('a');
-      link.download = 'nachozorra_1080x1080.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+        // 4. Forzamos la descarga
+        const link = document.createElement('a');
+        link.download = 'nachozorra_1080x1080.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
     });
 
     // Contraste automático (texto blanco o negro según fondo)
