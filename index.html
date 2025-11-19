@@ -228,6 +228,8 @@
       // → Luego watermark diagonal
       drawWatermark();
 
+      drawCornerTagOutline(); // ← NUEVA MARCA @nachozorra
+
       if (!text) {
         drawPlaceholder();
         return;
@@ -541,7 +543,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v36 🦊",
+        "v37 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -629,6 +631,64 @@
       ctx.restore();
     }
 
+    /* ========= Marca esquina inferior izquierda con OUTLINE EXTERNO ========= */
+    function drawCornerTagOutline() {
+      const tag = "@nachozorra";
+
+      // ------- Canvas temporal para stroke externo -------
+      const temp = document.createElement("canvas");
+      temp.width = CANVAS_SIZE;
+      temp.height = CANVAS_SIZE;
+      const tctx = temp.getContext("2d");
+
+      // ---- Configuración tipografía ----
+      const fontSize = 42;        // más pequeño
+      tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      tctx.textAlign = "left";
+      tctx.textBaseline = "bottom";
+
+      // Posición esquina inferior izquierda
+      const padding = 45;
+      const x = padding;
+      const y = CANVAS_SIZE - padding;
+
+      // ---- 1. Dibujar STROKE completo ----
+      tctx.strokeStyle = "black";
+      tctx.lineWidth = 8;   // grosor del borde
+      tctx.globalAlpha = 1; // aquí todo debe ser sólido
+
+      tctx.strokeText(tag, x, y);
+
+      // ---- 2. Borrar el interior para dejar solo el borde externo ----
+      tctx.globalCompositeOperation = "destination-out";
+      tctx.fillText(tag, x, y);
+
+      // ------- Canvas final para sombra + relleno -------
+      const finalCanvas = document.createElement("canvas");
+      finalCanvas.width = CANVAS_SIZE;
+      finalCanvas.height = CANVAS_SIZE;
+      const fctx = finalCanvas.getContext("2d");
+
+      // ---- Sombra estilo After Effects ----
+      fctx.shadowColor = "rgba(0,0,0,0.40)";
+      fctx.shadowBlur = 5;
+      fctx.shadowOffsetX = -3;
+      fctx.shadowOffsetY = 3;
+
+      // ---- 3. Dibujar borde externo con sombra ----
+      fctx.drawImage(temp, 0, 0);
+
+      // ---- 4. Dibujar el relleno blanco (sin sombra) ----
+      fctx.shadowBlur = 0;
+      fctx.fillStyle = "white";
+      fctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      fctx.textAlign = "left";
+      fctx.textBaseline = "bottom";
+      fctx.fillText(tag, x, y);
+
+      // ---- 5. Pegar en canvas principal (SIN alpha) ----
+      ctx.drawImage(finalCanvas, 0, 0);
+    }
 
 
     /* ========= CONTRASTE ========= */
