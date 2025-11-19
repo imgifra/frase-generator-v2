@@ -495,10 +495,10 @@
     function drawWatermark() {
       if (!watermarkImage.complete) return; // aún cargando
 
-      const size = CANVAS_SIZE * 0.55; // tamaño del logo (ajustable)
+      const size = CANVAS_SIZE * 0.75; // tamaño del logo (ajustable)
 
       ctx.save();
-      ctx.globalAlpha = 0.08; // transparencia estilo brat
+      ctx.globalAlpha = 0.06; // transparencia estilo brat
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
 
       ctx.drawImage(
@@ -521,7 +521,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v26 🦊",
+        "v28 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -529,17 +529,17 @@
     }
 
     function drawAEStyleText() {
-      const textLines = ["NACHO", "ZORRA"];
+      const textLines = ["  NACHO", "ZORRA"];
 
       // ALPHA 0.08 (muy suave)
       ctx.save();
-      ctx.globalAlpha = 0.08;
+      ctx.globalAlpha = 0.06;
 
       // Tamaño y posición mejorados (más abajo y más grande)
-      const x = CANVAS_SIZE / 2;
+      const x = CANVAS_SIZE / 2 + 70;
       const y = CANVAS_SIZE * 0.78;
 
-      ctx.font = "140px 'OPTICashew-ExtraBold'";
+      ctx.font = "70px 'OPTICashew-ExtraBold'";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
