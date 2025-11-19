@@ -169,6 +169,10 @@
   <script>
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
+    // Marca de agua como imagen
+    const watermarkImage = new Image();
+    watermarkImage.src = "assets/marca.png?v=1"; // cache-buster
+
 
     const input = document.getElementById("textInput");
     const bgColorInput = document.getElementById("bgColor");
@@ -473,18 +477,26 @@
 
     /* ========= WATERMARK DIAGONAL ========= */
     function drawWatermark() {
+      if (!watermarkImage.complete) return; // aún cargando
+
+      const size = CANVAS_SIZE * 0.55; // tamaño del logo (ajustable)
+
       ctx.save();
-      ctx.globalAlpha = 0.2;
-      ctx.fillStyle = getContrastColor(bgColorInput.value);
-      ctx.font = "180px arial_narrowregular, 'Arial Narrow', sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      ctx.globalAlpha = 0.08; // transparencia estilo brat
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
       ctx.rotate(-0.6);
-      ctx.filter = "blur(4px)";
-      ctx.fillText("@nachozorra", 0, 0);
+
+      ctx.drawImage(
+        watermarkImage,
+        -size / 2,
+        -size / 2,
+        size,
+        size
+      );
+
       ctx.restore();
     }
+
 
     /* ========= PLACEHOLDER ========= */
     function drawPlaceholder() {
