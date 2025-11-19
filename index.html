@@ -292,13 +292,28 @@
         const candidateLines = wrapWordsToLines(text, boxWidth, ctx);
         const totalHeight = candidateLines.length * mid * 1.1 * BRAT_STRETCH_Y;
 
-        if (totalHeight <= boxHeight) {
+        // Verificar si cada palabra cabe en el ancho
+        let wordTooWide = false;
+        for (const line of candidateLines) {
+          for (const w of line) {
+            if (ctx.measureText(w).width > boxWidth) {
+              wordTooWide = true;
+              break;
+            }
+          }
+          if (wordTooWide) break;
+        }
+
+        if (!wordTooWide && totalHeight <= boxHeight) {
+          // Sí cabe
           bestFont = mid;
           bestLines = candidateLines;
           low = mid + 2;
         } else {
+          // No cabe: letra demasiado grande para alguna palabra
           high = mid - 2;
         }
+
       }
 
       ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
@@ -479,7 +494,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v19 🦊",
+        "v20 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
