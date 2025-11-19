@@ -179,6 +179,7 @@
 
     const CANVAS_SIZE = 1080;
     const PADDING = window.innerWidth < 600 ? 14 : 20;
+    const BRAT_STRETCH_Y = 1.2;
 
 
     // 💚 Cargar explícitamente las fuentes que usamos en canvas
@@ -393,41 +394,58 @@
       if (!words || words.length === 0) return;
 
       ctx.save();
-      ctx.filter = "blur(2px)";
+      ctx.filter = "blur(5px)";
 
-      // 🔹 Si solo hay una palabra, NO justificamos (no hay espacios que ajustar)
-      if (words.length === 1) {
-        ctx.fillText(words[0], x, y);
+      const gaps = words.length - 1;
+
+      // 🔹 Caso: solo una palabra → no hay espacios que ajustar
+      if (gaps === 0) {
+        const w = words[0];
+        const wWidth = ctx.measureText(w).width;
+        // la centramos en la caja para que no quede pegada a la izquierda
+        const startX = x + (lineWidth - wWidth) / 2;
+        ctx.fillText(w, startX, y);
         ctx.restore();
         return;
       }
 
-      const gaps = words.length - 1;
+      // Ancho de un espacio "natural"
+      const naturalSpace = ctx.measureText(" ").width;
 
-      // Ancho base: suma de palabras + espacios normales
-      const baseSpaceWidth = ctx.measureText(" ").width;
-      const wordWidths = words.map(w => ctx.measureText(w).width);
-      const wordsWidth = wordWidths.reduce((a, b) => a + b, 0);
+      // Queremos que por defecto el espacio sea MÁS corto que el natural
+      const baseSpace = naturalSpace * 0.6;  // espacio "normal" (corto)
+      const minSpace  = naturalSpace * 0.45; // nunca menos de esto
+      const maxSpace  = naturalSpace * 1.4;  // nunca más loco que esto
 
-      const baseWidth = wordsWidth + baseSpaceWidth * gaps;
+      // Ancho de todas las palabras
+      const wordsWidth = words
+        .map(w => ctx.measureText(w).width)
+        .reduce((a, b) => a + b, 0);
 
-      // Si ya nos pasamos o estamos muy justos, dibujamos sin justificar
+      // Ancho usando el espacio cortico base
+      const baseWidth = wordsWidth + baseSpace * gaps;
+
+      // Si ya llenamos casi todo el ancho, dibujamos con espacios base y listo
       if (baseWidth >= lineWidth) {
         let cursor = x;
         for (let i = 0; i < words.length; i++) {
           const w = words[i];
           ctx.fillText(w, cursor, y);
           if (i < gaps) {
-            cursor += ctx.measureText(w).width + baseSpaceWidth;
+            cursor += ctx.measureText(w).width + baseSpace;
           }
         }
         ctx.restore();
         return;
       }
 
-      // 🔹 Aquí sí justificamos: agrandamos un poco cada espacio
-      const extraPerGap = (lineWidth - baseWidth) / gaps;
-      const adjustedSpace = baseSpaceWidth + extraPerGap;
+      // 🔹 Hay espacio extra que repartir entre los gaps
+      let extraPerGap = (lineWidth - baseWidth) / gaps;
+      let finalSpace = baseSpace + extraPerGap;
+
+      // Limitamos cuánto puede crecer o encogerse el espacio
+      if (finalSpace < minSpace) finalSpace = minSpace;
+      if (finalSpace > maxSpace) finalSpace = maxSpace;
 
       let cursorX = x;
 
@@ -435,7 +453,7 @@
         const w = words[i];
         ctx.fillText(w, cursorX, y);
         if (i < gaps) {
-          cursorX += ctx.measureText(w).width + adjustedSpace;
+          cursorX += ctx.measureText(w).width + finalSpace;
         }
       }
 
@@ -465,7 +483,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v9 🦊",
+        "v10 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
