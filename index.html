@@ -271,12 +271,12 @@
       const textColor = getContrastColor(bg);
 
       // Caja interna tipo "textOverlay"
-      const boxWidth  = CANVAS_SIZE * 0.60; // más angosto para que no pida huecos gigantes
+      const boxWidth  = CANVAS_SIZE * 0.70; // más angosto para que no pida huecos gigantes
       const boxHeight = CANVAS_SIZE * 0.55;
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
 
-      const maxFont = 230;
+      const maxFont = 360;
       const minFont = 40;
 
       let low = minFont;
@@ -434,7 +434,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v13 🦊",
+        "v14 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
