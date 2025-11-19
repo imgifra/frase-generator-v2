@@ -540,7 +540,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v40 🦊",
+        "v41 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -559,8 +559,8 @@
       temp.height = CANVAS_SIZE;
       const tctx = temp.getContext("2d");
 
-      const x = CANVAS_SIZE / 2 + 200;  // << mueve todo a la derecha
-      const y = CANVAS_SIZE * 0.78 - 20;
+      const x = CANVAS_SIZE / 2 + 220;  // << mueve todo a la derecha
+      const y = CANVAS_SIZE * 0.78 - 15;
 
       const fontSize = 90;
       const lineSpacing = fontSize * 0.9;
@@ -640,7 +640,7 @@
 
       // ---- Configuración tipografía ----
       const fontSize = 42;
-      tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      tctx.font = `${fontSize}px arial_narrowregular, 'Arial Narrow', sans-serif`;
       tctx.textAlign = "right";     // ANCLA A LA DERECHA
       tctx.textBaseline = "bottom";
 
@@ -677,7 +677,7 @@
       // ---- 4. Relleno blanco ----
       fctx.shadowBlur = 0;
       fctx.fillStyle = "white";
-      fctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      fctx.font = `${fontSize}px arial_narrowregular, 'Arial Narrow', sans-serif`;
       fctx.textAlign = "right";
       fctx.textBaseline = "bottom";
       fctx.fillText(tag, x, y);
