@@ -172,6 +172,7 @@
     // Marca de agua como imagen
     const watermarkImage = new Image();
     watermarkImage.src = "assets/marca.png?v=1"; // cache-buster
+    watermarkImage.onload = draw;
 
 
     const input = document.getElementById("textInput");
@@ -506,7 +507,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v24 🦊",
+        "v25 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
