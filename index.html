@@ -180,48 +180,22 @@
     const PADDING = window.innerWidth < 600 ? 14 : 20;
     const BRAT_STRETCH_Y = 1.25; // letras más altas en modo brat
 
-    // 💚 Cargar explícitamente las fuentes que usamos en canvas
-    let fontsReadyPromise;
-
-    if (document.fonts && document.fonts.load) {
-      fontsReadyPromise = Promise.all([
-        document.fonts.load("80px 'Felt Tip Roman'"),
-        document.fonts.load("200px arial_narrowregular, 'Arial Narrow', sans-serif")
-      ]);
-    } else {
-      fontsReadyPromise = Promise.resolve();
-    }
-
-    function safeDraw() {
-      fontsReadyPromise.then(draw);
-    }
-
-    // Dibujar solo cuando las fuentes estén listas
-    fontsReadyPromise.then(() => {
-      draw();
-    });
-
-    // Por si acaso, si algo falla, aseguramos un draw mínimo al cargar la página
-    window.addEventListener("load", () => {
-      draw();
-    });
-
-    input.addEventListener("input", safeDraw);
-    bgColorInput.addEventListener("input", safeDraw);
+    // Eventos
+    window.addEventListener("load", draw);
+    input.addEventListener("input", draw);
+    bgColorInput.addEventListener("input", draw);
     toggle.addEventListener("change", () => {
       modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
-      safeDraw();
+      draw();
     });
     downloadBtn.addEventListener("click", downloadPNG);
 
-    /* Crear botón para generar múltiples */
+    // Botón para múltiples frases
     const multiBtn = document.createElement("button");
     multiBtn.innerText = "Generar múltiples";
     multiBtn.className =
       "px-4 py-2 bg-pink-600 text-white text-sm rounded-lg shadow-md hover:bg-pink-700 active:bg-pink-800";
     multiBtn.onclick = generateMultiple;
-
-    /* Insertarlo dentro del panel de controles */
     document.querySelector(".control-panel").appendChild(multiBtn);
 
     function draw() {
@@ -247,7 +221,7 @@
       }
     }
 
-    /* ========= MODO NORMAL (Felt Tip Roman, centrado) ========= */
+    /* ========= MODO NORMAL ========= */
     function drawNormal(text, bg) {
       ctx.save();
 
@@ -284,7 +258,7 @@
       ctx.restore();
     }
 
-    /* ========= MODO BRAT (Arial Narrow, bloque centrado + justificado + blur + alto) ========= */
+    /* ========= MODO BRAT ========= */
     function drawBrat(rawText, bg) {
       ctx.save();
 
@@ -310,8 +284,7 @@
       let bestFont = minFont;
       let bestLines = [];
 
-      // 🔎 Búsqueda binaria de tamaño de fuente que cabe en (boxWidth, boxHeight),
-      // teniendo en cuenta que luego estiramos en Y.
+      // Búsqueda binaria del tamaño de fuente (considerando estiramiento vertical)
       while (low <= high) {
         const mid = (low + high) >> 1;
         ctx.font = `${mid}px arial_narrowregular, 'Arial Narrow', sans-serif`;
@@ -328,15 +301,12 @@
         }
       }
 
-      // Usar el mejor fontSize encontrado
       ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
 
       const lineHeight = bestFont * 1.1;
       const blockHeight = bestLines.length * lineHeight * BRAT_STRETCH_Y;
-
-      // Centrado vertical del bloque dentro de la caja, considerando estiramiento Y
       let y = boxY + (boxHeight - blockHeight) / 2;
 
       bestLines.forEach(words => {
@@ -389,7 +359,7 @@
       return lines;
     }
 
-    // Dibuja una línea justificada en un sistema "normal" (sin estirar Y)
+    // Línea justificada en coordenadas "normales"
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words || words.length === 0) return;
 
@@ -398,7 +368,7 @@
 
       const gaps = words.length - 1;
 
-      // 🔹 Caso: solo una palabra → la centramos en la caja
+      // Solo una palabra → centrar
       if (gaps === 0) {
         const w = words[0];
         const wWidth = ctx.measureText(w).width;
@@ -408,23 +378,19 @@
         return;
       }
 
-      // Ancho de un espacio "natural"
       const naturalSpace = ctx.measureText(" ").width;
 
-      // Espacio corto por defecto
-      const baseSpace = naturalSpace * 0.35;  // espacio "normal" (corto)
-      const minSpace  = naturalSpace * 0.25;  // mínimo
-      const maxSpace  = naturalSpace * 1.2;   // máximo
+      // Espacio entre palabras corto por defecto
+      const baseSpace = naturalSpace * 0.35;
+      const minSpace  = naturalSpace * 0.25;
+      const maxSpace  = naturalSpace * 1.2;
 
-      // Ancho de todas las palabras
       const wordsWidth = words
         .map(w => ctx.measureText(w).width)
         .reduce((a, b) => a + b, 0);
 
-      // Ancho usando el espacio base
       const baseWidth = wordsWidth + baseSpace * gaps;
 
-      // Si ya llenamos casi todo el ancho, dibujamos con espacios base
       if (baseWidth >= lineWidth) {
         let cursor = x;
         for (let i = 0; i < words.length; i++) {
@@ -438,11 +404,9 @@
         return;
       }
 
-      // 🔹 Hay espacio extra que repartir entre los gaps
       let extraPerGap = (lineWidth - baseWidth) / gaps;
       let finalSpace = baseSpace + extraPerGap;
 
-      // Limitamos cuánto puede crecer o encogerse el espacio
       if (finalSpace < minSpace) finalSpace = minSpace;
       if (finalSpace > maxSpace) finalSpace = maxSpace;
 
@@ -459,7 +423,7 @@
       ctx.restore();
     }
 
-    // Envuelve drawJustifiedLine aplicando estiramiento vertical (letras más altas)
+    // Misma línea, pero estirada verticalmente (letras más altas)
     function drawJustifiedLineTall(words, x, y, lineWidth, ctx) {
       ctx.save();
       ctx.translate(x, y);
@@ -491,7 +455,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v11 🦊",
+        "v12 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -532,16 +496,15 @@
       function next() {
         if (index >= phrases.length) {
           input.value = original;
-          safeDraw();
+          draw();
           alert("Listo: todas las imágenes fueron generadas.");
           return;
         }
 
         const phrase = phrases[index];
         input.value = phrase;
-        safeDraw();
+        draw();
 
-        // Esperamos un momento para asegurar que el texto ya está renderizado
         setTimeout(() => {
           const link = document.createElement("a");
           link.download = "frase_" + (index + 1) + ".png";
