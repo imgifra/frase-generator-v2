@@ -493,12 +493,22 @@
 
     /* ========= WATERMARK logo ========= */
     function drawWatermark() {
-      if (!watermarkImage.complete) return; // aún cargando
+      if (!watermarkImage.complete) return;
 
-      const size = CANVAS_SIZE * 1.0; // tamaño del logo (ajustable)
+      const size = CANVAS_SIZE * 0.55;
 
       ctx.save();
-      ctx.globalAlpha = 0.06; // transparencia estilo brat
+
+      // === OPACIDAD DE LA IMAGEN (marca de agua) ===
+      ctx.globalAlpha = 0.08;
+
+      // === SOMBRA IGUAL A LA DEL TEXTO ===
+      ctx.shadowColor = "rgba(0,0,0,0.40)";  // opacidad 40%
+      ctx.shadowBlur = 5;                   // suavidad
+      ctx.shadowOffsetX = -4;               // dirección 135°
+      ctx.shadowOffsetY = 4;                // distancia
+
+      // === DIBUJAR PNG CENTRADO ===
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
 
       ctx.drawImage(
@@ -513,6 +523,7 @@
     }
 
 
+
     /* ========= PLACEHOLDER ========= */
     function drawPlaceholder() {
       ctx.save();
@@ -521,7 +532,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v33 🦊",
+        "v34 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -547,7 +558,7 @@
       const lineSpacing = fontSize * 0.9;
 
       tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
-      tctx.textAlign = "center";
+      tctx.textAlign = "left";
       tctx.textBaseline = "middle";
       tctx.globalAlpha = 1.0; // alpha se aplica luego
 
