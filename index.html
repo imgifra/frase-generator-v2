@@ -495,12 +495,12 @@
     function drawWatermark() {
       if (!watermarkImage.complete) return;
 
-      const size = CANVAS_SIZE * 0.55;
+      const size = CANVAS_SIZE * 1.1;
 
       ctx.save();
 
       // === OPACIDAD DE LA IMAGEN (marca de agua) ===
-      ctx.globalAlpha = 0.08;
+      ctx.globalAlpha = 0.06;
 
       // === SOMBRA IGUAL A LA DEL TEXTO ===
       ctx.shadowColor = "rgba(0,0,0,0.40)";  // opacidad 40%
@@ -541,7 +541,7 @@
 
 
     function drawAEStyleText() {
-      const textLines = ["  NACHO", "ZORRA"];
+      const textLines = ["\u00A0\u00A0NACHO", "ZORRA"];
 
       // ==================================================
       // 1. Canvas temporal para fabricar el STROKE OUTSIDE
@@ -558,7 +558,7 @@
       const lineSpacing = fontSize * 0.9;
 
       tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
-      tctx.textAlign = "left";
+      tctx.textAlign = "center";
       tctx.textBaseline = "middle";
       tctx.globalAlpha = 1.0; // alpha se aplica luego
 
