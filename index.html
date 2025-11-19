@@ -222,15 +222,11 @@
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
+      // → Primero marca Nacho Zorra con alpha bajo
+      drawAEStyleText();  
+
+      // → Luego watermark diagonal
       drawWatermark();
-
-      drawAEStyleText();   // ← ★ LO QUE FALTABA ★
-
-      if (!text) {
-          drawPlaceholder();
-          return;
-      }
-
 
       if (!text) {
         drawPlaceholder();
@@ -243,6 +239,7 @@
         drawNormal(text, bg);
       }
     }
+
 
     /* ========= MODO NORMAL ========= */
     function drawNormal(text, bg) {
@@ -524,7 +521,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v25 🦊",
+        "v26 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -533,36 +530,41 @@
 
     function drawAEStyleText() {
       const textLines = ["NACHO", "ZORRA"];
-      
-      // == posición equivalente a AE ==
-      const x = 603;
-      const y = 866;
 
-      // == fuente ==
-      ctx.font = "90px 'OPTICashew-ExtraBold'";
+      // ALPHA 0.08 (muy suave)
+      ctx.save();
+      ctx.globalAlpha = 0.08;
+
+      // Tamaño y posición mejorados (más abajo y más grande)
+      const x = CANVAS_SIZE / 2;
+      const y = CANVAS_SIZE * 0.78;
+
+      ctx.font = "140px 'OPTICashew-ExtraBold'";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // == stroke + fill ==
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = "black";
-      ctx.fillStyle = "white";
+      // Sombra MUY sutil
+      ctx.shadowColor = "rgba(0,0,0,0.25)";
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = -2;
+      ctx.shadowOffsetY = 2;
 
-      // == sombra (similar a AE) ==
-      ctx.shadowColor = "rgba(0,0,0,0.5)";
-      ctx.shadowBlur = 5;
-      ctx.shadowOffsetX = -4;
-      ctx.shadowOffsetY = 4;
-
-      const lineSpacing = 90 * 0.9; // leading proporcional
+      const lineSpacing = 140 * 0.84;
 
       for (let i = 0; i < textLines.length; i++) {
         const ly = y + (i - 0.5) * lineSpacing;
 
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 5;
+        ctx.fillStyle = "white";
+
         ctx.strokeText(textLines[i], x, ly);
         ctx.fillText(textLines[i], x, ly);
       }
+
+      ctx.restore();
     }
+
 
 
 
