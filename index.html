@@ -29,7 +29,6 @@
   <!-- Tailwind para layout de controles -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-
   <style>
     :root {
       --controls-h: 110px;
@@ -179,8 +178,7 @@
 
     const CANVAS_SIZE = 1080;
     const PADDING = window.innerWidth < 600 ? 14 : 20;
-    const BRAT_STRETCH_Y = 1.2;
-
+    const BRAT_STRETCH_Y = 1.25; // letras más altas en modo brat
 
     // 💚 Cargar explícitamente las fuentes que usamos en canvas
     let fontsReadyPromise;
@@ -194,6 +192,10 @@
       fontsReadyPromise = Promise.resolve();
     }
 
+    function safeDraw() {
+      fontsReadyPromise.then(draw);
+    }
+
     // Dibujar solo cuando las fuentes estén listas
     fontsReadyPromise.then(() => {
       draw();
@@ -204,12 +206,11 @@
       draw();
     });
 
-
-    input.addEventListener("input", draw);
-    bgColorInput.addEventListener("input", draw);
+    input.addEventListener("input", safeDraw);
+    bgColorInput.addEventListener("input", safeDraw);
     toggle.addEventListener("change", () => {
       modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
-      draw();
+      safeDraw();
     });
     downloadBtn.addEventListener("click", downloadPNG);
 
@@ -222,8 +223,6 @@
 
     /* Insertarlo dentro del panel de controles */
     document.querySelector(".control-panel").appendChild(multiBtn);
-
-
 
     function draw() {
       const text = input.value.trim();
@@ -285,11 +284,10 @@
       ctx.restore();
     }
 
-    /* ========= MODO BRAT (Arial Narrow, bloque centrado + justificado + blur) ========= */
+    /* ========= MODO BRAT (Arial Narrow, bloque centrado + justificado + blur + alto) ========= */
     function drawBrat(rawText, bg) {
       ctx.save();
 
-      // Texto en mayúsculas, muy al estilo Brat
       const text = rawText.trim();
       if (!text) {
         ctx.restore();
@@ -298,13 +296,13 @@
 
       const textColor = getContrastColor(bg);
 
-      // Caja interna tipo "textOverlay" del original
-      const boxWidth  = CANVAS_SIZE * 0.8;  // ~80% del ancho
-      const boxHeight = CANVAS_SIZE * 0.55; // algo más bajo que ancho
+      // Caja interna tipo "textOverlay"
+      const boxWidth  = CANVAS_SIZE * 0.8;
+      const boxHeight = CANVAS_SIZE * 0.55;
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
 
-      const maxFont = 230; // similar al Brat original en pantalla grande
+      const maxFont = 230;
       const minFont = 40;
 
       let low = minFont;
@@ -312,13 +310,14 @@
       let bestFont = minFont;
       let bestLines = [];
 
-      // 🔎 Búsqueda binaria de tamaño de fuente que cabe en (boxWidth, boxHeight)
+      // 🔎 Búsqueda binaria de tamaño de fuente que cabe en (boxWidth, boxHeight),
+      // teniendo en cuenta que luego estiramos en Y.
       while (low <= high) {
         const mid = (low + high) >> 1;
         ctx.font = `${mid}px arial_narrowregular, 'Arial Narrow', sans-serif`;
 
         const candidateLines = wrapWordsToLines(text, boxWidth, ctx);
-        const totalHeight = candidateLines.length * mid * 1.1;
+        const totalHeight = candidateLines.length * mid * 1.1 * BRAT_STRETCH_Y;
 
         if (totalHeight <= boxHeight) {
           bestFont = mid;
@@ -335,14 +334,14 @@
       ctx.fillStyle = textColor;
 
       const lineHeight = bestFont * 1.1;
-      const blockHeight = bestLines.length * lineHeight;
+      const blockHeight = bestLines.length * lineHeight * BRAT_STRETCH_Y;
 
-      // Centrado vertical del bloque dentro de la caja
+      // Centrado vertical del bloque dentro de la caja, considerando estiramiento Y
       let y = boxY + (boxHeight - blockHeight) / 2;
 
       bestLines.forEach(words => {
-        drawJustifiedLine(words, boxX, y, boxWidth, ctx);
-        y += lineHeight;
+        drawJustifiedLineTall(words, boxX, y, boxWidth, ctx);
+        y += lineHeight * BRAT_STRETCH_Y;
       });
 
       ctx.restore();
@@ -390,19 +389,19 @@
       return lines;
     }
 
+    // Dibuja una línea justificada en un sistema "normal" (sin estirar Y)
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words || words.length === 0) return;
 
       ctx.save();
-      ctx.filter = "blur(5px)";
+      ctx.filter = "blur(2px)";
 
       const gaps = words.length - 1;
 
-      // 🔹 Caso: solo una palabra → no hay espacios que ajustar
+      // 🔹 Caso: solo una palabra → la centramos en la caja
       if (gaps === 0) {
         const w = words[0];
         const wWidth = ctx.measureText(w).width;
-        // la centramos en la caja para que no quede pegada a la izquierda
         const startX = x + (lineWidth - wWidth) / 2;
         ctx.fillText(w, startX, y);
         ctx.restore();
@@ -412,20 +411,20 @@
       // Ancho de un espacio "natural"
       const naturalSpace = ctx.measureText(" ").width;
 
-      // Queremos que por defecto el espacio sea MÁS corto que el natural
-      const baseSpace = naturalSpace * 0.6;  // espacio "normal" (corto)
-      const minSpace  = naturalSpace * 0.45; // nunca menos de esto
-      const maxSpace  = naturalSpace * 1.4;  // nunca más loco que esto
+      // Espacio corto por defecto
+      const baseSpace = naturalSpace * 0.35;  // espacio "normal" (corto)
+      const minSpace  = naturalSpace * 0.25;  // mínimo
+      const maxSpace  = naturalSpace * 1.2;   // máximo
 
       // Ancho de todas las palabras
       const wordsWidth = words
         .map(w => ctx.measureText(w).width)
         .reduce((a, b) => a + b, 0);
 
-      // Ancho usando el espacio cortico base
+      // Ancho usando el espacio base
       const baseWidth = wordsWidth + baseSpace * gaps;
 
-      // Si ya llenamos casi todo el ancho, dibujamos con espacios base y listo
+      // Si ya llenamos casi todo el ancho, dibujamos con espacios base
       if (baseWidth >= lineWidth) {
         let cursor = x;
         for (let i = 0; i < words.length; i++) {
@@ -460,6 +459,15 @@
       ctx.restore();
     }
 
+    // Envuelve drawJustifiedLine aplicando estiramiento vertical (letras más altas)
+    function drawJustifiedLineTall(words, x, y, lineWidth, ctx) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(1, BRAT_STRETCH_Y);
+      drawJustifiedLine(words, 0, 0, lineWidth, ctx);
+      ctx.restore();
+    }
+
     /* ========= WATERMARK DIAGONAL ========= */
     function drawWatermark() {
       ctx.save();
@@ -470,7 +478,7 @@
       ctx.textBaseline = "middle";
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
       ctx.rotate(-0.6);
-      ctx.filter = "blur(5px)";
+      ctx.filter = "blur(4px)";
       ctx.fillText("@nachozorra", 0, 0);
       ctx.restore();
     }
@@ -483,7 +491,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v10 🦊",
+        "v11 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -524,16 +532,16 @@
       function next() {
         if (index >= phrases.length) {
           input.value = original;
-          draw();
+          safeDraw();
           alert("Listo: todas las imágenes fueron generadas.");
           return;
         }
 
         const phrase = phrases[index];
         input.value = phrase;
-        draw();
+        safeDraw();
 
-        // Esperamos 200ms para asegurar que el texto ya está renderizado
+        // Esperamos un momento para asegurar que el texto ya está renderizado
         setTimeout(() => {
           const link = document.createElement("a");
           link.download = "frase_" + (index + 1) + ".png";
@@ -547,10 +555,7 @@
 
       next();
     }
-
-    
   </script>
 
 </body>
 </html>
-
