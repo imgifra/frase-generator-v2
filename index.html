@@ -540,7 +540,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v45 🦊",
+        "46 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -640,7 +640,7 @@
       const y = CANVAS_SIZE - padding;
 
       // === BLUR REAL SUAVE ===
-      ctx.filter = "blur(1.2px)";
+      ctx.filter = "blur(2px)";
 
       // === CALCULAR CONTRASTE SEGÚN EL FONDO ===
       const bg = bgColorInput.value;
@@ -654,12 +654,12 @@
         : "rgba(0,0,0,0.45)";
 
       ctx.shadowColor = shadowColor;
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetX = 4;
-      ctx.shadowOffsetY = 4;
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetX = 3;
+      ctx.shadowOffsetY = 3;
 
       // === FUENTE BRAT ===
-      const fontSize = 42;
+      const fontSize = 35;
       ctx.font = `${fontSize}px arial_narrowregular, 'Arial Narrow', sans-serif`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
