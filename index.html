@@ -271,7 +271,7 @@
       const textColor = getContrastColor(bg);
 
       // Caja interna tipo "textOverlay"
-      const boxWidth  = CANVAS_SIZE * 0.72; // 🔹 más angosto para que no pida tantos espacios
+      const boxWidth  = CANVAS_SIZE * 0.70; // más angosto para que no pida huecos gigantes
       const boxHeight = CANVAS_SIZE * 0.55;
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
@@ -359,7 +359,7 @@
       return lines;
     }
 
-    // Justificado SUAVE: ajusta espacios, no toca el tamaño de las letras
+    // Justificado real: ajusta solo espacios, no el tamaño de las letras
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words || words.length === 0) return;
 
@@ -368,30 +368,26 @@
       ctx.textBaseline = "top";
 
       const gaps = words.length - 1;
-
-      // Medir ancho de todas las palabras
       const wordWidths = words.map(w => ctx.measureText(w).width);
       const wordsWidth = wordWidths.reduce((a, b) => a + b, 0);
 
-      const naturalSpace = ctx.measureText(" ").width;
+      // Una sola palabra: no podemos justificar sin deformar → pegada a la izquierda
+      if (gaps === 0) {
+        ctx.fillText(words[0], x, y);
+        ctx.restore();
+        return;
+      }
 
-      // Espacio base y límites
-      const baseSpace = naturalSpace * 0.40; // espacio normal (cortico)
-      const minSpace  = naturalSpace * 0.30; // mínimo
-      const maxSpace  = naturalSpace * 1.30; // máximo
+      // Espacio libre que hay que repartir en los huecos
+      const freeSpace = lineWidth - wordsWidth;
 
-      let spaceSize = baseSpace;
-
-      if (gaps > 0) {
-        const baseWidth = wordsWidth + baseSpace * gaps;
-        const freeSpace = lineWidth - baseWidth;
-
-        if (freeSpace > 0) {
-          let extraPerGap = freeSpace / gaps;
-          spaceSize = baseSpace + extraPerGap;
-          if (spaceSize < minSpace) spaceSize = minSpace;
-          if (spaceSize > maxSpace) spaceSize = maxSpace;
-        }
+      let spaceSize;
+      if (freeSpace <= 0) {
+        // Línea ya muy llena → usamos espacio natural
+        spaceSize = ctx.measureText(" ").width;
+      } else {
+        // 💚 Justificado real: repartimos TODO el espacio libre entre los huecos
+        spaceSize = freeSpace / gaps;
       }
 
       let cursorX = x;
@@ -438,7 +434,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v11 🦊",
+        "v12 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
