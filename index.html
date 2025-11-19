@@ -532,33 +532,35 @@
     function drawAEStyleText() {
       const textLines = ["  NACHO", "ZORRA"];
 
-      // ====== CANVAS TEMPORAL ======
+      // ==================================================
+      // 1. Canvas temporal para fabricar el STROKE OUTSIDE
+      // ==================================================
       const temp = document.createElement("canvas");
       temp.width = CANVAS_SIZE;
       temp.height = CANVAS_SIZE;
       const tctx = temp.getContext("2d");
 
-      // ====== POSICIÓN ======
-      const x = CANVAS_SIZE / 2 + 180;  // ajustado a la derecha
+      const x = CANVAS_SIZE / 2 + 180;  // << mueve todo a la derecha
       const y = CANVAS_SIZE * 0.78;
+
       const fontSize = 70;
       const lineSpacing = fontSize * 0.9;
 
       tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
       tctx.textAlign = "center";
       tctx.textBaseline = "middle";
-      tctx.globalAlpha = 0.6;
+      tctx.globalAlpha = 1.0; // alpha se aplica luego
 
-      // ====== 1. STROKE COMPLETO ======
+      // -------------- Stroke total (dentro y fuera) --------------
       tctx.strokeStyle = "black";
-      tctx.lineWidth = 10;    // grosor del borde (ajustable)
+      tctx.lineWidth = 10;  // equivalente aproximado a StrokeWidth=8 de AE
 
       for (let i = 0; i < textLines.length; i++) {
         const ly = y + (i - 0.5) * lineSpacing;
         tctx.strokeText(textLines[i], x, ly);
       }
 
-      // ====== 2. RECORTAR INTERIOR ======
+      // -------------- Borrar interior (solo deja fuera) --------------
       tctx.globalCompositeOperation = "destination-out";
 
       for (let i = 0; i < textLines.length; i++) {
@@ -566,39 +568,45 @@
         tctx.fillText(textLines[i], x, ly);
       }
 
-      // ====== 3. Canvas final con sombra ======
+      // ==================================================
+      // 2. Canvas final para sombra + relleno (como AE)
+      // ==================================================
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = CANVAS_SIZE;
       finalCanvas.height = CANVAS_SIZE;
       const fctx = finalCanvas.getContext("2d");
 
-      fctx.globalAlpha = 0.06;
+      // -------- Sombra estilo After Effects --------
+      fctx.shadowColor = "rgba(0,0,0,0.40)";   // parecido a opacityPct:128
+      fctx.shadowBlur = 5;                     // softness=5
+      fctx.shadowOffsetX = -4;                 // dirección 135°
+      fctx.shadowOffsetY = 4;                  // distancia 6 px aprox
 
-      // sombra suave tipo AE
-      fctx.shadowColor = "rgba(0,0,0,0.25)";
-      fctx.shadowBlur = 4;
-      fctx.shadowOffsetX = -3;
-      fctx.shadowOffsetY = 3;
-
-      // pintar borde externo con sombra
+      // borde externo con sombra
       fctx.drawImage(temp, 0, 0);
 
-      // quitar sombra para el relleno
+      // quitar sombra antes del relleno
       fctx.shadowBlur = 0;
 
-      // ====== 4. RELLENO BLANCO ======
+      // -------- Relleno blanco --------
+      fctx.globalAlpha = 1.0;
+      fctx.fillStyle = "white";
       fctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
       fctx.textAlign = "center";
       fctx.textBaseline = "middle";
-      fctx.fillStyle = "white";
 
       for (let i = 0; i < textLines.length; i++) {
         const ly = y + (i - 0.5) * lineSpacing;
         fctx.fillText(textLines[i], x, ly);
       }
 
-      // ====== 5. DIBUJAR EN CANVAS PRINCIPAL ======
+      // ==================================================
+      // 3. Alpha global bajo (marca de agua) y draw final
+      // ==================================================
+      ctx.save();
+      ctx.globalAlpha = 0.06;   // <<<<<< EXACTO como pediste
       ctx.drawImage(finalCanvas, 0, 0);
+      ctx.restore();
     }
 
 
