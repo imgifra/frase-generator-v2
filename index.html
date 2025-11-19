@@ -26,6 +26,15 @@
     }
   </style>
 
+  <style>
+  @font-face {
+    font-family: 'OPTICashew-ExtraBold';
+    src: url('assets/OPTICashew-ExtraBold.woff') format('woff');
+    font-weight: 800;
+  }
+  </style>
+
+
   <!-- Tailwind para layout de controles -->
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -187,6 +196,8 @@
 
     // Eventos
     window.addEventListener("load", draw);
+    document.fonts.ready.then(draw);
+
     input.addEventListener("input", draw);
     bgColorInput.addEventListener("input", draw);
     toggle.addEventListener("change", () => {
@@ -211,8 +222,15 @@
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // Watermark siempre detrás
       drawWatermark();
+
+      drawAEStyleText();   // ← ★ LO QUE FALTABA ★
+
+      if (!text) {
+          drawPlaceholder();
+          return;
+      }
+
 
       if (!text) {
         drawPlaceholder();
@@ -512,6 +530,42 @@
       );
       ctx.restore();
     }
+
+    function drawAEStyleText() {
+      const textLines = ["NACHO", "ZORRA"];
+      
+      // == posición equivalente a AE ==
+      const x = 603;
+      const y = 866;
+
+      // == fuente ==
+      ctx.font = "90px 'OPTICashew-ExtraBold'";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // == stroke + fill ==
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = "black";
+      ctx.fillStyle = "white";
+
+      // == sombra (similar a AE) ==
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetX = -4;
+      ctx.shadowOffsetY = 4;
+
+      const lineSpacing = 90 * 0.9; // leading proporcional
+
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+
+        ctx.strokeText(textLines[i], x, ly);
+        ctx.fillText(textLines[i], x, ly);
+      }
+    }
+
+
+
 
     /* ========= CONTRASTE ========= */
     function getContrastColor(hex) {
