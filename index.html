@@ -540,7 +540,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v42 🦊",
+        "v43 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -639,9 +639,12 @@
       const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
+      // === BLUR REAL (suave, estilo BRAT) ===
+      ctx.filter = "blur(1.2px)";
+
       // === SOMBRA estilo BRAT ===
       ctx.shadowColor = "rgba(0,0,0,0.40)";
-      ctx.shadowBlur = 5;
+      ctx.shadowBlur = 6;       // más suave para combinar con blur general
       ctx.shadowOffsetX = -3;
       ctx.shadowOffsetY = 3;
 
@@ -653,22 +656,23 @@
 
       // === COLORES (como BRAT) ===
       const bg = bgColorInput.value;
-      const color = getContrastColor(bg); // blanco o negro según fondo
+      const color = getContrastColor(bg);
       ctx.fillStyle = color;
       ctx.strokeStyle = color === "#000000" ? "#ffffff" : "#000000";
       ctx.lineWidth = 4;
 
-      // === ESTIRAMIENTO vertical BRAT =========
+      // === ESTIRAMIENTO vertical BRAT (alrededor de x,y) ===
       ctx.translate(x, y);
-      ctx.scale(1, BRAT_STRETCH_Y);   // <<<<<< El estiramiento BRAT
+      ctx.scale(1, BRAT_STRETCH_Y);
       ctx.translate(-x, -y);
 
-      // === DIBUJAR (una sola línea) ===
-      ctx.strokeText(tag, x, y / BRAT_STRETCH_Y);
-      ctx.fillText(tag, x, y / BRAT_STRETCH_Y);
+      // === DIBUJAR ===
+      ctx.strokeText(tag, x, y);
+      ctx.fillText(tag, x, y);
 
       ctx.restore();
     }
+
 
 
     /* ========= CONTRASTE ========= */
