@@ -540,7 +540,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v44 🦊",
+        "v45 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -628,7 +628,7 @@
       ctx.restore();
     }
 
-   /* ========= Marca inferior derecha estilo BRAT (una sola línea) ========= */
+    /* ========= Marca inferior derecha estilo BRAT con sombra dinámica ========= */
     function drawCornerTagBrat() {
       const tag = "@nachozorra";
 
@@ -639,14 +639,24 @@
       const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
-      // === BLUR REAL (suave, estilo BRAT) ===
+      // === BLUR REAL SUAVE ===
       ctx.filter = "blur(1.2px)";
 
-      // === SOMBRA estilo BRAT ===
-      ctx.shadowColor = "rgba(0,0,0,0.40)";
-      ctx.shadowBlur = 8;       // más suave para combinar con blur general
-      ctx.shadowOffsetX = 3;
-      ctx.shadowOffsetY = 3;
+      // === CALCULAR CONTRASTE SEGÚN EL FONDO ===
+      const bg = bgColorInput.value;
+      const textColor = getContrastColor(bg); // blanco o negro
+
+      // === SOMBRA DINÁMICA ===
+      // Si el texto es blanco → sombra clara
+      // Si el texto es negro → sombra negra
+      const shadowColor = (textColor === "#ffffff")
+        ? "rgba(255,255,255,0.45)"
+        : "rgba(0,0,0,0.45)";
+
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 4;
+      ctx.shadowOffsetY = 4;
 
       // === FUENTE BRAT ===
       const fontSize = 42;
@@ -654,24 +664,23 @@
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
-      // === COLORES (como BRAT) ===
-      const bg = bgColorInput.value;
-      const color = getContrastColor(bg);
-      ctx.fillStyle = color;
-      ctx.strokeStyle = color === "#000000" ? "#ffffff" : "#000000";
+      // === COLORES DEL TEXTO ===
+      ctx.fillStyle = textColor;
+      ctx.strokeStyle = textColor === "#000000" ? "#ffffff" : "#000000";
       ctx.lineWidth = 4;
 
-      // === ESTIRAMIENTO vertical BRAT (alrededor de x,y) ===
+      // === ESTIRAMIENTO BRAT ===
       ctx.translate(x, y);
       ctx.scale(1, BRAT_STRETCH_Y);
       ctx.translate(-x, -y);
 
-      // === DIBUJAR ===
+      // === DIBUJAR TEXTO ===
       ctx.strokeText(tag, x, y);
       ctx.fillText(tag, x, y);
 
       ctx.restore();
     }
+
 
 
 
