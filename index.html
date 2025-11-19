@@ -543,7 +543,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v37 🦊",
+        "v38 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -654,7 +654,7 @@
 
       // ---- 1. Dibujar STROKE completo ----
       tctx.strokeStyle = "black";
-      tctx.lineWidth = 8;   // grosor del borde
+      tctx.lineWidth = 10;   // grosor del borde
       tctx.globalAlpha = 1; // aquí todo debe ser sólido
 
       tctx.strokeText(tag, x, y);
@@ -672,8 +672,8 @@
       // ---- Sombra estilo After Effects ----
       fctx.shadowColor = "rgba(0,0,0,0.40)";
       fctx.shadowBlur = 5;
-      fctx.shadowOffsetX = -3;
-      fctx.shadowOffsetY = 3;
+      fctx.shadowOffsetX = 4;
+      fctx.shadowOffsetY = 4;
 
       // ---- 3. Dibujar borde externo con sombra ----
       fctx.drawImage(temp, 0, 0);
@@ -682,7 +682,7 @@
       fctx.shadowBlur = 0;
       fctx.fillStyle = "white";
       fctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
-      fctx.textAlign = "left";
+      fctx.textAlign = "right";
       fctx.textBaseline = "bottom";
       fctx.fillText(tag, x, y);
 
