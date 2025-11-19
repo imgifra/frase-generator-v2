@@ -359,16 +359,16 @@
       return lines;
     }
 
-    // Línea justificada en coordenadas "normales"
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words || words.length === 0) return;
 
       ctx.save();
       ctx.filter = "blur(2px)";
+      ctx.textBaseline = "top";
 
       const gaps = words.length - 1;
 
-      // Solo una palabra → centrar
+      // Caso: una sola palabra → la centramos en la caja, sin justificar
       if (gaps === 0) {
         const w = words[0];
         const wWidth = ctx.measureText(w).width;
@@ -378,45 +378,37 @@
         return;
       }
 
-      const naturalSpace = ctx.measureText(" ").width;
+      // Ancho de todas las palabras (solo letras)
+      const wordWidths = words.map(w => ctx.measureText(w).width);
+      const wordsWidth = wordWidths.reduce((a, b) => a + b, 0);
 
-      // Espacio entre palabras corto por defecto
-      const baseSpace = naturalSpace * 0.35;
-      const minSpace  = naturalSpace * 0.25;
-      const maxSpace  = naturalSpace * 1.2;
+      // Espacio que queda para repartir entre los huecos
+      const freeSpace = lineWidth - wordsWidth;
 
-      const wordsWidth = words
-        .map(w => ctx.measureText(w).width)
-        .reduce((a, b) => a + b, 0);
-
-      const baseWidth = wordsWidth + baseSpace * gaps;
-
-      if (baseWidth >= lineWidth) {
+      // Si no hay espacio libre (o es negativo), dibujamos con un espacio normal
+      if (freeSpace <= 0) {
+        const naturalSpace = ctx.measureText(" ").width * 0.8; // un poco más corto
         let cursor = x;
         for (let i = 0; i < words.length; i++) {
           const w = words[i];
           ctx.fillText(w, cursor, y);
           if (i < gaps) {
-            cursor += ctx.measureText(w).width + baseSpace;
+            cursor += ctx.measureText(w).width + naturalSpace;
           }
         }
         ctx.restore();
         return;
       }
 
-      let extraPerGap = (lineWidth - baseWidth) / gaps;
-      let finalSpace = baseSpace + extraPerGap;
-
-      if (finalSpace < minSpace) finalSpace = minSpace;
-      if (finalSpace > maxSpace) finalSpace = maxSpace;
+      // 🔥 Justificado real: cada espacio ocupa exactamente lo necesario
+      const spaceSize = freeSpace / gaps;
 
       let cursorX = x;
-
       for (let i = 0; i < words.length; i++) {
         const w = words[i];
         ctx.fillText(w, cursorX, y);
         if (i < gaps) {
-          cursorX += ctx.measureText(w).width + finalSpace;
+          cursorX += wordWidths[i] + spaceSize;
         }
       }
 
@@ -455,7 +447,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v12 🦊",
+        "v13 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
