@@ -272,11 +272,11 @@
 
       // Caja interna tipo "textOverlay"
       const boxWidth  = CANVAS_SIZE * 0.90; // más angosto para que no pida huecos gigantes
-      const boxHeight = CANVAS_SIZE * 0.90;
+      const boxHeight = CANVAS_SIZE * 0.98;
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
 
-      const maxFont = 540;
+      const maxFont = 740;
       const minFont = 20;
 
       let low = minFont;
@@ -320,7 +320,7 @@
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
 
-      const lineHeight = bestFont * 1.1;
+      const lineHeight = bestFont * 1;
       const blockHeight = bestLines.length * lineHeight * BRAT_STRETCH_Y;
       let y = boxY + (boxHeight - blockHeight) / 2;
 
@@ -424,7 +424,7 @@
       if (!words || words.length === 0) return;
 
       ctx.save();
-      ctx.filter = "blur(2px)";
+      ctx.filter = "blur(5px)";
       ctx.textBaseline = "top";
 
       const gaps = words.length - 1;
@@ -476,7 +476,7 @@
       ctx.save();
       ctx.globalAlpha = 0.07;
       ctx.fillStyle = getContrastColor(bgColorInput.value);
-      ctx.font = "200px arial_narrowregular, 'Arial Narrow', sans-serif";
+      ctx.font = "180px arial_narrowregular, 'Arial Narrow', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
@@ -494,7 +494,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v22 🦊",
+        "v23 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
