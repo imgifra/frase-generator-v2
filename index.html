@@ -344,9 +344,10 @@
       const lines = [];
       let current = [];
 
+      // --- 1. Wrap codicioso normal ---
       words.forEach(w => {
         const test = [...current, w].join(" ");
-        const { width } = ctxLocal.measureText(test);
+        const width = ctxLocal.measureText(test).width;
         if (width > maxWidth && current.length > 0) {
           lines.push(current);
           current = [w];
@@ -356,8 +357,52 @@
       });
 
       if (current.length) lines.push(current);
+
+      // --- 2. Balanceo: evitar líneas de 1 palabra si se puede ---
+      const naturalSpace = ctxLocal.measureText(" ").width;
+
+      function lineWidth(line) {
+        if (!line.length) return 0;
+        const wordsWidth = line.reduce(
+          (acc, w) => acc + ctxLocal.measureText(w).width,
+          0
+        );
+        const gaps = line.length - 1;
+        return wordsWidth + gaps * naturalSpace;
+      }
+
+      // Recorremos de arriba hacia abajo,
+      // moviendo palabras de la siguiente línea a la actual
+      for (let i = 0; i < lines.length - 1; i++) {
+        let line = lines[i];
+        let next = lines[i + 1];
+
+        // Mientras esta línea tenga 1 palabra
+        // y la siguiente tenga al menos 2, intentamos subir una palabra
+        while (line.length === 1 && next && next.length >= 2) {
+          const candidate = [...line, next[0]];
+          if (lineWidth(candidate) <= maxWidth) {
+            // Sí cabe: subimos la primera palabra de la siguiente línea
+            line = candidate;
+            next = next.slice(1);
+            lines[i] = line;
+            if (next.length) {
+              lines[i + 1] = next;
+            } else {
+              // Si dejamos vacía la siguiente línea, la quitamos
+              lines.splice(i + 1, 1);
+              break;
+            }
+          } else {
+            // No cabe "no está" juntos, nos quedamos como estamos
+            break;
+          }
+        }
+      }
+
       return lines;
     }
+
 
     // Justificado real: ajusta solo espacios, no el tamaño de las letras
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
@@ -434,7 +479,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v14 🦊",
+        "v15 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
