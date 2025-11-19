@@ -521,49 +521,76 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v29 🦊",
+        "v30 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
       ctx.restore();
     }
-
     function drawAEStyleText() {
       const textLines = ["  NACHO", "ZORRA"];
 
-      // ALPHA 0.08 (muy suave)
-      ctx.save();
-      ctx.globalAlpha = 0.06;
+      // CANVAS TEMPORAL
+      const temp = document.createElement("canvas");
+      temp.width = CANVAS_SIZE;
+      temp.height = CANVAS_SIZE;
+      const tctx = temp.getContext("2d");
 
-      // Tamaño y posición mejorados (más abajo y más grande)
-      const x = CANVAS_SIZE / 2 + 140;
+      const x = CANVAS_SIZE / 2 + 60;
       const y = CANVAS_SIZE * 0.78;
+      const fontSize = 70;
+      const lineSpacing = fontSize * 1.2;
 
-      ctx.font = "70px 'OPTICashew-ExtraBold'";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      // Fuente
+      tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      tctx.textAlign = "center";
+      tctx.textBaseline = "middle";
+      tctx.globalAlpha = 0.06;
 
-      // Sombra MUY sutil
-      ctx.shadowColor = "rgba(0,0,0,0.25)";
-      ctx.shadowBlur = 3;
-      ctx.shadowOffsetX = -2;
-      ctx.shadowOffsetY = 2;
-
-      const lineSpacing = 140 * 0.5;
+      // ===== 1. BORDE EXTERNO =====
+      tctx.strokeStyle = "black";
+      tctx.lineWidth = 14;
 
       for (let i = 0; i < textLines.length; i++) {
         const ly = y + (i - 0.5) * lineSpacing;
-
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = 5;
-        ctx.fillStyle = "white";
-
-        ctx.strokeText(textLines[i], x, ly);
-        ctx.fillText(textLines[i], x, ly);
+        tctx.strokeText(textLines[i], x, ly);
       }
 
-      ctx.restore();
+      // ===== 2. BORRAR INTERIOR (solo dejar bordes externos) =====
+      tctx.globalCompositeOperation = "destination-out";
+
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+        tctx.fillText(textLines[i], x, ly);
+      }
+
+      // ===== 3. BLUR SOLO BORDES =====
+      const blurCanvas = document.createElement("canvas");
+      blurCanvas.width = CANVAS_SIZE;
+      blurCanvas.height = CANVAS_SIZE;
+      const bctx = blurCanvas.getContext("2d");
+
+      bctx.filter = "blur(3px)"; // <<<<< AQUI SE APLICA EL BLUR VERDADERO
+      bctx.drawImage(temp, 0, 0);
+
+      // ===== 4. AGREGAR RELLENO BLANCO ENCIMA DEL BLUR =====
+      bctx.filter = "none"; // quitar blur para el texto blanco
+      bctx.globalAlpha = 0.06;
+
+      bctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      bctx.textAlign = "center";
+      bctx.textBaseline = "middle";
+      bctx.fillStyle = "white";
+
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+        bctx.fillText(textLines[i], x, ly);
+      }
+
+      // ===== 5. PINTAR RESULTADO EN EL CANVAS PRINCIPAL =====
+      ctx.drawImage(blurCanvas, 0, 0);
     }
+
 
 
 
