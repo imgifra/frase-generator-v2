@@ -530,49 +530,76 @@
 
 
     function drawAEStyleText() {
-      // Texto con espacios al inicio
       const textLines = ["  NACHO", "ZORRA"];
 
-      ctx.save();
+      // ====== CANVAS TEMPORAL ======
+      const temp = document.createElement("canvas");
+      temp.width = CANVAS_SIZE;
+      temp.height = CANVAS_SIZE;
+      const tctx = temp.getContext("2d");
 
-      // Marca de agua suave
-      ctx.globalAlpha = 0.06;
+      // ====== POSICIÓN ======
+      const x = CANVAS_SIZE / 2 + 180;  // ajustado a la derecha
+      const y = CANVAS_SIZE * 0.78;
+      const fontSize = 70;
+      const lineSpacing = fontSize * 0.9;
 
-      // POSICIÓN (AJUSTADA MÁS A LA DERECHA)
-      const x = CANVAS_SIZE / 2 + 180;   // << mueve todo a la derecha
-      const y = CANVAS_SIZE * 0.78;      // mismo nivel vertical
+      tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      tctx.textAlign = "center";
+      tctx.textBaseline = "middle";
+      tctx.globalAlpha = 0.06;
 
-      // Estilo de letra
-      ctx.font = "70px 'OPTICashew-ExtraBold'";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      // Sombra suave
-      ctx.shadowColor = "rgba(0,0,0,0.25)";
-      ctx.shadowBlur = 3;
-      ctx.shadowOffsetX = -2;
-      ctx.shadowOffsetY = 2;
-
-      // Separación entre líneas
-      const lineSpacing = 70 * 0.9; // proporcionado al tamaño real de la fuente
+      // ====== 1. STROKE COMPLETO ======
+      tctx.strokeStyle = "black";
+      tctx.lineWidth = 10;    // grosor del borde (ajustable)
 
       for (let i = 0; i < textLines.length; i++) {
         const ly = y + (i - 0.5) * lineSpacing;
-
-        // Borde por fuera del relleno (aunque siga centrado)
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = 5;
-
-        // Relleno blanco
-        ctx.fillStyle = "white";
-
-        ctx.strokeText(textLines[i], x, ly);
-        ctx.fillText(textLines[i], x, ly);
+        tctx.strokeText(textLines[i], x, ly);
       }
 
-      ctx.restore();
-    }
+      // ====== 2. RECORTAR INTERIOR ======
+      tctx.globalCompositeOperation = "destination-out";
 
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+        tctx.fillText(textLines[i], x, ly);
+      }
+
+      // ====== 3. Canvas final con sombra ======
+      const finalCanvas = document.createElement("canvas");
+      finalCanvas.width = CANVAS_SIZE;
+      finalCanvas.height = CANVAS_SIZE;
+      const fctx = finalCanvas.getContext("2d");
+
+      fctx.globalAlpha = 0.06;
+
+      // sombra suave tipo AE
+      fctx.shadowColor = "rgba(0,0,0,0.25)";
+      fctx.shadowBlur = 4;
+      fctx.shadowOffsetX = -3;
+      fctx.shadowOffsetY = 3;
+
+      // pintar borde externo con sombra
+      fctx.drawImage(temp, 0, 0);
+
+      // quitar sombra para el relleno
+      fctx.shadowBlur = 0;
+
+      // ====== 4. RELLENO BLANCO ======
+      fctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      fctx.textAlign = "center";
+      fctx.textBaseline = "middle";
+      fctx.fillStyle = "white";
+
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+        fctx.fillText(textLines[i], x, ly);
+      }
+
+      // ====== 5. DIBUJAR EN CANVAS PRINCIPAL ======
+      ctx.drawImage(finalCanvas, 0, 0);
+    }
 
 
 
