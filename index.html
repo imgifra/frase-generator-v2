@@ -392,27 +392,59 @@
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words || words.length === 0) return;
 
-      // Si solo hay una palabra, no la estiramos
+      ctx.save();
+      ctx.filter = "blur(2px)";
+
+      // 🔹 Caso 1: solo UNA palabra → justificar por letras (como hace el Brat original)
       if (words.length === 1) {
-        ctx.save();
-        ctx.filter = "blur(2px)";
-        ctx.fillText(words[0], x, y);
+        const word = words[0];
+
+        // Usamos Array.from para respetar caracteres con tilde, emojis, etc.
+        const chars = Array.from(word);
+        if (chars.length === 1) {
+          // Si es un solo carácter, simplemente lo centramos un poco a la izquierda
+          ctx.fillText(word, x, y);
+          ctx.restore();
+          return;
+        }
+
+        // Ancho total de todos los caracteres sin extra spacing
+        const totalCharsWidth = chars.reduce(
+          (acc, ch) => acc + ctx.measureText(ch).width,
+          0
+        );
+
+        const gaps = chars.length - 1;
+        let extraPerGap = (lineWidth - totalCharsWidth) / gaps;
+
+        // Si por alguna razón es negativo, no justificamos para no deformar
+        if (extraPerGap < 0) extraPerGap = 0;
+
+        let cursorX = x;
+
+        chars.forEach((ch, i) => {
+          ctx.fillText(ch, cursorX, y);
+          if (i < chars.length - 1) {
+            cursorX += ctx.measureText(ch).width + extraPerGap;
+          }
+        });
+
         ctx.restore();
         return;
       }
 
-      ctx.save();
-      ctx.filter = "blur(2px)";
-
+      // 🔹 Caso 2: VARIAS palabras → justificar por espacios (lo que ya hacías)
       const wordsWidth = words.reduce(
         (acc, w) => acc + ctx.measureText(w).width,
         0
       );
 
       const gaps = words.length - 1;
-      const targetWidth = lineWidth; // llenamos casi todo el ancho
-      let extraSpaceTotal = targetWidth - wordsWidth;
+      let extraSpaceTotal = lineWidth - wordsWidth;
       let spaceSize = extraSpaceTotal / gaps;
+
+      // Por seguridad, si lineWidth < wordsWidth no queremos espacios negativos
+      if (spaceSize < 0) spaceSize = 0;
 
       let cursorX = x;
 
