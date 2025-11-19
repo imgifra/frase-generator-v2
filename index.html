@@ -228,7 +228,7 @@
       // → Luego watermark diagonal
       drawWatermark();
 
-      drawCornerTagOutline(); // ← NUEVA MARCA @nachozorra
+      drawCornerTagBrat(); // ← NUEVA MARCA @nachozorra
 
       if (!text) {
         drawPlaceholder();
@@ -540,7 +540,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v41 🦊",
+        "v42 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -628,62 +628,46 @@
       ctx.restore();
     }
 
-    /* ========= Marca esquina inferior derecha con OUTLINE EXTERNO ========= */
-    function drawCornerTagOutline() {
+   /* ========= Marca inferior derecha estilo BRAT (una sola línea) ========= */
+    function drawCornerTagBrat() {
       const tag = "@nachozorra";
 
-      // ------- Canvas temporal para stroke externo -------
-      const temp = document.createElement("canvas");
-      temp.width = CANVAS_SIZE;
-      temp.height = CANVAS_SIZE;
-      const tctx = temp.getContext("2d");
+      ctx.save();
 
-      // ---- Configuración tipografía ----
-      const fontSize = 42;
-      tctx.font = `${fontSize}px arial_narrowregular, 'Arial Narrow', sans-serif`;
-      tctx.textAlign = "right";     // ANCLA A LA DERECHA
-      tctx.textBaseline = "bottom";
-
-      // ---- Posición: esquina inferior derecha ----
+      // === POSICIÓN ===
       const padding = 45;
-      const x = CANVAS_SIZE - padding;     // <<< ESTE era tu problema
+      const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
-      // ---- 1. Dibujar STROKE completo ----
-      tctx.strokeStyle = "black";
-      tctx.lineWidth = 10;
-      tctx.globalAlpha = 1;
-      tctx.strokeText(tag, x, y);
+      // === SOMBRA estilo BRAT ===
+      ctx.shadowColor = "rgba(0,0,0,0.40)";
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetX = -3;
+      ctx.shadowOffsetY = 3;
 
-      // ---- 2. Recortar interior (outline externo real) ----
-      tctx.globalCompositeOperation = "destination-out";
-      tctx.fillText(tag, x, y);
+      // === FUENTE BRAT ===
+      const fontSize = 42;
+      ctx.font = `${fontSize}px arial_narrowregular, 'Arial Narrow', sans-serif`;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
 
-      // ------- Canvas final para sombra + relleno -------
-      const finalCanvas = document.createElement("canvas");
-      finalCanvas.width = CANVAS_SIZE;
-      finalCanvas.height = CANVAS_SIZE;
-      const fctx = finalCanvas.getContext("2d");
+      // === COLORES (como BRAT) ===
+      const bg = bgColorInput.value;
+      const color = getContrastColor(bg); // blanco o negro según fondo
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color === "#000000" ? "#ffffff" : "#000000";
+      ctx.lineWidth = 4;
 
-      // ---- Sombra AE ----
-      fctx.shadowColor = "rgba(0,0,0,0.40)";
-      fctx.shadowBlur = 5;
-      fctx.shadowOffsetX = 4;
-      fctx.shadowOffsetY = 4;
+      // === ESTIRAMIENTO vertical BRAT =========
+      ctx.translate(x, y);
+      ctx.scale(1, BRAT_STRETCH_Y);   // <<<<<< El estiramiento BRAT
+      ctx.translate(-x, -y);
 
-      // ---- 3. Dibujar contorno externo con sombra ----
-      fctx.drawImage(temp, 0, 0);
+      // === DIBUJAR (una sola línea) ===
+      ctx.strokeText(tag, x, y / BRAT_STRETCH_Y);
+      ctx.fillText(tag, x, y / BRAT_STRETCH_Y);
 
-      // ---- 4. Relleno blanco ----
-      fctx.shadowBlur = 0;
-      fctx.fillStyle = "white";
-      fctx.font = `${fontSize}px arial_narrowregular, 'Arial Narrow', sans-serif`;
-      fctx.textAlign = "right";
-      fctx.textBaseline = "bottom";
-      fctx.fillText(tag, x, y);
-
-      // ---- 5. Pegar en canvas principal ----
-      ctx.drawImage(finalCanvas, 0, 0);
+      ctx.restore();
     }
 
 
