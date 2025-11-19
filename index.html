@@ -497,20 +497,23 @@
 
       const size = CANVAS_SIZE * 1.1;
 
-      ctx.save();
+      // Canvas temporal para componer sombra + imagen con alpha 1.0
+      const temp = document.createElement("canvas");
+      temp.width = CANVAS_SIZE;
+      temp.height = CANVAS_SIZE;
+      const tctx = temp.getContext("2d");
 
-      // === OPACIDAD DE LA IMAGEN (marca de agua) ===
-      ctx.globalAlpha = 0.06;
+      tctx.save();
 
       // === SOMBRA IGUAL A LA DEL TEXTO ===
-      ctx.shadowColor = "rgba(0,0,0,0.40)";  // opacidad 40%
-      ctx.shadowOffsetX = 4;               // dirección 135°
-      ctx.shadowOffsetY = 4;                // distancia
+      tctx.shadowColor = "rgba(0,0,0,0.40)";
+      tctx.shadowBlur = 8;
+      tctx.shadowOffsetX = 4;
+      tctx.shadowOffsetY = 4;
 
-      // === DIBUJAR PNG CENTRADO ===
-      ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
-
-      ctx.drawImage(
+      // === DIBUJAR PNG CENTRADO (con sombra) ===
+      tctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      tctx.drawImage(
         watermarkImage,
         -size / 2,
         -size / 2,
@@ -518,8 +521,15 @@
         size
       );
 
+      tctx.restore();
+
+      // === AHORA APLICAMOS LA OPACIDAD FINAL ===
+      ctx.save();
+      ctx.globalAlpha = 0.06;  // << ESTA ES LA ÚNICA OPACIDAD
+      ctx.drawImage(temp, 0, 0);
       ctx.restore();
     }
+
 
 
 
@@ -531,7 +541,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v34 🦊",
+        "v35 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
