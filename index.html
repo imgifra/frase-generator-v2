@@ -178,7 +178,7 @@
 
     const CANVAS_SIZE = 1080;
     const PADDING = window.innerWidth < 600 ? 14 : 20;
-    const BRAT_STRETCH_Y = 1.25; // letras más altas en modo brat
+    const BRAT_STRETCH_Y = 1.25; // alto de letras en modo brat
 
     // Eventos
     window.addEventListener("load", draw);
@@ -271,7 +271,7 @@
       const textColor = getContrastColor(bg);
 
       // Caja interna tipo "textOverlay"
-      const boxWidth  = CANVAS_SIZE * 0.8;
+      const boxWidth  = CANVAS_SIZE * 0.72; // 🔹 más angosto para que no pida tantos espacios
       const boxHeight = CANVAS_SIZE * 0.55;
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
@@ -359,6 +359,7 @@
       return lines;
     }
 
+    // Justificado SUAVE: ajusta espacios, no toca el tamaño de las letras
     function drawJustifiedLine(words, x, y, lineWidth, ctx) {
       if (!words || words.length === 0) return;
 
@@ -368,42 +369,32 @@
 
       const gaps = words.length - 1;
 
-      // Medimos todas las palabras
+      // Medir ancho de todas las palabras
       const wordWidths = words.map(w => ctx.measureText(w).width);
       const wordsWidth = wordWidths.reduce((a, b) => a + b, 0);
 
-      // 🔹 CASO 1: solo una palabra → la estiramos para que ocupe TODO el ancho
-      if (gaps === 0) {
-        if (wordsWidth === 0) {
-          ctx.restore();
-          return;
+      const naturalSpace = ctx.measureText(" ").width;
+
+      // Espacio base y límites
+      const baseSpace = naturalSpace * 0.40; // espacio normal (cortico)
+      const minSpace  = naturalSpace * 0.30; // mínimo
+      const maxSpace  = naturalSpace * 1.30; // máximo
+
+      let spaceSize = baseSpace;
+
+      if (gaps > 0) {
+        const baseWidth = wordsWidth + baseSpace * gaps;
+        const freeSpace = lineWidth - baseWidth;
+
+        if (freeSpace > 0) {
+          let extraPerGap = freeSpace / gaps;
+          spaceSize = baseSpace + extraPerGap;
+          if (spaceSize < minSpace) spaceSize = minSpace;
+          if (spaceSize > maxSpace) spaceSize = maxSpace;
         }
-
-        const scaleX = lineWidth / wordsWidth;
-
-        // x,y vienen del "mundo" externo. En modo brat alto llamamos con x=0,y=0
-        ctx.translate(x, y);
-        ctx.scale(scaleX, 1);
-        ctx.fillText(words[0], 0, 0);
-
-        ctx.restore();
-        return;
-      }
-
-      // 🔹 CASO 2: varias palabras → justificamos con espacios
-      const freeSpace = lineWidth - wordsWidth;
-
-      let spaceSize;
-      if (freeSpace <= 0) {
-        // Si no sobra espacio, usamos un espacio "natural" un poco cortico
-        spaceSize = ctx.measureText(" ").width * 0.8;
-      } else {
-        // Justificado REAL: repartimos todo el espacio libre entre los huecos
-        spaceSize = freeSpace / gaps;
       }
 
       let cursorX = x;
-
       for (let i = 0; i < words.length; i++) {
         const w = words[i];
         ctx.fillText(w, cursorX, y);
@@ -414,7 +405,6 @@
 
       ctx.restore();
     }
-
 
     // Misma línea, pero estirada verticalmente (letras más altas)
     function drawJustifiedLineTall(words, x, y, lineWidth, ctx) {
@@ -448,7 +438,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v14 🦊",
+        "v11 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
