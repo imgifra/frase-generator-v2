@@ -178,7 +178,7 @@
 
     const CANVAS_SIZE = 1080;
     const PADDING = window.innerWidth < 600 ? 14 : 20;
-    const BRAT_STRETCH_Y = 1.25; // alto de letras en modo brat
+    const BRAT_STRETCH_Y = 1.3; // alto de letras en modo brat
 
     // Eventos
     window.addEventListener("load", draw);
@@ -276,7 +276,7 @@
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
 
-      const maxFont = 740;
+      const maxFont = 470;
       const minFont = 20;
 
       let low = minFont;
@@ -320,7 +320,7 @@
       ctx.textBaseline = "top";
       ctx.fillStyle = textColor;
 
-      const lineHeight = bestFont * 1;
+      const lineHeight = bestFont * 0.9;
       const blockHeight = bestLines.length * lineHeight * BRAT_STRETCH_Y;
       let y = boxY + (boxHeight - blockHeight) / 2;
 
@@ -494,7 +494,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v23 🦊",
+        "v24 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
