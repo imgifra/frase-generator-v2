@@ -289,10 +289,17 @@
       // === Centrado vertical real ===
       let y = boxY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
 
+      // === Activar sombra suave (antes de dibujar las líneas) ===
+      ctx.shadowColor = "rgba(0,0,0,0.10)";
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+
+
       // === Dibujar texto línea por línea ===
       for (const line of lines) {
         ctx.strokeStyle = ctx.fillStyle;
-        ctx.lineWidth = 2.2;
+        ctx.lineWidth = 2.35;
         ctx.strokeText(line, CANVAS_SIZE / 2, y);
         ctx.fillText(line, CANVAS_SIZE / 2, y);
 
@@ -564,7 +571,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v50 🦊",
+        "v51 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
