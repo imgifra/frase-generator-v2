@@ -290,10 +290,10 @@
       let y = boxY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
 
       // === Activar sombra suave (antes de dibujar las líneas) ===
-      ctx.shadowColor = "rgba(0,0,0,0.10)";
-      ctx.shadowBlur = 2;
-      ctx.shadowOffsetX = 2;
-      ctx.shadowOffsetY = 2;
+      ctx.shadowColor = "rgba(0,0,0,0.20)";
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetX = 4;
+      ctx.shadowOffsetY = 4;
 
 
       // === Dibujar texto línea por línea ===
@@ -571,7 +571,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v51 🦊",
+        "v52 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
