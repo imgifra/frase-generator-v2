@@ -243,57 +243,63 @@
     }
 
 
-/* ========= MODO NORMAL (con caja estilo BRAT) ========= */
-function drawNormal(text, bg) {
-  ctx.save();
 
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = getContrastColor(bg);
+    /* ========= MODO NORMAL (con caja estilo BRAT) ========= */
+    function drawNormal(text, bg) {
+      ctx.save();
 
-  // === Caja igual al estilo BRAT ===
-  const boxWidth  = CANVAS_SIZE * 0.85;   // más angosto → más vertical
-  const boxHeight = CANVAS_SIZE * 0.90;   // ocupa casi todo el alto
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = getContrastColor(bg);
 
-  const boxX = (CANVAS_SIZE - boxWidth) / 2;
-  const boxY = (CANVAS_SIZE - boxHeight) / 2;
+      // === Caja igual al estilo BRAT ===
+      const boxWidth  = CANVAS_SIZE * 0.85;   // más angosto → más vertical
+      const boxHeight = CANVAS_SIZE * 0.90;   // ocupa casi todo el alto
 
-  // === Tamaños de letra más grandes ===
-  const maxFont = 130;
-  const minFont = 40;
+      const boxX = (CANVAS_SIZE - boxWidth) / 2;
+      const boxY = (CANVAS_SIZE - boxHeight) / 2;
 
-  let fontSize = maxFont;
-  let lines = [];
+      // === Tamaños de letra más grandes ===
+      const maxFont = 130;
+      const minFont = 40;
 
-  // === Ajuste automático de tamaño ===
-  while (fontSize > minFont) {
-    ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
-    lines = wrapText(text, boxWidth, ctx);
+      let fontSize = maxFont;
+      let lines = [];
 
-    const totalHeight = lines.length * fontSize * 1.1;
+      // === Ajuste automático de tamaño ===
+      while (fontSize > minFont) {
+        ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
+        lines = wrapText(text, boxWidth, ctx);
 
-    if (totalHeight <= boxHeight) break;  // cabe perfecto dentro del “box”
+        const totalHeight = lines.length * fontSize * 1.1;
 
-    fontSize -= 4;
-  }
+        if (totalHeight <= boxHeight) break;  // cabe perfecto dentro del “box”
 
-  // === Aplicar fuente final ===
-  ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
-  lines = wrapText(text, boxWidth, ctx);
+        fontSize -= 4;
+      }
 
-  const totalHeight = lines.length * fontSize * 1.1;
+      // === Aplicar fuente final ===
+      ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
+      lines = wrapText(text, boxWidth, ctx);
 
-  // Posicionamiento exacto dentro del “box”
-  let y = boxY + (boxHeight - totalHeight) / 2 + fontSize * 0.1;
+      const totalHeight = lines.length * fontSize * 1.1;
 
-  // === Dibujar texto línea por línea ===
-  for (const line of lines) {
-    ctx.fillText(line, CANVAS_SIZE / 2, y);
-    y += fontSize * 1.2;
-  }
+      // Posicionamiento exacto dentro del “box”
+      let y = boxY + (boxHeight - totalHeight) / 2 + fontSize * 0.1;
 
-  ctx.restore();
-}
+      // === Dibujar texto línea por línea ===
+      for (const line of lines) {
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = 2.2;
+        ctx.strokeText(line, CANVAS_SIZE / 2, y);
+
+        ctx.fillText(line, CANVAS_SIZE / 2, y);
+
+        y += fontSize * 1;
+      }
+
+      ctx.restore();
+    }
 
 
     /* ========= MODO BRAT ========= */
@@ -556,7 +562,7 @@ function drawNormal(text, bg) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V48 🦊",
+        "v49 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -740,15 +746,6 @@ function drawNormal(text, bg) {
 
       ctx.restore();
     }
-
-
-
-
-
-
-
-
-
 
 
 
