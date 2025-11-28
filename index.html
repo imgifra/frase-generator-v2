@@ -282,21 +282,23 @@
       ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
       lines = wrapText(text, boxWidth, ctx);
 
-      const totalHeight = lines.length * fontSize * 1.1;
+      // === Cálculo consistente del interlineado ===
+      const lineHeight = fontSize * 1;     // ← mismo valor que en el dibujo
+      const totalHeight = lines.length * lineHeight;
 
-      // Posicionamiento exacto dentro del “box”
-      let y = boxY + (boxHeight - totalHeight) / 2 + fontSize * 0.1;
+      // === Centrado vertical real ===
+      let y = boxY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
 
       // === Dibujar texto línea por línea ===
       for (const line of lines) {
         ctx.strokeStyle = ctx.fillStyle;
         ctx.lineWidth = 2.2;
         ctx.strokeText(line, CANVAS_SIZE / 2, y);
-
         ctx.fillText(line, CANVAS_SIZE / 2, y);
 
-        y += fontSize * 1;
+        y += lineHeight;
       }
+
 
       ctx.restore();
     }
@@ -562,7 +564,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v49 🦊",
+        "v50 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
