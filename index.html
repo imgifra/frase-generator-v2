@@ -37,102 +37,151 @@
 
   <!-- Tailwind para layout de controles -->
   <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --controls-h: 110px;
+  }
 
-  <style>
+  body {
+    background: #111;
+    margin: 0;
+    color: #fff;
+    font-family: 'Felt Tip Roman', cursive;
+    overflow: hidden;
+  }
+
+  /* Área de preview */
+  #stage {
+    height: calc(100vh - var(--controls-h));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #previewCanvas {
+    width: min(90vw, 90vh);
+    height: min(90vw, 90vh);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    border-radius: 25px;
+    background: #fff;
+    display: block;
+  }
+
+  /* Panel de control inferior */
+  .control-panel {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: var(--controls-h);
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    z-index: 20;
+    padding-bottom: 6px;
+  }
+
+  /* Switch tipo iPhone */
+  .switch {
+    position: relative;
+    width: 55px;
+    height: 28px;
+  }
+  .switch input { display:none; }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #555;
+    transition: .3s;
+    border-radius: 34px;
+  }
+  .slider:before {
+    content: "";
+    position: absolute;
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    transition: .3s;
+    border-radius: 50%;
+  }
+  input:checked + .slider {
+    background-color: #22c55e;
+  }
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  /* Input de color */
+  #bgColor {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 999px;
+    border: none;
+    overflow: hidden;
+  }
+  #bgColor::-webkit-color-swatch,
+  #bgColor::-moz-color-swatch {
+    border: none;
+    border-radius: 999px;
+  }
+
+  /* =========================================
+            RESPONSIVE PARA CELULARES
+     ========================================= */
+  @media (max-width: 480px) {
+
+    /* Aumentamos la altura para que todo quepa */
     :root {
-      --controls-h: 110px;
+      --controls-h: 160px;
     }
 
-    body {
-      background: #111;
-      margin: 0;
-      color: #fff;
-      font-family: 'Felt Tip Roman', cursive;
-      overflow: hidden;
-    }
-
-    /* Área de preview */
-    #stage {
-      height: calc(100vh - var(--controls-h));
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    #previewCanvas {
-      width: min(90vw, 90vh);
-      height: min(90vw, 90vh);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
-      border-radius: 25px;
-      background: #fff;
-      display: block;
-    }
-
-    /* Panel de control inferior */
+    /* Panel en vertical */
     .control-panel {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
       height: var(--controls-h);
-      background: rgba(0,0,0,0.88);
-      backdrop-filter: blur(10px);
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 8px;
+    }
+
+    /* Segunda fila: input + color + botón → vertical */
+    .control-panel > div:nth-child(2) {
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      gap: 6px;
-      z-index: 20;
-      padding-bottom: 6px;
+      gap: 8px !important;
+      width: 100%;
+      padding: 0 10px;
     }
 
-    /* Switch tipo iPhone */
-    .switch {
-      position: relative;
-      width: 55px;
-      height: 28px;
-    }
-    .switch input { display:none; }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background-color: #555;
-      transition: .3s;
-      border-radius: 34px;
-    }
-    .slider:before {
-      content: "";
-      position: absolute;
-      height: 22px;
-      width: 22px;
-      left: 3px;
-      bottom: 3px;
-      background: #fff;
-      transition: .3s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: #22c55e;
-    }
-    input:checked + .slider:before {
-      transform: translateX(26px);
+    /* Input ocupa todo el ancho */
+    #textInput {
+      width: 100% !important;
+      font-size: 16px !important;
+      padding: 8px !important;
     }
 
-    /* Input de color */
+    /* Botón ocupa todo el ancho */
+    #downloadBtn {
+      width: 100%;
+      padding: 8px !important;
+      font-size: 14px !important;
+    }
+
+    /* Color picker más pequeño */
     #bgColor {
-      width: 34px;
-      height: 34px;
-      padding: 0;
-      border-radius: 999px;
-      border: none;
-      overflow: hidden;
+      width: 28px !important;
+      height: 28px !important;
     }
-    #bgColor::-webkit-color-swatch,
-    #bgColor::-moz-color-swatch {
-      border: none;
-      border-radius: 999px;
-    }
-  </style>
+
+  }
+</style>
+
 </head>
 <body>
 
@@ -571,7 +620,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v52 🦊",
+        "v53 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
