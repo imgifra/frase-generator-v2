@@ -89,6 +89,16 @@
     padding-bottom: 90px;
   }
 
+  .control-panel {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  }
+
+  #multiBtn {
+    margin-bottom: calc(env(safe-area-inset-bottom) + 90px);
+  }
+
+
+
   /* Switch tipo iPhone */
   .switch {
     position: relative;
@@ -626,7 +636,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v54 🦊",
+        "v55 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
