@@ -218,27 +218,27 @@
       const text = input.value.trim();
       const bg = bgColorInput.value;
 
-      // Fondo
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // → Primero marca Nacho Zorra con alpha bajo
-      drawAEStyleText();  
-
-      // → Luego watermark diagonal
       drawWatermark();
-
-      drawCornerTagBrat(); // ← NUEVA MARCA @nachozorra
+      drawAEStyleText();
 
       if (!text) {
         drawPlaceholder();
-        return;
+      } else {
+        if (toggle.checked) {
+          drawBrat(text, bg);
+        } else {
+          drawNormal(text, bg);
+        }
       }
 
+      // ← Agregar aquí:
       if (toggle.checked) {
-        drawBrat(text, bg);
+        drawCornerTagBrat();
       } else {
-        drawNormal(text, bg);
+        drawCornerTagNormal();
       }
     }
 
@@ -556,7 +556,7 @@ function drawNormal(text, bg) {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V47 🦊",
+        "V48 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -696,6 +696,58 @@ function drawNormal(text, bg) {
 
       ctx.restore();
     }
+
+    /* ========= Marca inferior derecha para MODO NORMAL ========= */
+    function drawCornerTagNormal() {
+      const tag = "@nachozorra";
+
+      ctx.save();
+
+      // === POSICIÓN EXACTA ===
+      const padding = 45;
+      const x = CANVAS_SIZE - padding;
+      const y = CANVAS_SIZE - padding;
+
+      // === SOMBRA DINÁMICA (igual que BRAT) ===
+      const bg = bgColorInput.value;
+      const textColor = getContrastColor(bg);
+
+      const shadowColor = (textColor === "#ffffff")
+        ? "rgba(255,255,255,0.45)"     // sombra clara si texto blanco
+        : "rgba(0,0,0,0.45)";          // sombra oscura si texto negro
+
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 3;
+      ctx.shadowOffsetY = 3;
+
+      // === FUENTE NORMAL: Felt Tip Roman ===
+      const fontSize = 42;
+      ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+
+      // === COLOR (contraste dinámico) ===
+      ctx.fillStyle = textColor;
+
+      // Contorno suave
+      ctx.strokeStyle = textColor === "#000000" ? "#ffffff" : "#000000";
+      ctx.lineWidth = 3;
+
+      // === DIBUJAR ===
+      ctx.strokeText(tag, x, y);
+      ctx.fillText(tag, x, y);
+
+      ctx.restore();
+    }
+
+
+
+
+
+
+
+
 
 
 
