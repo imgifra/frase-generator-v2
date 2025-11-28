@@ -243,42 +243,58 @@
     }
 
 
-    /* ========= MODO NORMAL ========= */
-    function drawNormal(text, bg) {
-      ctx.save();
+/* ========= MODO NORMAL (con caja estilo BRAT) ========= */
+function drawNormal(text, bg) {
+  ctx.save();
 
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = getContrastColor(bg);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = getContrastColor(bg);
 
-      const maxFont = 80;
-      const minFont = 36;
-      const maxWidth = CANVAS_SIZE - 2 * PADDING;
-      let fontSize = maxFont;
-      let lines = [];
+  // === Caja igual al estilo BRAT ===
+  const boxWidth  = CANVAS_SIZE * 0.85;   // más angosto → más vertical
+  const boxHeight = CANVAS_SIZE * 0.90;   // ocupa casi todo el alto
 
-      while (fontSize > minFont) {
-        ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
-        lines = wrapText(text, maxWidth, ctx);
-        const totalHeight = lines.length * fontSize * 1.1;
-        if (totalHeight <= CANVAS_SIZE - 2 * PADDING) {
-          break;
-        }
-        fontSize -= 4;
-      }
+  const boxX = (CANVAS_SIZE - boxWidth) / 2;
+  const boxY = (CANVAS_SIZE - boxHeight) / 2;
 
-      ctx.font = fontSize + "px 'Felt Tip Roman', cursive";
-      lines = wrapText(text, maxWidth, ctx);
-      const totalHeight = lines.length * fontSize * 1.1;
-      let y = CANVAS_SIZE / 2 - totalHeight / 2 + fontSize * 0.1;
+  // === Tamaños de letra más grandes ===
+  const maxFont = 130;
+  const minFont = 40;
 
-      for (const line of lines) {
-        ctx.fillText(line, CANVAS_SIZE / 2, y);
-        y += fontSize * 1.2;
-      }
+  let fontSize = maxFont;
+  let lines = [];
 
-      ctx.restore();
-    }
+  // === Ajuste automático de tamaño ===
+  while (fontSize > minFont) {
+    ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
+    lines = wrapText(text, boxWidth, ctx);
+
+    const totalHeight = lines.length * fontSize * 1.1;
+
+    if (totalHeight <= boxHeight) break;  // cabe perfecto dentro del “box”
+
+    fontSize -= 4;
+  }
+
+  // === Aplicar fuente final ===
+  ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
+  lines = wrapText(text, boxWidth, ctx);
+
+  const totalHeight = lines.length * fontSize * 1.1;
+
+  // Posicionamiento exacto dentro del “box”
+  let y = boxY + (boxHeight - totalHeight) / 2 + fontSize * 0.1;
+
+  // === Dibujar texto línea por línea ===
+  for (const line of lines) {
+    ctx.fillText(line, CANVAS_SIZE / 2, y);
+    y += fontSize * 1.2;
+  }
+
+  ctx.restore();
+}
+
 
     /* ========= MODO BRAT ========= */
     function drawBrat(rawText, bg) {
@@ -540,7 +556,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "46 🦊",
+        "V47 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
