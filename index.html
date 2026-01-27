@@ -462,7 +462,7 @@
     
       // 1) Fondo base: ignoramos el bg picker o lo "suavizamos"
       // Si quieres que el color picker siga mandando, comenta estas dos líneas.
-      const paperBase = softenHex(bg, 0.78); // lo lleva hacia blanco/hueso
+      const paperBase = "#F3EEE6"; // lo lleva hacia blanco/hueso
       ctx.fillStyle = paperBase;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
     
@@ -474,8 +474,8 @@
       const t = raw.toUpperCase();
     
       // Caja para texto (estilo "bloque plantado")
-      const boxWidth  = CANVAS_SIZE * 0.72;
-      const boxHeight = CANVAS_SIZE * 0.55;
+      const boxWidth  = CANVAS_SIZE * 0.68;
+      const boxHeight = CANVAS_SIZE * 0.42;
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
     
@@ -511,10 +511,12 @@
       let y = boxY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
     
       // Sombra mínima (no “glow”)
-      ctx.shadowColor = "rgba(0,0,0,0.12)";
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetX = 2;
-      ctx.shadowOffsetY = 2;
+      // === SOMBRA SUAVE EDITORIAL (CRUDO) ===
+      ctx.shadowColor = "rgba(0,0,0,0.10)";
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+
     
       // “Tinta”: dibujamos 2 pasadas con micro-jitter + grano
       for (const line of lines) {
