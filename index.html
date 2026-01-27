@@ -210,12 +210,16 @@
     <!-- Modo -->
     <div class="flex items-center justify-center gap-3 text-sm">
       <span>Modo:</span>
-      <label class="switch">
-        <input type="checkbox" id="modeToggle">
-        <span class="slider"></span>
-      </label>
+    
+      <select id="modeSelect" class="p-2 rounded-lg text-black font-bold">
+        <option value="normal">Normal</option>
+        <option value="brat">Brat</option>
+        <option value="crudo">Crudo</option>
+      </select>
+    
       <span id="modeLabel">Normal</span>
     </div>
+
 
     <!-- Texto + fondo + botón -->
     <div class="flex items-center justify-center gap-3 w-full px-3">
@@ -251,7 +255,7 @@
 
     const input = document.getElementById("textInput");
     const bgColorInput = document.getElementById("bgColor");
-    const toggle = document.getElementById("modeToggle");
+    const modeSelect = document.getElementById("modeSelect");
     const modeLabel = document.getElementById("modeLabel");
     const downloadBtn = document.getElementById("downloadBtn");
 
@@ -265,8 +269,9 @@
 
     input.addEventListener("input", draw);
     bgColorInput.addEventListener("input", draw);
-    toggle.addEventListener("change", () => {
-      modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
+    modeSelect.addEventListener("change", () => {
+      const v = modeSelect.value;
+      modeLabel.textContent = v === "brat" ? "Brat" : (v === "crudo" ? "Crudo" : "Normal");
       draw();
     });
     downloadBtn.addEventListener("click", downloadPNG);
@@ -289,23 +294,21 @@
       drawWatermark();
       drawAEStyleText();
 
+      const mode = modeSelect.value;
+      
       if (!text) {
         drawPlaceholder();
       } else {
-        if (toggle.checked) {
-          drawBrat(text, bg);
-        } else {
-          drawNormal(text, bg);
-        }
+        if (mode === "brat") drawBrat(text, bg);
+        else if (mode === "crudo") drawCrudo(text, bg);
+        else drawNormal(text, bg);
       }
-
-      // ← Agregar aquí:
-      if (toggle.checked) {
-        drawCornerTagBrat();
-      } else {
-        drawCornerTagNormal();
-      }
-    }
+      
+      // tags
+      if (mode === "brat") drawCornerTagBrat();
+      else if (mode === "crudo") drawCornerTagCrudo();
+      else drawCornerTagNormal();
+      
 
 
 
@@ -450,6 +453,190 @@
       ctx.restore();
     }
 
+    /* ========= MODO CRUDO (original NachoZorra) =========
+       Idea: fondo hueso + textura tipo papel + bloque tipográfico ultra-bold,
+       tinta con un poquito de imperfección (sin copiar el estilo exacto de nadie).
+    */
+    function drawCrudo(text, bg) {
+      ctx.save();
+    
+      // 1) Fondo base: ignoramos el bg picker o lo "suavizamos"
+      // Si quieres que el color picker siga mandando, comenta estas dos líneas.
+      const paperBase = softenHex(bg, 0.78); // lo lleva hacia blanco/hueso
+      ctx.fillStyle = paperBase;
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    
+      // 2) Textura de papel (procedural)
+      drawPaperTexture();
+    
+      // 3) Texto: mayúsculas y bloque fuerte
+      const raw = (text || "").trim();
+      const t = raw.toUpperCase();
+    
+      // Caja para texto (estilo "bloque plantado")
+      const boxWidth  = CANVAS_SIZE * 0.72;
+      const boxHeight = CANVAS_SIZE * 0.55;
+      const boxX = (CANVAS_SIZE - boxWidth) / 2;
+      const boxY = (CANVAS_SIZE - boxHeight) / 2;
+    
+      // Color tinta: en crudo no depende del contraste puro; usamos "tinta quemada"
+      const ink = pickInkColorFromBackground(paperBase);
+    
+      // Fuente: usamos una stack segura. Si quieres una fuente específica,
+      // la cargamos igual que tus otras.
+      const fontFamily = "Impact, 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
+    
+      // Autosize + wrapping
+      const maxFont = 190;
+      const minFont = 40;
+      let fontSize = maxFont;
+      let lines = [];
+    
+      while (fontSize > minFont) {
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        lines = wrapText(t, boxWidth, ctx);
+        const lh = fontSize * 0.92;
+        const totalH = lines.length * lh;
+        if (totalH <= boxHeight) break;
+        fontSize -= 4;
+      }
+    
+      // Dibujo "tinta" con ligera imperfección
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+    
+      const lineHeight = fontSize * 0.92;
+      const totalHeight = lines.length * lineHeight;
+      let y = boxY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
+    
+      // Sombra mínima (no “glow”)
+      ctx.shadowColor = "rgba(0,0,0,0.12)";
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+    
+      // “Tinta”: dibujamos 2 pasadas con micro-jitter + grano
+      for (const line of lines) {
+        drawInkText(line, CANVAS_SIZE / 2, y, ink, fontSize);
+        y += lineHeight;
+      }
+    
+      ctx.restore();
+    }
+    
+    /* ======== Textura de papel: noise procedural ======== */
+    function drawPaperTexture() {
+      const img = ctx.createImageData(CANVAS_SIZE, CANVAS_SIZE);
+      const d = img.data;
+    
+      // Densidad de grano (sube a 0.12 si quieres más textura)
+      const strength = 0.06;
+    
+      for (let i = 0; i < d.length; i += 4) {
+        const n = (Math.random() - 0.5) * 255 * strength; // -..+
+        d[i]     = clamp(d[i] + n, 0, 255);
+        d[i + 1] = clamp(d[i + 1] + n, 0, 255);
+        d[i + 2] = clamp(d[i + 2] + n, 0, 255);
+        d[i + 3] = 255;
+      }
+    
+      // Mezcla con baja opacidad para no “ensuciar” de más
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.putImageData(img, 0, 0);
+      ctx.restore();
+    
+      // Un “vignette” suave para profundidad
+      ctx.save();
+      const g = ctx.createRadialGradient(
+        CANVAS_SIZE/2, CANVAS_SIZE/2, CANVAS_SIZE*0.15,
+        CANVAS_SIZE/2, CANVAS_SIZE/2, CANVAS_SIZE*0.75
+      );
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, "rgba(0,0,0,0.14)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,CANVAS_SIZE,CANVAS_SIZE);
+      ctx.restore();
+    }
+    
+    /* ======== Texto con efecto de "tinta" original ======== */
+    function drawInkText(line, x, y, inkColor, fontSize) {
+      ctx.save();
+      ctx.fillStyle = inkColor;
+    
+      // Pasada 1 (normal)
+      ctx.fillText(line, x, y);
+    
+      // Pasada 2 (micro jitter + alpha)
+      ctx.globalAlpha = 0.55;
+      const jx = (Math.random() - 0.5) * 2.2;
+      const jy = (Math.random() - 0.5) * 2.2;
+      ctx.fillText(line, x + jx, y + jy);
+    
+      // Pasada 3 (un pelín de “desgaste” con stroke finito)
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = Math.max(2, fontSize * 0.03);
+      ctx.strokeStyle = inkColor;
+      ctx.strokeText(line, x, y);
+    
+      ctx.restore();
+    }
+    
+    /* ======== Tag para modo CRUDO ======== */
+    function drawCornerTagCrudo() {
+      const tag = "@nachozorra";
+    
+      ctx.save();
+      const padding = 46;
+      const x = CANVAS_SIZE - padding;
+      const y = CANVAS_SIZE - padding;
+    
+      ctx.font = `28px Impact, Arial, sans-serif`;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+    
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillText(tag, x, y);
+    
+      ctx.restore();
+    }
+    
+    /* ======== Helpers ======== */
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+    
+    function softenHex(hex, amountToWhite=0.8){
+      // amountToWhite: 0 => igual, 1 => blanco
+      const rgb = hexToRgb(hex);
+      const r = Math.round(rgb.r + (255 - rgb.r) * amountToWhite);
+      const g = Math.round(rgb.g + (255 - rgb.g) * amountToWhite);
+      const b = Math.round(rgb.b + (255 - rgb.b) * amountToWhite);
+      return rgbToHex(r,g,b);
+    }
+    
+    function pickInkColorFromBackground(bgHex){
+      // tinta “quemada” que funciona con fondos claros
+      // (si el fondo ya es oscuro, devolvemos casi blanco)
+      const c = getContrastColor(bgHex);
+      if (c === "#ffffff") return "rgba(245,245,245,0.92)";
+      // tinta roja/negra "propia"
+      return "rgba(140, 24, 18, 0.92)"; // rojo quemado original
+    }
+    
+    function hexToRgb(hex){
+      hex = hex.replace("#","");
+      return {
+        r: parseInt(hex.slice(0,2),16),
+        g: parseInt(hex.slice(2,4),16),
+        b: parseInt(hex.slice(4,6),16),
+      };
+    }
+    
+    function rgbToHex(r,g,b){
+      return "#" + [r,g,b].map(v => v.toString(16).padStart(2,"0")).join("");
+    }
+
+    
     /* ========= UTILIDADES DE TEXTO ========= */
 
     function wrapText(text, maxWidth, ctxLocal) {
@@ -836,7 +1023,7 @@
     /* ========= DESCARGAR ========= */
     function downloadPNG() {
       const link = document.createElement("a");
-      const mode = toggle.checked ? "brat" : "normal";
+      const mode = modeSelect.value;
       link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
       link.href = canvas.toDataURL("image/png");
       link.click();
