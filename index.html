@@ -33,6 +33,14 @@
     font-weight: 800;
   }
   </style>
+  <style>
+  @font-face {
+    font-family: 'Blacksword';
+    src: url('assets/Blacksword.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+  }
+  </style>
 
 
   <!-- Tailwind para layout de controles -->
@@ -215,6 +223,8 @@
         <option value="normal">Normal</option>
         <option value="brat">Brat</option>
         <option value="crudo">Crudo</option>
+        <option value="elegante">Elegante</option>
+
       </select>
     
       <span id="modeLabel">Normal</span>
@@ -271,9 +281,15 @@
     bgColorInput.addEventListener("input", draw);
     modeSelect.addEventListener("change", () => {
       const v = modeSelect.value;
-      modeLabel.textContent = v === "brat" ? "Brat" : (v === "crudo" ? "Crudo" : "Normal");
+
+      if (v === "brat") modeLabel.textContent = "Brat";
+      else if (v === "crudo") modeLabel.textContent = "Crudo";
+      else if (v === "elegante") modeLabel.textContent = "Elegante";
+      else modeLabel.textContent = "Normal";
+
       draw();
     });
+
     downloadBtn.addEventListener("click", downloadPNG);
 
     // Botón para múltiples frases
@@ -301,7 +317,9 @@
       } else {
         if (mode === "brat") drawBrat(text, bg);
         else if (mode === "crudo") drawCrudo(text, bg);
+        else if (mode === "elegante") drawElegante(text, bg);
         else drawNormal(text, bg);
+
       }
       
       // tags
@@ -452,6 +470,83 @@
 
       ctx.restore();
     }
+
+    function drawElegante(text, bg) {
+      ctx.save();
+
+      // Fondo negro elegante fijo
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffffff";
+
+      const boxWidth  = CANVAS_SIZE * 0.75;
+      const boxHeight = CANVAS_SIZE * 0.75;
+
+      const maxFont = 140;
+      const minFont = 40;
+
+      let fontSize = maxFont;
+      let lines = [];
+
+      while (fontSize > minFont) {
+        ctx.font = `${fontSize}px 'Blacksword'`;
+        lines = wrapText(text, boxWidth, ctx);
+
+        const totalHeight = lines.length * fontSize * 1.2;
+
+        if (totalHeight <= boxHeight) break;
+
+        fontSize -= 4;
+      }
+
+      ctx.font = `${fontSize}px 'Blacksword'`;
+      lines = wrapText(text, boxWidth, ctx);
+
+      const lineHeight = fontSize * 1.25;
+      const totalHeight = lines.length * lineHeight;
+
+      let y = CANVAS_SIZE / 2 - totalHeight / 2 + lineHeight / 2;
+
+      // Sombra suave tipo cinematográfica
+      ctx.shadowColor = "rgba(0,0,0,0.6)";
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetX = 4;
+      ctx.shadowOffsetY = 4;
+
+      for (const line of lines) {
+        ctx.fillText(line, CANVAS_SIZE / 2, y);
+        y += lineHeight;
+      }
+
+      // ========= LÍNEAS DECORATIVAS =========
+      const lastLineY = y;
+      const centerX = CANVAS_SIZE / 2;
+
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineCap = "round";
+
+      // Línea principal curva
+      ctx.beginPath();
+      ctx.moveTo(centerX - 220, lastLineY + 10);
+      ctx.quadraticCurveTo(centerX, lastLineY + 50, centerX + 220, lastLineY + 10);
+      ctx.stroke();
+
+      // Línea secundaria más fina
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX - 180, lastLineY + 25);
+      ctx.quadraticCurveTo(centerX, lastLineY + 65, centerX + 180, lastLineY + 25);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+
 
     /* ========= MODO CRUDO (original NachoZorra) =========
        Idea: fondo hueso + textura tipo papel + bloque tipográfico ultra-bold,
@@ -825,7 +920,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v55 🦊",
+        "v56 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
