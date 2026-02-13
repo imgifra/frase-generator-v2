@@ -305,31 +305,37 @@
     function draw() {
       const text = input.value.trim();
       const bg = bgColorInput.value;
-
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-      drawWatermark();
-      drawAEStyleText();
-
       const mode = modeSelect.value;
-      
+
+      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
       if (!text) {
         drawPlaceholder();
+        return;
+      }
+
+      if (mode === "elegante") {
+        drawElegante(text);
       } else {
+        // fondo normal para otros modos
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+        drawWatermark();
+        drawAEStyleText();
+
         if (mode === "brat") drawBrat(text, bg);
         else if (mode === "crudo") drawCrudo(text, bg);
-        else if (mode === "elegante") drawElegante(text, bg);
         else drawNormal(text, bg);
-
       }
-      
-      // tags
+
+      // Tags
       if (mode === "brat") drawCornerTagBrat();
       else if (mode === "crudo") drawCornerTagCrudo();
       else if (mode === "elegante") drawCornerTagElegante();
       else drawCornerTagNormal();
     }
+
 
 
 
@@ -872,7 +878,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V71 🦊",
+        "V72 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
