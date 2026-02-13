@@ -715,11 +715,11 @@
 
       ctx.save();
 
-      const padding = 70;
+      const padding = 45;
       const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
-      ctx.font = `italic 48px 'Blacksword'`;
+      ctx.font = `italic 60px 'Blacksword'`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
@@ -727,9 +727,9 @@
 
       // Sombra ultra sutil
       ctx.shadowColor = "rgba(255,255,255,0.05)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetX = 3;
+      ctx.shadowOffsetY = 3;
 
       // Ligera inclinación natural
       ctx.translate(x, y);
@@ -963,7 +963,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v60 🦊",
+        "v61 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
