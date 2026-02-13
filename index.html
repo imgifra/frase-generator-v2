@@ -398,7 +398,7 @@
     }
 
 
-    /* ========= MODO BRAT ========= */
+    /* ========= MODO ELEGANTE ========= */
     function drawElegante(text) {
       ctx.save();
 
@@ -474,14 +474,6 @@
       ctx.restore();
     }
 
-
-
-
-
-    /* ========= MODO CRUDO (original NachoZorra) =========
-       Idea: fondo hueso + textura tipo papel + bloque tipográfico ultra-bold,
-       tinta con un poquito de imperfección (sin copiar el estilo exacto de nadie).
-    */
     function drawCrudo(text, bg) {
       ctx.save();
     
@@ -610,52 +602,8 @@
       ctx.restore();
     }
     
-    /* ======== Tag para modo CRUDO ======== */
-    function drawCornerTagCrudo() {
-      const tag = "@nachozorra";
-    
-      ctx.save();
-      const padding = 46;
-      const x = CANVAS_SIZE - padding;
-      const y = CANVAS_SIZE - padding;
-    
-      ctx.font = `28px Impact, Arial, sans-serif`;
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
-    
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillText(tag, x, y);
-    
-      ctx.restore();
-    }
-    
 
 
-    function drawCornerTagElegante() {
-      const tag = "vixevel";
-
-      ctx.save();
-
-      const padding = 60;
-      const x = CANVAS_SIZE - padding;
-      const y = CANVAS_SIZE - padding;
-
-      const fontSize = 44;
-      ctx.font = `${fontSize}px 'Blacksword'`;
-
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
-
-      // 🔥 Sin sombras
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = "transparent";
-
-      ctx.fillStyle = "#ffffff";
-
-      ctx.fillText(tag, x, y);
-
-      ctx.restore();
-    }
 
 
 
@@ -881,7 +829,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v65 🦊",
+        "v66 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1066,6 +1014,32 @@
       ctx.restore();
     }
 
+    /* ========= Marca inferior derecha para MODO ELEGANTE ========= */
+    function drawCornerTagElegante() {
+      const tag = "vixevel";
+
+      ctx.save();
+
+      const padding = 45;
+      const x = CANVAS_SIZE - padding;
+      const y = CANVAS_SIZE - padding;
+
+      const fontSize = 60;
+      ctx.font = `${fontSize}px 'Blacksword'`;
+
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+
+      // 🔥 Sin sombras
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+
+      ctx.fillStyle = "#ffffff";
+
+      ctx.fillText(tag, x, y);
+
+      ctx.restore();
+    }
 
 
     /* ========= CONTRASTE ========= */
