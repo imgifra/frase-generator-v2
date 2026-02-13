@@ -261,6 +261,8 @@
     const watermarkImage = new Image();
     watermarkImage.src = "assets/marca.png?v=1"; // cache-buster
     watermarkImage.onload = draw;
+    const eleganteLogo = new Image();
+    eleganteLogo.src = "assets/logo-elegante.png?v=1";
 
 
     const input = document.getElementById("textInput");
@@ -406,10 +408,25 @@
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
+      // Logo elegante PNG centrado
+      if (eleganteLogo.complete) {
+
+        const size = CANVAS_SIZE * 0.9;
+        const x = CANVAS_SIZE / 2 - size / 2;
+        const y = CANVAS_SIZE / 2 - size / 2;
+
+        ctx.save();
+        ctx.globalAlpha = 0.06;
+        ctx.drawImage(eleganteLogo, x, y, size, size);
+        ctx.restore();
+      }
+
+
+
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
-
+      
       const boxWidth  = CANVAS_SIZE * 0.70;
       const boxHeight = CANVAS_SIZE * 0.60;
 
@@ -829,7 +846,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v69 🦊",
+        "V70 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
