@@ -714,11 +714,12 @@
 
       ctx.save();
 
-      const padding = 120; // más aire
+      const padding = 60; // más aire
       const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
-      ctx.font = `52px 'Blacksword'`;
+      const fontSize = 46;
+      ctx.font = `${fontSize}px 'Blacksword'`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
@@ -955,7 +956,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v62 🦊",
+        "v63 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
