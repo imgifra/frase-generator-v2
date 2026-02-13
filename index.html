@@ -868,7 +868,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V79🦊",
+        "V80🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1058,12 +1058,10 @@
       const tag = "@vixevel";
 
       ctx.save();
-
-      // 🔥 Resetear cualquier transformación previa
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-      const x = CANVAS_SIZE / 2;   // centro real horizontal
-      const y = CANVAS_SIZE - 80;  // margen inferior elegante
+      const x = CANVAS_SIZE / 2;
+      const y = CANVAS_SIZE - 80;
 
       const fontSize = 90;
       ctx.font = `${fontSize}px 'Blacksword'`;
@@ -1071,15 +1069,14 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
 
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = "transparent";
-
-      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      // 🔥 Opacidad real sin acumulación
+      ctx.fillStyle = "rgba(255,255,255,0.28)";
 
       ctx.fillText(tag, x, y);
 
       ctx.restore();
     }
+
 
 
 
