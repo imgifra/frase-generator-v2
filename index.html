@@ -263,6 +263,8 @@
     watermarkImage.onload = draw;
     const eleganteLogo = new Image();
     eleganteLogo.src = "assets/logo-elegante.png?v=1";
+    eleganteLogo.onload = draw;
+
 
 
     const input = document.getElementById("textInput");
@@ -878,7 +880,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V72 🦊",
+        "V73🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
