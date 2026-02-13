@@ -868,7 +868,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V80🦊",
+        "V81🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1057,25 +1057,31 @@
     function drawCornerTagElegante() {
       const tag = "@vixevel";
 
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      // ===== 1. Canvas temporal =====
+      const temp = document.createElement("canvas");
+      temp.width = CANVAS_SIZE;
+      temp.height = CANVAS_SIZE;
+      const tctx = temp.getContext("2d");
 
       const x = CANVAS_SIZE / 2;
       const y = CANVAS_SIZE - 80;
-
       const fontSize = 90;
-      ctx.font = `${fontSize}px 'Blacksword'`;
 
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
+      tctx.font = `${fontSize}px 'Blacksword'`;
+      tctx.textAlign = "center";
+      tctx.textBaseline = "bottom";
 
-      // 🔥 Opacidad real sin acumulación
-      ctx.fillStyle = "rgba(255,255,255,0.28)";
+      // 🔥 Texto completamente sólido
+      tctx.fillStyle = "#ffffff";
+      tctx.fillText(tag, x, y);
 
-      ctx.fillText(tag, x, y);
-
+      // ===== 2. Aplicamos opacidad al bloque completo =====
+      ctx.save();
+      ctx.globalAlpha = 0.28;   // controla intensidad aquí
+      ctx.drawImage(temp, 0, 0);
       ctx.restore();
     }
+
 
 
 
@@ -1125,7 +1131,7 @@
 
         setTimeout(() => {
           const link = document.createElement("a");
-          link.download = "frase_" + (index + 1) + ".png";
+          link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
           link.href = canvas.toDataURL("image/png");
           link.click();
 
