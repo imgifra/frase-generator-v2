@@ -472,10 +472,10 @@
       ctx.restore();
     }
 
-    function drawElegante(text, bg) {
+    function drawElegante(text) {
       ctx.save();
 
-      // ===== Fondo negro profundo =====
+      // Fondo negro puro
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
@@ -483,76 +483,75 @@
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
 
-      const boxWidth  = CANVAS_SIZE * 0.72;
-      const boxHeight = CANVAS_SIZE * 0.70;
+      const boxWidth  = CANVAS_SIZE * 0.65;
+      const boxHeight = CANVAS_SIZE * 0.60;
 
-      const maxFont = 130;
-      const minFont = 36;
+      const maxFont = 150;
+      const minFont = 50;
 
       let fontSize = maxFont;
       let lines = [];
 
-      // ===== Ajuste automático de tamaño =====
       while (fontSize > minFont) {
-        ctx.font = `italic ${fontSize}px 'Blacksword'`;
+        ctx.font = `${fontSize}px 'Blacksword'`;
         lines = wrapText(text, boxWidth, ctx);
 
-        const totalHeight = lines.length * fontSize * 1.05;
+        const totalHeight = lines.length * fontSize * 0.95;
 
         if (totalHeight <= boxHeight) break;
 
-        fontSize -= 3;
+        fontSize -= 4;
       }
 
-      ctx.font = `italic ${fontSize}px 'Blacksword'`;
+      ctx.font = `${fontSize}px 'Blacksword'`;
       lines = wrapText(text, boxWidth, ctx);
 
-      const lineHeight = fontSize * 1.03;
+      const lineHeight = fontSize * 0.92; // MÁS compacto
       const totalHeight = lines.length * lineHeight;
 
       let y = CANVAS_SIZE / 2 - totalHeight / 2 + lineHeight / 2;
 
-      // ===== Ligera inclinación editorial =====
-      ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
-      ctx.rotate(-0.03); // inclinación sutil
-      ctx.translate(-CANVAS_SIZE / 2, -CANVAS_SIZE / 2);
-
-      // ===== Sombra muy sutil =====
+      // Sombra elegante mínima
       ctx.shadowColor = "rgba(255,255,255,0.05)";
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 8;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
-      // ===== Dibujar texto =====
+      // 🔥 Inclinación MUY leve
+      ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      ctx.rotate(-0.03);
+      ctx.translate(-CANVAS_SIZE / 2, -CANVAS_SIZE / 2);
+
       for (const line of lines) {
         ctx.fillText(line, CANVAS_SIZE / 2, y);
         y += lineHeight;
       }
 
-      // ========= LÍNEAS DECORATIVAS ESTILO VIXEVEL =========
+      // ========= SUBRAYADO ESTILO VIXEVEL =========
+      const underlineY = y + 10;
+      const centerX = CANVAS_SIZE / 2;
+
       ctx.shadowBlur = 0;
       ctx.lineCap = "round";
       ctx.strokeStyle = "#ffffff";
 
-      const centerX = CANVAS_SIZE / 2;
-      const lastLineY = y - lineHeight / 3;
-
-      // Línea principal (más orgánica)
-      ctx.lineWidth = 2.5;
+      // Línea larga principal
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(centerX - 260, lastLineY + 20);
-      ctx.quadraticCurveTo(centerX - 40, lastLineY + 80, centerX + 200, lastLineY + 25);
+      ctx.moveTo(centerX - 260, underlineY);
+      ctx.quadraticCurveTo(centerX - 40, underlineY + 30, centerX + 260, underlineY);
       ctx.stroke();
 
-      // Línea secundaria más fina
-      ctx.lineWidth = 1.2;
+      // Línea secundaria fina
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(centerX - 230, lastLineY + 35);
-      ctx.quadraticCurveTo(centerX - 30, lastLineY + 90, centerX + 170, lastLineY + 40);
+      ctx.moveTo(centerX - 220, underlineY + 12);
+      ctx.quadraticCurveTo(centerX - 20, underlineY + 40, centerX + 220, underlineY + 12);
       ctx.stroke();
 
       ctx.restore();
     }
+
 
 
 
@@ -715,31 +714,24 @@
 
       ctx.save();
 
-      const padding = 45;
+      const padding = 120; // más aire
       const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
-      ctx.font = `italic 60px 'Blacksword'`;
+      ctx.font = `52px 'Blacksword'`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
       ctx.fillStyle = "#ffffff";
 
-      // Sombra ultra sutil
       ctx.shadowColor = "rgba(255,255,255,0.05)";
-      ctx.shadowBlur = 10;
-      ctx.shadowOffsetX = 3;
-      ctx.shadowOffsetY = 3;
-
-      // Ligera inclinación natural
-      ctx.translate(x, y);
-      ctx.rotate(-0.05);
-      ctx.translate(-x, -y);
+      ctx.shadowBlur = 6;
 
       ctx.fillText(tag, x, y);
 
       ctx.restore();
     }
+
 
 
     /* ======== Helpers ======== */
@@ -963,7 +955,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v61 🦊",
+        "v62 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
