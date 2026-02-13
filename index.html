@@ -509,18 +509,6 @@
       ctx.lineCap = "round";
       ctx.strokeStyle = "#ffffff";
 
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(centerX - 260, underlineY);
-      ctx.quadraticCurveTo(centerX - 40, underlineY + 30, centerX + 260, underlineY);
-      ctx.stroke();
-
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(centerX - 220, underlineY + 12);
-      ctx.quadraticCurveTo(centerX - 20, underlineY + 40, centerX + 220, underlineY + 12);
-      ctx.stroke();
-
       ctx.restore();
     }
 
@@ -880,7 +868,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V75🦊",
+        "V76🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
