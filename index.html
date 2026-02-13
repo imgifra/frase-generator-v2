@@ -474,7 +474,7 @@
     function drawElegante(text, bg) {
       ctx.save();
 
-      // Fondo negro elegante fijo
+      // ===== Fondo negro profundo =====
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
@@ -482,69 +482,77 @@
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
 
-      const boxWidth  = CANVAS_SIZE * 0.75;
-      const boxHeight = CANVAS_SIZE * 0.75;
+      const boxWidth  = CANVAS_SIZE * 0.72;
+      const boxHeight = CANVAS_SIZE * 0.70;
 
-      const maxFont = 140;
-      const minFont = 40;
+      const maxFont = 110;
+      const minFont = 36;
 
       let fontSize = maxFont;
       let lines = [];
 
+      // ===== Ajuste automático de tamaño =====
       while (fontSize > minFont) {
-        ctx.font = `${fontSize}px 'Blacksword'`;
+        ctx.font = `italic ${fontSize}px 'Blacksword'`;
         lines = wrapText(text, boxWidth, ctx);
 
-        const totalHeight = lines.length * fontSize * 1.2;
+        const totalHeight = lines.length * fontSize * 1.05;
 
         if (totalHeight <= boxHeight) break;
 
-        fontSize -= 4;
+        fontSize -= 3;
       }
 
-      ctx.font = `${fontSize}px 'Blacksword'`;
+      ctx.font = `italic ${fontSize}px 'Blacksword'`;
       lines = wrapText(text, boxWidth, ctx);
 
-      const lineHeight = fontSize * 1.25;
+      const lineHeight = fontSize * 1.03;
       const totalHeight = lines.length * lineHeight;
 
       let y = CANVAS_SIZE / 2 - totalHeight / 2 + lineHeight / 2;
 
-      // Sombra suave tipo cinematográfica
-      ctx.shadowColor = "rgba(0,0,0,0.6)";
-      ctx.shadowBlur = 15;
-      ctx.shadowOffsetX = 4;
-      ctx.shadowOffsetY = 4;
+      // ===== Ligera inclinación editorial =====
+      ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      ctx.rotate(-0.03); // inclinación sutil
+      ctx.translate(-CANVAS_SIZE / 2, -CANVAS_SIZE / 2);
 
+      // ===== Sombra muy sutil =====
+      ctx.shadowColor = "rgba(255,255,255,0.05)";
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      // ===== Dibujar texto =====
       for (const line of lines) {
         ctx.fillText(line, CANVAS_SIZE / 2, y);
         y += lineHeight;
       }
 
-      // ========= LÍNEAS DECORATIVAS =========
-      const lastLineY = y;
-      const centerX = CANVAS_SIZE / 2;
-
+      // ========= LÍNEAS DECORATIVAS ESTILO VIXEVEL =========
       ctx.shadowBlur = 0;
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = "#ffffff";
       ctx.lineCap = "round";
+      ctx.strokeStyle = "#ffffff";
 
-      // Línea principal curva
+      const centerX = CANVAS_SIZE / 2;
+      const lastLineY = y - lineHeight / 3;
+
+      // Línea principal (más orgánica)
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(centerX - 220, lastLineY + 10);
-      ctx.quadraticCurveTo(centerX, lastLineY + 50, centerX + 220, lastLineY + 10);
+      ctx.moveTo(centerX - 260, lastLineY + 20);
+      ctx.quadraticCurveTo(centerX - 40, lastLineY + 80, centerX + 200, lastLineY + 25);
       ctx.stroke();
 
       // Línea secundaria más fina
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(centerX - 180, lastLineY + 25);
-      ctx.quadraticCurveTo(centerX, lastLineY + 65, centerX + 180, lastLineY + 25);
+      ctx.moveTo(centerX - 230, lastLineY + 35);
+      ctx.quadraticCurveTo(centerX - 30, lastLineY + 90, centerX + 170, lastLineY + 40);
       ctx.stroke();
 
       ctx.restore();
     }
+
 
 
 
@@ -920,7 +928,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v57 🦊",
+        "v58 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
