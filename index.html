@@ -400,33 +400,64 @@
     }
 
 
-    /* ========= MODO ELEGANTE ========= */
     function drawElegante(text) {
       ctx.save();
 
-      // Fondo negro puro
+      // ==========================
+      // 1. FONDO NEGRO
+      // ==========================
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // Logo elegante PNG centrado
-      if (eleganteLogo.complete) {
 
-        const size = CANVAS_SIZE * 0.9;
-        const x = CANVAS_SIZE / 2 - size / 2;
-        const y = CANVAS_SIZE / 2 - size / 2;
+      // ==========================
+      // 2. LOGO DE FONDO (tipo watermark)
+      // ==========================
+      if (eleganteLogo && eleganteLogo.complete) {
 
+        const size = CANVAS_SIZE * 1.1;
+
+        // Canvas temporal para sombra + composición limpia
+        const temp = document.createElement("canvas");
+        temp.width = CANVAS_SIZE;
+        temp.height = CANVAS_SIZE;
+        const tctx = temp.getContext("2d");
+
+        tctx.save();
+
+        // Sombra suave elegante
+        tctx.shadowColor = "rgba(0,0,0,0.40)";
+        tctx.shadowBlur = 8;
+        tctx.shadowOffsetX = 4;
+        tctx.shadowOffsetY = 4;
+
+        // Centrado matemático perfecto
+        tctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+        tctx.drawImage(
+          eleganteLogo,
+          -size / 2,
+          -size / 2,
+          size,
+          size
+        );
+
+        tctx.restore();
+
+        // Aplicar opacidad final
         ctx.save();
-        ctx.globalAlpha = 0.06;
-        ctx.drawImage(eleganteLogo, x, y, size, size);
+        ctx.globalAlpha = 0.06;  // Ajusta aquí si lo quieres más visible
+        ctx.drawImage(temp, 0, 0);
         ctx.restore();
       }
 
 
-
+      // ==========================
+      // 3. TEXTO PRINCIPAL
+      // ==========================
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
-      
+
       const boxWidth  = CANVAS_SIZE * 0.70;
       const boxHeight = CANVAS_SIZE * 0.60;
 
@@ -450,38 +481,32 @@
       ctx.font = `${fontSize}px 'Blacksword'`;
       lines = wrapText(text, boxWidth, ctx);
 
-      const lineHeight = fontSize * 0.92; // MÁS compacto
+      const lineHeight = fontSize * 0.92;
       const totalHeight = lines.length * lineHeight;
 
       let y = CANVAS_SIZE / 2 - totalHeight / 2 + lineHeight / 2;
-
-      // Sombra elegante mínima
-      ctx.shadowColor = "rgba(255,255,255,0.05)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
 
       for (const line of lines) {
         ctx.fillText(line, CANVAS_SIZE / 2, y);
         y += lineHeight;
       }
 
-      // ========= SUBRAYADO ESTILO VIXEVEL =========
+
+      // ==========================
+      // 4. SUBRAYADO VIXEVEL
+      // ==========================
       const underlineY = y + 10;
       const centerX = CANVAS_SIZE / 2;
 
-      ctx.shadowBlur = 0;
       ctx.lineCap = "round";
       ctx.strokeStyle = "#ffffff";
 
-      // Línea larga principal
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(centerX - 260, underlineY);
       ctx.quadraticCurveTo(centerX - 40, underlineY + 30, centerX + 260, underlineY);
       ctx.stroke();
 
-      // Línea secundaria fina
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(centerX - 220, underlineY + 12);
@@ -490,6 +515,7 @@
 
       ctx.restore();
     }
+
 
     function drawCrudo(text, bg) {
       ctx.save();
@@ -846,7 +872,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V70 🦊",
+        "V71 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
