@@ -325,6 +325,7 @@
       // tags
       if (mode === "brat") drawCornerTagBrat();
       else if (mode === "crudo") drawCornerTagCrudo();
+      else if (mode === "elegante") drawCornerTagElegante();
       else drawCornerTagNormal();
     }
 
@@ -485,7 +486,7 @@
       const boxWidth  = CANVAS_SIZE * 0.72;
       const boxHeight = CANVAS_SIZE * 0.70;
 
-      const maxFont = 110;
+      const maxFont = 130;
       const minFont = 36;
 
       let fontSize = maxFont;
@@ -518,7 +519,7 @@
 
       // ===== Sombra muy sutil =====
       ctx.shadowColor = "rgba(255,255,255,0.05)";
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 20;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
@@ -707,6 +708,40 @@
       ctx.restore();
     }
     
+
+
+    function drawCornerTagElegante() {
+      const tag = "vixevel";
+
+      ctx.save();
+
+      const padding = 70;
+      const x = CANVAS_SIZE - padding;
+      const y = CANVAS_SIZE - padding;
+
+      ctx.font = `italic 48px 'Blacksword'`;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+
+      ctx.fillStyle = "#ffffff";
+
+      // Sombra ultra sutil
+      ctx.shadowColor = "rgba(255,255,255,0.05)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+
+      // Ligera inclinación natural
+      ctx.translate(x, y);
+      ctx.rotate(-0.05);
+      ctx.translate(-x, -y);
+
+      ctx.fillText(tag, x, y);
+
+      ctx.restore();
+    }
+
+
     /* ======== Helpers ======== */
     function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
     
@@ -928,7 +963,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v59 🦊",
+        "v60 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
