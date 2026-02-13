@@ -399,79 +399,6 @@
 
 
     /* ========= MODO BRAT ========= */
-    function drawBrat(rawText, bg) {
-      ctx.save();
-
-      const text = rawText.trim();
-      if (!text) {
-        ctx.restore();
-        return;
-      }
-
-      const textColor = getContrastColor(bg);
-
-      // Caja interna tipo "textOverlay"
-      const boxWidth  = CANVAS_SIZE * 0.90; // más angosto para que no pida huecos gigantes
-      const boxHeight = CANVAS_SIZE * 0.98;
-      const boxX = (CANVAS_SIZE - boxWidth) / 2;
-      const boxY = (CANVAS_SIZE - boxHeight) / 2;
-
-      const maxFont = 470;
-      const minFont = 20;
-
-      let low = minFont;
-      let high = maxFont;
-      let bestFont = minFont;
-      let bestLines = [];
-
-      // Búsqueda binaria del tamaño de fuente (considerando estiramiento vertical)
-      while (low <= high) {
-        const mid = (low + high) >> 1;
-        ctx.font = `${mid}px arial_narrowregular, 'Arial Narrow', sans-serif`;
-
-        const candidateLines = wrapWordsToLines(text, boxWidth, ctx);
-        const totalHeight = candidateLines.length * mid * 1.1 * BRAT_STRETCH_Y;
-
-        // Verificar si cada palabra cabe en el ancho
-        let wordTooWide = false;
-        for (const line of candidateLines) {
-          for (const w of line) {
-            if (ctx.measureText(w).width > boxWidth) {
-              wordTooWide = true;
-              break;
-            }
-          }
-          if (wordTooWide) break;
-        }
-
-        if (!wordTooWide && totalHeight <= boxHeight) {
-          // Sí cabe
-          bestFont = mid;
-          bestLines = candidateLines;
-          low = mid + 2;
-        } else {
-          // No cabe: letra demasiado grande para alguna palabra
-          high = mid - 2;
-        }
-
-      }
-
-      ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
-      ctx.textBaseline = "top";
-      ctx.fillStyle = textColor;
-
-      const lineHeight = bestFont * 0.9;
-      const blockHeight = bestLines.length * lineHeight * BRAT_STRETCH_Y;
-      let y = boxY + (boxHeight - blockHeight) / 2;
-
-      bestLines.forEach(words => {
-        drawJustifiedLineTall(words, boxX, y, boxWidth, ctx);
-        y += lineHeight * BRAT_STRETCH_Y;
-      });
-
-      ctx.restore();
-    }
-
     function drawElegante(text) {
       ctx.save();
 
@@ -516,11 +443,6 @@
       ctx.shadowBlur = 8;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
-
-      // 🔥 Inclinación MUY leve
-      ctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
-      ctx.rotate(-0.03);
-      ctx.translate(-CANVAS_SIZE / 2, -CANVAS_SIZE / 2);
 
       for (const line of lines) {
         ctx.fillText(line, CANVAS_SIZE / 2, y);
@@ -714,24 +636,27 @@
 
       ctx.save();
 
-      const padding = 60; // más aire
+      const padding = 60;
       const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
-      const fontSize = 46;
+      const fontSize = 44;
       ctx.font = `${fontSize}px 'Blacksword'`;
+
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
-      ctx.fillStyle = "#ffffff";
+      // 🔥 Sin sombras
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
 
-      ctx.shadowColor = "rgba(255,255,255,0.05)";
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = "#ffffff";
 
       ctx.fillText(tag, x, y);
 
       ctx.restore();
     }
+
 
 
 
@@ -956,7 +881,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v63 🦊",
+        "v65 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
