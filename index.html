@@ -829,7 +829,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v68 🦊",
+        "v69 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1020,9 +1020,11 @@
 
       ctx.save();
 
-      const padding = 45;
-      const x = CANVAS_SIZE - padding;
-      const y = CANVAS_SIZE - padding;
+      // 🔥 Resetear cualquier transformación previa
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      const x = CANVAS_SIZE / 2;   // centro real horizontal
+      const y = CANVAS_SIZE - 80;  // margen inferior elegante
 
       const fontSize = 60;
       ctx.font = `${fontSize}px 'Blacksword'`;
@@ -1030,7 +1032,6 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
 
-      // 🔥 Sin sombras
       ctx.shadowBlur = 0;
       ctx.shadowColor = "transparent";
 
@@ -1040,6 +1041,7 @@
 
       ctx.restore();
     }
+
 
 
     /* ========= CONTRASTE ========= */
