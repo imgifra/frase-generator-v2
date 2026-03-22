@@ -900,18 +900,12 @@
     <!-- Modo -->
     <div class="flex items-center justify-center gap-3 text-sm">
       <span>Modo:</span>
-    
-      <select id="modeSelect" class="p-2 rounded-lg text-black font-bold">
-        <option value="normal">Normal</option>
-        <option value="brat">Brat</option>
-        <option value="crudo">Crudo</option>
-        <option value="elegante">Elegante</option>
-
-      </select>
-    
+      <label class="switch">
+        <input type="checkbox" id="modeToggle">
+        <span class="slider"></span>
+      </label>
       <span id="modeLabel">Normal</span>
     </div>
-
 
     <!-- Texto + fondo + botón -->
     <div class="flex items-center justify-center gap-3 w-full px-3">
@@ -941,17 +935,13 @@
     const ctx = canvas.getContext("2d");
     // Marca de agua como imagen
     const watermarkImage = new Image();
-    watermarkImage.src = "assets/marca.png?v=1"; // cache-buster
+    watermarkImage.src = "assets/marca2.png?v=1"; // cache-buster
     watermarkImage.onload = draw;
-    const eleganteLogo = new Image();
-    eleganteLogo.src = "assets/logo-elegante.png?v=1";
-    eleganteLogo.onload = draw;
-
 
 
     const input = document.getElementById("textInput");
     const bgColorInput = document.getElementById("bgColor");
-    const modeSelect = document.getElementById("modeSelect");
+    const toggle = document.getElementById("modeToggle");
     const modeLabel = document.getElementById("modeLabel");
     const downloadBtn = document.getElementById("downloadBtn");
 
@@ -965,17 +955,10 @@
 
     input.addEventListener("input", draw);
     bgColorInput.addEventListener("input", draw);
-    modeSelect.addEventListener("change", () => {
-      const v = modeSelect.value;
-
-      if (v === "brat") modeLabel.textContent = "Brat";
-      else if (v === "crudo") modeLabel.textContent = "Crudo";
-      else if (v === "elegante") modeLabel.textContent = "Elegante";
-      else modeLabel.textContent = "Normal";
-
+    toggle.addEventListener("change", () => {
+      modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
       draw();
     });
-
     downloadBtn.addEventListener("click", downloadPNG);
 
     // Botón para múltiples frases
@@ -989,37 +972,30 @@
     function draw() {
       const text = input.value.trim();
       const bg = bgColorInput.value;
-      const mode = modeSelect.value;
 
-      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      drawWatermark();
+      drawAEStyleText();
 
       if (!text) {
         drawPlaceholder();
-        return;
-      }
-
-      if (mode === "elegante") {
-        drawElegante(text);
       } else {
-        // fondo normal para otros modos
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-        drawWatermark();
-        drawAEStyleText();
-
-        if (mode === "brat") drawBrat(text, bg);
-        else if (mode === "crudo") drawCrudo(text, bg);
-        else drawNormal(text, bg);
+        if (toggle.checked) {
+          drawBrat(text, bg);
+        } else {
+          drawNormal(text, bg);
+        }
       }
 
-      // Tags
-      if (mode === "brat") drawCornerTagBrat();
-      else if (mode === "crudo") drawCornerTagCrudo();
-      else if (mode === "elegante") drawCornerTagElegante();
-      else drawCornerTagNormal();
+      // ← Agregar aquí:
+      if (toggle.checked) {
+        drawCornerTagBrat();
+      } else {
+        drawCornerTagNormal();
+      }
     }
-
 
 
 
@@ -1090,280 +1066,80 @@
     }
 
 
-    function drawElegante(text) {
+    /* ========= MODO BRAT ========= */
+    function drawBrat(rawText, bg) {
       ctx.save();
 
-      // ==========================
-      // 1. FONDO NEGRO
-      // ==========================
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-
-      // ==========================
-      // 2. LOGO DE FONDO (tipo watermark)
-      // ==========================
-      if (eleganteLogo && eleganteLogo.complete) {
-
-        const size = CANVAS_SIZE * 1.1;
-
-        // Canvas temporal para sombra + composición limpia
-        const temp = document.createElement("canvas");
-        temp.width = CANVAS_SIZE;
-        temp.height = CANVAS_SIZE;
-        const tctx = temp.getContext("2d");
-
-        tctx.save();
-
-        // Sombra suave elegante
-        tctx.shadowColor = "rgba(0,0,0,0.40)";
-        tctx.shadowBlur = 8;
-        tctx.shadowOffsetX = 4;
-        tctx.shadowOffsetY = 4;
-
-        // Centrado matemático perfecto
-        tctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
-        tctx.drawImage(
-          eleganteLogo,
-          -size / 2,
-          -size / 2,
-          size,
-          size
-        );
-
-        tctx.restore();
-
-        // Aplicar opacidad final
-        ctx.save();
-        ctx.globalAlpha = 0.1;  // Ajusta aquí si lo quieres más visible
-        ctx.drawImage(temp, 0, 0);
+      const text = rawText.trim();
+      if (!text) {
         ctx.restore();
+        return;
       }
 
+      const textColor = getContrastColor(bg);
 
-      // ==========================
-      // 3. TEXTO PRINCIPAL
-      // ==========================
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#ffffff";
-
-      const boxWidth  = CANVAS_SIZE * 0.70;
-      const boxHeight = CANVAS_SIZE * 0.60;
-
-      const maxFont = 150;
-      const minFont = 40;
-
-      let fontSize = maxFont;
-      let lines = [];
-
-      while (fontSize > minFont) {
-        ctx.font = `${fontSize}px 'Blacksword'`;
-        lines = wrapText(text, boxWidth, ctx);
-
-        const totalHeight = lines.length * fontSize * 0.95;
-
-        if (totalHeight <= boxHeight) break;
-
-        fontSize -= 4;
-      }
-
-      ctx.font = `${fontSize}px 'Blacksword'`;
-      lines = wrapText(text, boxWidth, ctx);
-
-      const lineHeight = fontSize * 0.92;
-      const totalHeight = lines.length * lineHeight;
-
-      let y = CANVAS_SIZE / 2 - totalHeight / 2 + lineHeight / 2;
-
-      for (const line of lines) {
-        ctx.fillText(line, CANVAS_SIZE / 2, y);
-        y += lineHeight;
-      }
-
-
-      // ==========================
-      // 4. SUBRAYADO VIXEVEL
-      // ==========================
-      const underlineY = y + 10;
-      const centerX = CANVAS_SIZE / 2;
-
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "#ffffff";
-
-      ctx.restore();
-    }
-
-
-    function drawCrudo(text, bg) {
-      ctx.save();
-    
-      // 1) Fondo base: ignoramos el bg picker o lo "suavizamos"
-      // Si quieres que el color picker siga mandando, comenta estas dos líneas.
-      const paperBase = "#F3EEE6"; // lo lleva hacia blanco/hueso
-      ctx.fillStyle = paperBase;
-      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-    
-      // 2) Textura de papel (procedural)
-      drawPaperTexture();
-    
-      // 3) Texto: mayúsculas y bloque fuerte
-      const raw = (text || "").trim();
-      const t = raw.toUpperCase();
-    
-      // Caja para texto (estilo "bloque plantado")
-      const boxWidth  = CANVAS_SIZE * 0.68;
-      const boxHeight = CANVAS_SIZE * 0.42;
+      // Caja interna tipo "textOverlay"
+      const boxWidth  = CANVAS_SIZE * 0.90; // más angosto para que no pida huecos gigantes
+      const boxHeight = CANVAS_SIZE * 0.98;
       const boxX = (CANVAS_SIZE - boxWidth) / 2;
       const boxY = (CANVAS_SIZE - boxHeight) / 2;
-    
-      // Color tinta: en crudo no depende del contraste puro; usamos "tinta quemada"
-      const ink = pickInkColorFromBackground(paperBase);
-    
-      // Fuente: usamos una stack segura. Si quieres una fuente específica,
-      // la cargamos igual que tus otras.
-      const fontFamily = "Impact, 'Arial Black', 'Helvetica Neue', Arial, sans-serif";
-    
-      // Autosize + wrapping
-      const maxFont = 190;
-      const minFont = 40;
-      let fontSize = maxFont;
-      let lines = [];
-    
-      while (fontSize > minFont) {
-        ctx.font = `${fontSize}px ${fontFamily}`;
-        lines = wrapText(t, boxWidth, ctx);
-        const lh = fontSize * 0.92;
-        const totalH = lines.length * lh;
-        if (totalH <= boxHeight) break;
-        fontSize -= 4;
+
+      const maxFont = 470;
+      const minFont = 20;
+
+      let low = minFont;
+      let high = maxFont;
+      let bestFont = minFont;
+      let bestLines = [];
+
+      // Búsqueda binaria del tamaño de fuente (considerando estiramiento vertical)
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        ctx.font = `${mid}px arial_narrowregular, 'Arial Narrow', sans-serif`;
+
+        const candidateLines = wrapWordsToLines(text, boxWidth, ctx);
+        const totalHeight = candidateLines.length * mid * 1.1 * BRAT_STRETCH_Y;
+
+        // Verificar si cada palabra cabe en el ancho
+        let wordTooWide = false;
+        for (const line of candidateLines) {
+          for (const w of line) {
+            if (ctx.measureText(w).width > boxWidth) {
+              wordTooWide = true;
+              break;
+            }
+          }
+          if (wordTooWide) break;
+        }
+
+        if (!wordTooWide && totalHeight <= boxHeight) {
+          // Sí cabe
+          bestFont = mid;
+          bestLines = candidateLines;
+          low = mid + 2;
+        } else {
+          // No cabe: letra demasiado grande para alguna palabra
+          high = mid - 2;
+        }
+
       }
-    
-      // Dibujo "tinta" con ligera imperfección
-      ctx.font = `${fontSize}px ${fontFamily}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-    
-      const lineHeight = fontSize * 0.92;
-      const totalHeight = lines.length * lineHeight;
-      let y = boxY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
-    
-      // Sombra mínima (no “glow”)
-      // === SOMBRA SUAVE EDITORIAL (CRUDO) ===
-      ctx.shadowColor = "rgba(0,0,0,0.10)";
-      ctx.shadowBlur = 2;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
 
-    
-      // “Tinta”: dibujamos 2 pasadas con micro-jitter + grano
-      for (const line of lines) {
-        drawInkText(line, CANVAS_SIZE / 2, y, ink, fontSize);
-        y += lineHeight;
-      }
-    
+      ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.fillStyle = textColor;
+
+      const lineHeight = bestFont * 0.9;
+      const blockHeight = bestLines.length * lineHeight * BRAT_STRETCH_Y;
+      let y = boxY + (boxHeight - blockHeight) / 2;
+
+      bestLines.forEach(words => {
+        drawJustifiedLineTall(words, boxX, y, boxWidth, ctx);
+        y += lineHeight * BRAT_STRETCH_Y;
+      });
+
       ctx.restore();
     }
-    
-    /* ======== Textura de papel: noise procedural ======== */
-    function drawPaperTexture() {
-      const img = ctx.createImageData(CANVAS_SIZE, CANVAS_SIZE);
-      const d = img.data;
-    
-      // Densidad de grano (sube a 0.12 si quieres más textura)
-      const strength = 0.06;
-    
-      for (let i = 0; i < d.length; i += 4) {
-        const n = (Math.random() - 0.5) * 255 * strength; // -..+
-        d[i]     = clamp(d[i] + n, 0, 255);
-        d[i + 1] = clamp(d[i + 1] + n, 0, 255);
-        d[i + 2] = clamp(d[i + 2] + n, 0, 255);
-        d[i + 3] = 255;
-      }
-    
-      // Mezcla con baja opacidad para no “ensuciar” de más
-      ctx.save();
-      ctx.globalAlpha = 0.35;
-      ctx.putImageData(img, 0, 0);
-      ctx.restore();
-    
-      // Un “vignette” suave para profundidad
-      ctx.save();
-      const g = ctx.createRadialGradient(
-        CANVAS_SIZE/2, CANVAS_SIZE/2, CANVAS_SIZE*0.15,
-        CANVAS_SIZE/2, CANVAS_SIZE/2, CANVAS_SIZE*0.75
-      );
-      g.addColorStop(0, "rgba(0,0,0,0)");
-      g.addColorStop(1, "rgba(0,0,0,0.14)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0,0,CANVAS_SIZE,CANVAS_SIZE);
-      ctx.restore();
-    }
-    
-    /* ======== Texto con efecto de "tinta" original ======== */
-    function drawInkText(line, x, y, inkColor, fontSize) {
-      ctx.save();
-      ctx.fillStyle = inkColor;
-    
-      // Pasada 1 (normal)
-      ctx.fillText(line, x, y);
-    
-      // Pasada 2 (micro jitter + alpha)
-      ctx.globalAlpha = 0.55;
-      const jx = (Math.random() - 0.5) * 2.2;
-      const jy = (Math.random() - 0.5) * 2.2;
-      ctx.fillText(line, x + jx, y + jy);
-    
-      // Pasada 3 (un pelín de “desgaste” con stroke finito)
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = Math.max(2, fontSize * 0.03);
-      ctx.strokeStyle = inkColor;
-      ctx.strokeText(line, x, y);
-    
-      ctx.restore();
-    }
-    
 
-
-
-
-
-
-    /* ======== Helpers ======== */
-    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
-    
-    function softenHex(hex, amountToWhite=0.8){
-      // amountToWhite: 0 => igual, 1 => blanco
-      const rgb = hexToRgb(hex);
-      const r = Math.round(rgb.r + (255 - rgb.r) * amountToWhite);
-      const g = Math.round(rgb.g + (255 - rgb.g) * amountToWhite);
-      const b = Math.round(rgb.b + (255 - rgb.b) * amountToWhite);
-      return rgbToHex(r,g,b);
-    }
-    
-    function pickInkColorFromBackground(bgHex){
-      // tinta “quemada” que funciona con fondos claros
-      // (si el fondo ya es oscuro, devolvemos casi blanco)
-      const c = getContrastColor(bgHex);
-      if (c === "#ffffff") return "rgba(245,245,245,0.92)";
-      // tinta roja/negra "propia"
-      return "rgba(140, 24, 18, 0.92)"; // rojo quemado original
-    }
-    
-    function hexToRgb(hex){
-      hex = hex.replace("#","");
-      return {
-        r: parseInt(hex.slice(0,2),16),
-        g: parseInt(hex.slice(2,4),16),
-        b: parseInt(hex.slice(4,6),16),
-      };
-    }
-    
-    function rgbToHex(r,g,b){
-      return "#" + [r,g,b].map(v => v.toString(16).padStart(2,"0")).join("");
-    }
-
-    
     /* ========= UTILIDADES DE TEXTO ========= */
 
     function wrapText(text, maxWidth, ctxLocal) {
@@ -1550,7 +1326,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "V82🦊",
+        "v55 🦊",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1735,37 +1511,6 @@
       ctx.restore();
     }
 
-    /* ========= Marca inferior derecha para MODO ELEGANTE ========= */
-    function drawCornerTagElegante() {
-      const tag = "@vixevel";
-
-      // ===== 1. Canvas temporal =====
-      const temp = document.createElement("canvas");
-      temp.width = CANVAS_SIZE;
-      temp.height = CANVAS_SIZE;
-      const tctx = temp.getContext("2d");
-
-      const x = CANVAS_SIZE / 2;
-      const y = CANVAS_SIZE - 80;
-      const fontSize = 90;
-
-      tctx.font = `${fontSize}px 'Blacksword'`;
-      tctx.textAlign = "center";
-      tctx.textBaseline = "bottom";
-
-      // 🔥 Texto completamente sólido
-      tctx.fillStyle = "#ffffff";
-      tctx.fillText(tag, x, y);
-
-      // ===== 2. Aplicamos opacidad al bloque completo =====
-      ctx.save();
-      ctx.globalAlpha = 0.18;   // controla intensidad aquí
-      ctx.drawImage(temp, 0, 0);
-      ctx.restore();
-    }
-
-
-
 
 
     /* ========= CONTRASTE ========= */
@@ -1781,7 +1526,7 @@
     /* ========= DESCARGAR ========= */
     function downloadPNG() {
       const link = document.createElement("a");
-      const mode = modeSelect.value;
+      const mode = toggle.checked ? "brat" : "normal";
       link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
       link.href = canvas.toDataURL("image/png");
       link.click();
@@ -1789,10 +1534,10 @@
 
     function generateMultiple() {
       const raw = input.value;
-      const phrases = raw.split("/").map(t => t.trim()).filter(t => t.length > 0);
+      const phrases = raw.split(";").map(t => t.trim()).filter(t => t.length > 0);
 
       if (phrases.length <= 1) {
-        alert("Escribe varias frases separadas por /");
+        alert("Escribe varias frases separadas por ;");
         return;
       }
 
@@ -1813,7 +1558,7 @@
 
         setTimeout(() => {
           const link = document.createElement("a");
-          link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
+          link.download = "frase_" + (index + 1) + ".png";
           link.href = canvas.toDataURL("image/png");
           link.click();
 
