@@ -33,8 +33,690 @@
     font-weight: 800;
   }
   </style>
-  <style>
-  @font-face {
+
+
+  <!-- Tailwind para layout de controles -->
+  <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --controls-h: 110px;
+  }
+
+  html, body {
+  height: 100dvh;
+  overflow: hidden;
+  }
+
+
+  body {
+    background: #111;
+    margin: 0;
+    color: #fff;
+    font-family: 'Felt Tip Roman', cursive;
+    overflow: hidden;
+  }
+
+  /* Área de preview */
+  #stage {
+    height: calc(100vh - var(--controls-h));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #previewCanvas {
+    width: min(90vw, 90vh);
+    height: min(90vw, 90vh);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    border-radius: 25px;
+    background: #fff;
+    display: block;
+  }
+
+  /* Panel de control inferior */
+  .control-panel {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: var(--controls-h);
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    z-index: 20;
+    padding-bottom: 90px;
+  }
+
+  .control-panel {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  }
+
+  #multiBtn {
+    margin-bottom: calc(env(safe-area-inset-bottom) + 90px);
+  }
+
+
+
+  /* Switch tipo iPhone */
+  .switch {
+    position: relative;
+    width: 55px;
+    height: 28px;
+  }
+  .switch input { display:none; }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #555;
+    transition: .3s;
+    border-radius: 34px;
+  }
+  .slider:before {
+    content: "";
+    position: absolute;
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    transition: .3s;
+    border-radius: 50%;
+  }
+  input:checked + .slider {
+    background-color: #22c55e;
+  }
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  /* Input de color */
+  #bgColor {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 999px;
+    border: none;
+    overflow: hidden;
+  }
+  #bgColor::-webkit-color-swatch,
+  #bgColor::-moz-color-swatch {
+    border: none;
+    border-radius: 999px;
+  }
+
+  /* =========================================
+            RESPONSIVE PARA CELULARES
+     ========================================= */
+  @media (max-width: 480px) {
+
+    /* Aumentamos la altura para que todo quepa */
+    :root {
+      --controls-h: 160px;
+    }
+
+    /* Panel en vertical */
+    .control-panel {
+      height: var(--controls-h);
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 8px;
+    }
+
+    /* Segunda fila: input + color + botón → vertical */
+    .control-panel > div:nth-child(2) {
+      display: flex;
+      flex-direction: column;
+      gap: 8px !important;
+      width: 100%;
+      padding: 0 10px;
+    }
+
+    /* Input ocupa todo el ancho */
+    #textInput {
+      width: 100% !important;
+      font-size: 16px !important;
+      padding: 8px !important;
+    }
+
+    /* Botón ocupa todo el ancho */
+    #downloadBtn {
+      width: 100%;
+      padding: 8px !important;
+      font-size: 14px !important;
+    }
+
+    /* Color picker más pequeño */
+    #bgColor {
+      width: 28px !important;
+      height: 28px !important;
+    }
+
+  }
+</style>
+
+</head>
+<body>
+
+  <main id="stage">
+    <canvas id="previewCanvas" width="1080" height="1080"></canvas>
+  </main>
+
+  <!-- Controles -->
+  <div class="control-panel">
+    <!-- Modo -->
+    <div class="flex items-center justify-center gap-3 text-sm">
+      <span>Modo:</span>
+      <label class="switch">
+        <input type="checkbox" id="modeToggle">
+        <span class="slider"></span>
+      </label>
+      <span id="modeLabel">Normal</span>
+    </div>
+
+    <!-- Texto + fondo + botón -->
+    <div class="flex items-center justify-center gap-3 w-full px-3">
+      <input
+        id="textInput"
+        type="text"
+        placeholder="Escribe tu frase..."
+        class="flex-1 p-2 rounded-lg text-black text-center font-bold text-lg outline-none"
+      >
+
+      <div class="flex items-center gap-1 text-sm">
+        <span>Fondo:</span>
+        <input type="color" id="bgColor" value="#ffffff">
+      </div>
+
+      <button
+        id="downloadBtn"
+        class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 active:bg-indigo-800"
+      >
+        Descargar PNG
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("previewCanvas");
+    const ctx = canvas.getContext("2d");
+    // Marca de agua como imagen
+    const watermarkImage = new Image();
+    watermarkImage.src = "assets/marca.png?v=1"; // cache-buster
+    watermarkImage.onload = draw;
+
+
+    const input = document.getElementById("textInput");
+    const bgColorInput = document.getElementById("bgColor");
+    const toggle = document.getElementById("modeToggle");
+    const modeLabel = document.getElementById("modeLabel");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    const CANVAS_SIZE = 1080;
+    const PADDING = window.innerWidth < 600 ? 14 : 20;
+    const BRAT_STRETCH_Y = 1.3; // alto de letras en modo brat
+
+    // Eventos
+    window.addEventListener("load", draw);
+    document.fonts.ready.then(draw);
+
+    input.addEventListener("input", draw);
+    bgColorInput.addEventListener("input", draw);
+    toggle.addEventListener("change", () => {
+      modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
+      draw();
+    });
+    downloadBtn.addEventListener("click", downloadPNG);
+
+    // Botón para múltiples frases
+    const multiBtn = document.createElement("button");
+    multiBtn.innerText = "Generar múltiples";
+    multiBtn.className =
+      "px-4 py-2 bg-pink-600 text-white text-sm rounded-lg shadow-md hover:bg-pink-700 active:bg-pink-800";
+    multiBtn.onclick = generateMultiple;
+    document.querySelector(".control-panel").appendChild(multiBtn);
+
+    function draw() {
+      const text = input.value.trim();
+      const bg = bgColorInput.value;
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      drawWatermark();
+      drawAEStyleText();
+
+      if (!text) {
+        drawPlaceholder();
+      } else {
+        if (toggle.checked) {
+          drawBrat(text, bg);
+        } else {
+          drawNormal(text, bg);
+        }
+      }
+
+      // ← Agregar aquí:
+      if (toggle.checked) {
+        drawCornerTagBrat();
+      } else {
+        drawCornerTagNormal();
+      }
+    }
+
+
+
+    /* ========= MODO NORMAL (con caja estilo BRAT) ========= */
+    function drawNormal(text, bg) {
+      ctx.save();
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = getContrastColor(bg);
+
+      // === Caja igual al estilo BRAT ===
+      const boxWidth  = CANVAS_SIZE * 0.85;   // más angosto → más vertical
+      const boxHeight = CANVAS_SIZE * 0.90;   // ocupa casi todo el alto
+
+      const boxX = (CANVAS_SIZE - boxWidth) / 2;
+      const boxY = (CANVAS_SIZE - boxHeight) / 2;
+
+      // === Tamaños de letra más grandes ===
+      const maxFont = 130;
+      const minFont = 40;
+
+      let fontSize = maxFont;
+      let lines = [];
+
+      // === Ajuste automático de tamaño ===
+      while (fontSize > minFont) {
+        ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
+        lines = wrapText(text, boxWidth, ctx);
+
+        const totalHeight = lines.length * fontSize * 1.1;
+
+        if (totalHeight <= boxHeight) break;  // cabe perfecto dentro del “box”
+
+        fontSize -= 4;
+      }
+
+      // === Aplicar fuente final ===
+      ctx.font = `${fontSize}px 'Felt Tip Roman', cursive`;
+      lines = wrapText(text, boxWidth, ctx);
+
+      // === Cálculo consistente del interlineado ===
+      const lineHeight = fontSize * 1;     // ← mismo valor que en el dibujo
+      const totalHeight = lines.length * lineHeight;
+
+      // === Centrado vertical real ===
+      let y = boxY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
+
+      // === Activar sombra suave (antes de dibujar las líneas) ===
+      ctx.shadowColor = "rgba(0,0,0,0.20)";
+      ctx.shadowBlur = 5;
+      ctx.shadowOffsetX = 4;
+      ctx.shadowOffsetY = 4;
+
+
+      // === Dibujar texto línea por línea ===
+      for (const line of lines) {
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = 2.35;
+        ctx.strokeText(line, CANVAS_SIZE / 2, y);
+        ctx.fillText(line, CANVAS_SIZE / 2, y);
+
+        y += lineHeight;
+      }
+
+
+      ctx.restore();
+    }
+
+
+    /* ========= MODO BRAT ========= */
+    function drawBrat(rawText, bg) {
+      ctx.save();
+
+      const text = rawText.trim();
+      if (!text) {
+        ctx.restore();
+        return;
+      }
+
+      const textColor = getContrastColor(bg);
+
+      // Caja interna tipo "textOverlay"
+      const boxWidth  = CANVAS_SIZE * 0.90; // más angosto para que no pida huecos gigantes
+      const boxHeight = CANVAS_SIZE * 0.98;
+      const boxX = (CANVAS_SIZE - boxWidth) / 2;
+      const boxY = (CANVAS_SIZE - boxHeight) / 2;
+
+      const maxFont = 470;
+      const minFont = 20;
+
+      let low = minFont;
+      let high = maxFont;
+      let bestFont = minFont;
+      let bestLines = [];
+
+      // Búsqueda binaria del tamaño de fuente (considerando estiramiento vertical)
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        ctx.font = `${mid}px arial_narrowregular, 'Arial Narrow', sans-serif`;
+
+        const candidateLines = wrapWordsToLines(text, boxWidth, ctx);
+        const totalHeight = candidateLines.length * mid * 1.1 * BRAT_STRETCH_Y;
+
+        // Verificar si cada palabra cabe en el ancho
+        let wordTooWide = false;
+        for (const line of candidateLines) {
+          for (const w of line) {
+            if (ctx.measureText(w).width > boxWidth) {
+              wordTooWide = true;
+              break;
+            }
+          }
+          if (wordTooWide) break;
+        }
+
+        if (!wordTooWide && totalHeight <= boxHeight) {
+          // Sí cabe
+          bestFont = mid;
+          bestLines = candidateLines;
+          low = mid + 2;
+        } else {
+          // No cabe: letra demasiado grande para alguna palabra
+          high = mid - 2;
+        }
+
+      }
+
+      ctx.font = `${bestFont}px arial_narrowregular, 'Arial Narrow', sans-serif`;
+      ctx.textBaseline = "top";
+      ctx.fillStyle = textColor;
+
+      const lineHeight = bestFont * 0.9;
+      const blockHeight = bestLines.length * lineHeight * BRAT_STRETCH_Y;
+      let y = boxY + (boxHeight - blockHeight) / 2;
+
+      bestLines.forEach(words => {
+        drawJustifiedLineTall(words, boxX, y, boxWidth, ctx);
+        y += lineHeight * BRAT_STRETCH_Y;
+      });
+
+      ctx.restore();
+    }
+
+    /* ========= UTILIDADES DE TEXTO ========= */
+
+    function wrapText(text, maxWidth, ctxLocal) {
+      const words = text.split(/\s+/);
+      const lines = [];
+      let line = "";
+
+      for (const w of words) {
+        const testLine = line ? line + " " + w : w;
+        const { width } = ctxLocal.measureText(testLine);
+        if (width > maxWidth && line) {
+          lines.push(line);
+          line = w;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    // Para brat: cada línea es array de palabras
+    function wrapWordsToLines(text, maxWidth, ctxLocal) {
+      const words = text.split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = [];
+
+      // --- 1. Wrap codicioso normal ---
+      words.forEach(w => {
+        const test = [...current, w].join(" ");
+        const width = ctxLocal.measureText(test).width;
+        if (width > maxWidth && current.length > 0) {
+          lines.push(current);
+          current = [w];
+        } else {
+          current.push(w);
+        }
+      });
+
+      if (current.length) lines.push(current);
+
+      // --- 2. Balanceo: evitar líneas de 1 palabra si se puede ---
+      const naturalSpace = ctxLocal.measureText(" ").width;
+
+      function lineWidth(line) {
+        if (!line.length) return 0;
+        const wordsWidth = line.reduce(
+          (acc, w) => acc + ctxLocal.measureText(w).width,
+          0
+        );
+        const gaps = line.length - 1;
+        return wordsWidth + gaps * naturalSpace;
+      }
+
+      // Recorremos de arriba hacia abajo,
+      // moviendo palabras de la siguiente línea a la actual
+      for (let i = 0; i < lines.length - 1; i++) {
+        let line = lines[i];
+        let next = lines[i + 1];
+
+        // Mientras esta línea tenga 1 palabra
+        // y la siguiente tenga al menos 2, intentamos subir una palabra
+        while (line.length === 1 && next && next.length >= 2) {
+          const candidate = [...line, next[0]];
+          if (lineWidth(candidate) <= maxWidth) {
+            // Sí cabe: subimos la primera palabra de la siguiente línea
+            line = candidate;
+            next = next.slice(1);
+            lines[i] = line;
+            if (next.length) {
+              lines[i + 1] = next;
+            } else {
+              // Si dejamos vacía la siguiente línea, la quitamos
+              lines.splice(i + 1, 1);
+              break;
+            }
+          } else {
+            // No cabe "no está" juntos, nos quedamos como estamos
+            break;
+          }
+        }
+      }
+
+      return lines;
+    }
+
+
+    // Justificado real: ajusta solo espacios, no el tamaño de las letras
+    function drawJustifiedLine(words, x, y, lineWidth, ctx) {
+      if (!words || words.length === 0) return;
+
+      ctx.save();
+      ctx.filter = "blur(5px)";
+      ctx.textBaseline = "top";
+
+      const gaps = words.length - 1;
+      const wordWidths = words.map(w => ctx.measureText(w).width);
+      const wordsWidth = wordWidths.reduce((a, b) => a + b, 0);
+
+      // Una sola palabra: no podemos justificar sin deformar → pegada a la izquierda
+      if (gaps === 0) {
+        ctx.fillText(words[0], x, y);
+        ctx.restore();
+        return;
+      }
+
+      // Espacio libre que hay que repartir en los huecos
+      const freeSpace = lineWidth - wordsWidth;
+
+      let spaceSize;
+      if (freeSpace <= 0) {
+        // Línea ya muy llena → usamos espacio natural
+        spaceSize = ctx.measureText(" ").width;
+      } else {
+        // 💚 Justificado real: repartimos TODO el espacio libre entre los huecos
+        spaceSize = freeSpace / gaps;
+      }
+
+      let cursorX = x;
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        ctx.fillText(w, cursorX, y);
+        if (i < gaps) {
+          cursorX += wordWidths[i] + spaceSize;
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // Misma línea, pero estirada verticalmente (letras más altas)
+    function drawJustifiedLineTall(words, x, y, lineWidth, ctx) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(1, BRAT_STRETCH_Y);
+      drawJustifiedLine(words, 0, 0, lineWidth, ctx);
+      ctx.restore();
+    }
+
+    /* ========= WATERMARK logo ========= */
+    function drawWatermark() {
+      if (!watermarkImage.complete) return;
+
+      const size = CANVAS_SIZE * 1.1;
+
+      // Canvas temporal para componer sombra + imagen con alpha 1.0
+      const temp = document.createElement("canvas");
+      temp.width = CANVAS_SIZE;
+      temp.height = CANVAS_SIZE;
+      const tctx = temp.getContext("2d");
+
+      tctx.save();
+
+      // === SOMBRA IGUAL A LA DEL TEXTO ===
+      tctx.shadowColor = "rgba(0,0,0,0.40)";
+      tctx.shadowBlur = 8;
+      tctx.shadowOffsetX = 4;
+      tctx.shadowOffsetY = 4;
+
+      // === DIBUJAR PNG CENTRADO (con sombra) ===
+      tctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      tctx.drawImage(
+        watermarkImage,
+        -size / 2,
+        -size / 2,
+        size,
+        size
+      );
+
+      tctx.restore();
+
+      // === AHORA APLICAMOS LA OPACIDAD FINAL ===
+      ctx.save();
+      ctx.globalAlpha = 0.06;  // << ESTA ES LA ÚNICA OPACIDAD
+      ctx.drawImage(temp, 0, 0);
+      ctx.restore();
+    }
+
+    /* ========= PLACEHOLDER ========= */
+    function drawPlaceholder() {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.font = "42px 'Felt Tip Roman', cursive";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        "v55 🦊",
+        CANVAS_SIZE / 2,
+        CANVAS_SIZE / 2
+      );
+      ctx.restore();
+    }
+
+
+    function drawAEStyleText() {
+      const textLines = ["\u00A0\u00A0\u00A0\u00A0\u00A0NACHO", "ZORRA"];
+
+      // ==================================================
+      // 1. Canvas temporal para fabricar el STROKE OUTSIDE
+      // ==================================================
+      const temp = document.createElement("canvas");
+      temp.width = CANVAS_SIZE;
+      temp.height = CANVAS_SIZE;
+      const tctx = temp.getContext("2d");
+
+      const x = CANVAS_SIZE / 2 + 220;  // << mueve todo a la derecha
+      const y = CANVAS_SIZE * 0.78 - 15;
+
+      const fontSize = 90;
+      const lineSpacing = fontSize * 0.9;
+
+      tctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      tctx.textAlign = "center";
+      tctx.textBaseline = "middle";
+      tctx.globalAlpha = 1.0; // alpha se aplica luego
+
+      // -------------- Stroke total (dentro y fuera) --------------
+      tctx.strokeStyle = "black";
+      tctx.lineWidth = 16;  // equivalente aproximado a StrokeWidth=8 de AE
+
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+        tctx.strokeText(textLines[i], x, ly);
+      }
+
+      // -------------- Borrar interior (solo deja fuera) --------------
+      tctx.globalCompositeOperation = "destination-out";
+
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+        tctx.fillText(textLines[i], x, ly);
+      }
+
+      // ==================================================
+      // 2. Canvas final para sombra + relleno (como AE)
+      // ==================================================
+      const finalCanvas = document.createElement("canvas");
+      finalCanvas.width = CANVAS_SIZE;
+      finalCanvas.height = CANVAS_SIZE;
+      const fctx = finalCanvas.getContext("2d");
+
+      // -------- Sombra estilo After Effects --------
+      fctx.shadowColor = "rgba(0,0,0,0.80)";   // parecido a opacityPct:128
+      fctx.shadowBlur = 5;                     // softness=5
+      fctx.shadowOffsetX = 4;                 // dirección 135°
+      fctx.shadowOffsetY = 4;                  // distancia 6 px aprox
+
+      // borde externo con sombra
+      fctx.drawImage(temp, 0, 0);
+
+      // quitar sombra antes del relleno
+      fctx.shadowBlur = 0;
+
+      // -------- Relleno blanco --------
+      fctx.globalAlpha = 1.0;
+      fctx.fillStyle = "white";
+      fctx.font = `${fontSize}px 'OPTICashew-ExtraBold'`;
+      fctx.textAlign = "center";
+      fctx.textBaseline = "middle";
+
+      for (let i = 0; i < textLines.length; i++) {
+        const ly = y + (i - 0.5) * lineSpacing;
+        fctx.fillText(textLines[i], x, ly);
+      }
+
+      // ==================================================
+      // 3. Alpha global bajo (marca d  @font-face {
     font-family: 'Blacksword';
     src: url('assets/diplomatic.otf') format('opentype');
     font-weight: normal;
