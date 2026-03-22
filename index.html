@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NachoZorra Generator 🦊</title>
+  <title>Mono Generator 🐵</title>
 
   <!-- Felt Tip Roman (modo normal) -->
   <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
@@ -245,7 +245,7 @@
     const ctx = canvas.getContext("2d");
     // Marca de agua como imagen
     const watermarkImage = new Image();
-    watermarkImage.src = "assets/marca.png?v=1"; // cache-buster
+    watermarkImage.src = "assets/marca2.png?v=1"; // cache-buster
     watermarkImage.onload = draw;
 
 
@@ -726,7 +726,7 @@
 
     /* ========= Marca inferior derecha estilo BRAT con sombra dinámica ========= */
     function drawCornerTagBrat() {
-      const tag = "@nachozorra";
+      const tag = "@monocastroso";
 
       ctx.save();
 
@@ -779,7 +779,7 @@
 
     /* ========= Marca inferior derecha para MODO NORMAL ========= */
     function drawCornerTagNormal() {
-      const tag = "@nachozorra";
+      const tag = "@monocastroso";
 
       ctx.save();
 
