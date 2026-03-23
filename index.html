@@ -530,43 +530,48 @@
     }
 
     function drawRetro3DLine(line, x, y, opts) {
-  const {
-    frontColor,
-    shadowColor,
-    fontSize
-  } = opts;
+      const {
+        frontColor,
+        shadowColor,
+        fontSize
+      } = opts;
 
-  ctx.save();
-  ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+      const depth = 9; // grosor total del volumen
 
-  // bloques exactos de extrusión (todos iguales)
-  const layers = [
-    { steps: 2, color: shadowColor }, // más cerca del frente
-    { steps: 2, color: frontColor },
-    { steps: 2, color: shadowColor }  // más al fondo
-  ];
+      ctx.save();
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
 
-  let offset = 0;
+      // EXTRUSIÓN CONTINUA:
+      // dibujamos desde atrás hacia adelante
+      for (let i = depth; i >= 1; i--) {
+        const t = i / depth;
 
-  // dibujamos desde el fondo hacia el frente
-  for (let layerIndex = layers.length - 1; layerIndex >= 0; layerIndex--) {
-    const layer = layers[layerIndex];
+        // 3 franjas de color dentro del volumen:
+        // atrás = shadowColor
+        // medio = frontColor
+        // cerca = shadowColor
+        let extrudeColor;
+        if (t > 0.66) {
+          extrudeColor = shadowColor;
+        } else if (t > 0.33) {
+          extrudeColor = frontColor;
+        } else {
+          extrudeColor = shadowColor;
+        }
 
-    for (let s = 0; s < layer.steps; s++) {
-      offset += 1;
-      ctx.fillStyle = layer.color;
-      ctx.fillText(line, x + offset, y + offset);
+        ctx.fillStyle = extrudeColor;
+        ctx.fillText(line, x + i, y + i);
+      }
+
+      // cara frontal
+      ctx.fillStyle = frontColor;
+      ctx.fillText(line, x, y);
+
+      ctx.restore();
     }
-  }
 
-  // frente
-  ctx.fillStyle = frontColor;
-  ctx.fillText(line, x, y);
-
-  ctx.restore();
-}
     
     function drawRetro3DDots(blockCenterY, palette) {
       ctx.save();
