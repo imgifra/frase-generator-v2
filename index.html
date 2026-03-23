@@ -290,14 +290,15 @@
     function draw() {
       const text = input.value.trim();
       const bg = bgColorInput.value;
+      const mode = modeSelect.value;
 
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      drawWatermark();
-      drawAEStyleText();
-
-      const mode = modeSelect.value;
+      if (mode !== "retro3d") {
+        drawWatermark();
+        drawAEStyleText();
+      }
 
       if (!text) {
         drawPlaceholder();
@@ -475,9 +476,23 @@
 
       const normalizedBg = getRetro3DBackground(bg);
 
-      // forzar el fondo a uno de los 3 oficiales
       ctx.fillStyle = normalizedBg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      // guardar fondo en un canvas aparte
+      const bgCanvas = document.createElement("canvas");
+      bgCanvas.width = CANVAS_SIZE;
+      bgCanvas.height = CANVAS_SIZE;
+      const bgCtx = bgCanvas.getContext("2d");
+
+      // copiar fondo
+      bgCtx.drawImage(canvas, 0, 0);
+
+      // aplicar grain SOLO al fondo
+      addGrain(bgCtx, 25);
+
+      // dibujar fondo texturizado de vuelta
+      ctx.drawImage(bgCanvas, 0, 0);
 
       const boxWidth = CANVAS_SIZE * 0.74;
       const boxHeight = CANVAS_SIZE * 0.72
@@ -596,6 +611,36 @@
       return lines;
     }
 
+    function addSubtleTexture(ctx, amount = 8) {
+      const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      const data = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const noise = (Math.random() - 0.5) * amount;
+
+        data[i] += noise * 0.3;
+        data[i + 1] += noise * 0.3;
+        data[i + 2] += noise * 0.3;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function addGrain(targetCtx, amount = 20) {
+      const imageData = targetCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      const data = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const noise = (Math.random() - 0.5) * amount;
+
+        data[i]     += noise;
+        data[i + 1] += noise;
+        data[i + 2] += noise;
+      }
+
+      targetCtx.putImageData(imageData, 0, 0);
+    }
+    
     // Para brat: cada línea es array de palabras
     function wrapWordsToLines(text, maxWidth, ctxLocal) {
       const words = text.split(/\s+/).filter(Boolean);
@@ -761,7 +806,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 29 🐵",
+        "v 30 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
