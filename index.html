@@ -572,7 +572,6 @@
       ctx.restore();
     }
 
-    
     function drawRetro3DDots(blockCenterY, palette) {
       ctx.save();
 
@@ -806,7 +805,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 20 🐵",
+        "v 21 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -992,46 +991,46 @@
     }
 
     function drawCornerTagRetro3D() {
-  const tag = "@monocastroso";
+      const tag = "@monocastroso";
 
-  ctx.save();
+      ctx.save();
 
-  const padding = 45;
-  const x = CANVAS_SIZE - padding;
-  const y = CANVAS_SIZE - padding;
+      const padding = 45;
+      const x = CANVAS_SIZE - padding;
+      const y = CANVAS_SIZE - padding;
 
-  const normalizedBg = getRetro3DBackground(bgColorInput.value);
-  const palette = getRetro3DPalette(normalizedBg);
+      const normalizedBg = getRetro3DBackground(bgColorInput.value);
+      const palette = getRetro3DPalette(normalizedBg);
 
-  const fontSize = 42;
-  const depth = 5;
+      const fontSize = 42;
+      const depth = 5;
 
-  ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
-  ctx.textAlign = "right";
-  ctx.textBaseline = "bottom";
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
 
-  for (let i = depth; i >= 1; i--) {
-    const t = i / depth;
+      for (let i = depth; i >= 1; i--) {
+        const t = i / depth;
 
-    let extrudeColor;
-    if (t > 0.66) {
-      extrudeColor = palette.shadowColor;
-    } else if (t > 0.33) {
-      extrudeColor = palette.frontColor;
-    } else {
-      extrudeColor = palette.shadowColor;
+        let extrudeColor;
+        if (t > 0.70) {
+          extrudeColor = palette.shadowColor;
+        } else if (t > 0.40) {
+          extrudeColor = palette.frontColor;
+        } else {
+          extrudeColor = palette.shadowColor;
+        }
+
+        ctx.fillStyle = extrudeColor;
+        ctx.fillText(tag, x + i, y + i);
+      }
+
+      ctx.fillStyle = palette.frontColor;
+      ctx.fillText(tag, x, y);
+
+      ctx.restore();
     }
-
-    ctx.fillStyle = extrudeColor;
-    ctx.fillText(tag, x + i, y + i);
-  }
-
-  ctx.fillStyle = palette.frontColor;
-  ctx.fillText(tag, x, y);
-
-  ctx.restore();
-}
-    
+        
 
     /* ========= CONTRASTE ========= */
     function getContrastColor(hex) {
