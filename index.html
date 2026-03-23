@@ -36,7 +36,7 @@
   </style>  <style>
   @font-face {
     font-family: 'Hornthin';
-    src: url('assets/Horn-Thin-Bold.woff') format('truetype');
+    src: url('assets/HornThin-Bold.ttf') format('truetype');
     font-weight: bold;
     font-style: normal;
     font-display: swap;
@@ -520,7 +520,7 @@
         fontSize -= 2;
       }
 
-      ctx.font = `${fontSize}px 'Hornthin'`;
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -558,7 +558,7 @@
       const depth = 9;
 
       ctx.save();
-      ctx.font = `${fontSize}px 'Hornthin'`;
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -802,7 +802,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 36 🐵",
+        "v 37 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1002,7 +1002,7 @@
       const fontSize = 30;
       const depth = 3; // grosor del volumen
 
-      ctx.font = `${fontSize}px 'Hornthin'`;
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
 
