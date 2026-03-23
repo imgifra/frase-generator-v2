@@ -210,11 +210,11 @@
     <!-- Modo -->
     <div class="flex items-center justify-center gap-3 text-sm">
       <span>Modo:</span>
-      <label class="switch">
-        <input type="checkbox" id="modeToggle">
-        <span class="slider"></span>
-      </label>
-      <span id="modeLabel">Normal</span>
+      <select id="modeSelect" class="text-black rounded-lg px-3 py-1 font-bold">
+        <option value="normal">Normal</option>
+        <option value="brat">Brat</option>
+        <option value="retro3d">3D Retro</option>
+      </select>
     </div>
 
     <!-- Texto + fondo + botón -->
@@ -251,8 +251,7 @@
 
     const input = document.getElementById("textInput");
     const bgColorInput = document.getElementById("bgColor");
-    const toggle = document.getElementById("modeToggle");
-    const modeLabel = document.getElementById("modeLabel");
+    const modeSelect = document.getElementById("modeSelect");
     const downloadBtn = document.getElementById("downloadBtn");
 
     const CANVAS_SIZE = 1080;
@@ -265,10 +264,7 @@
 
     input.addEventListener("input", draw);
     bgColorInput.addEventListener("input", draw);
-    toggle.addEventListener("change", () => {
-      modeLabel.textContent = toggle.checked ? "Brat" : "Normal";
-      draw();
-    });
+    modeSelect.addEventListener("change", draw);
     downloadBtn.addEventListener("click", downloadPNG);
 
     // Botón para múltiples frases
@@ -289,19 +285,24 @@
       drawWatermark();
       drawAEStyleText();
 
+      const mode = modeSelect.value;
+
       if (!text) {
         drawPlaceholder();
       } else {
-        if (toggle.checked) {
-          drawBrat(text, bg);
-        } else {
+        if (mode === "normal") {
           drawNormal(text, bg);
+        } else if (mode === "brat") {
+          drawBrat(text, bg);
+        } else if (mode === "retro3d") {
+          drawRetro3D(text, bg);
         }
       }
 
-      // ← Agregar aquí:
-      if (toggle.checked) {
+      if (mode === "brat") {
         drawCornerTagBrat();
+      } else if (mode === "retro3d") {
+        drawCornerTagRetro3D();
       } else {
         drawCornerTagNormal();
       }
@@ -449,6 +450,120 @@
 
       ctx.restore();
     }
+
+    function drawRetro3D(rawText, bg) {
+      ctx.save();
+
+      const text = rawText.trim();
+      if (!text) {
+        ctx.restore();
+        return;
+      }
+
+      const boxWidth = CANVAS_SIZE * 0.82;
+      const boxHeight = CANVAS_SIZE * 0.72;
+      const centerX = CANVAS_SIZE / 2;
+      const startY = CANVAS_SIZE * 0.20;
+
+      const maxFont = 150;
+      const minFont = 38;
+
+      let fontSize = maxFont;
+      let lines = [];
+
+      while (fontSize >= minFont) {
+        ctx.font = `900 ${fontSize}px 'Georgia', 'Times New Roman', serif`;
+        lines = wrapText(text.toUpperCase(), boxWidth, ctx);
+
+        const lineHeight = fontSize * 1.02;
+        const totalHeight = lines.length * lineHeight;
+
+        const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
+
+        if (widest <= boxWidth && totalHeight <= boxHeight) break;
+
+        fontSize -= 2;
+      }
+
+      ctx.font = `900 ${fontSize}px 'Georgia', 'Times New Roman', serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const lineHeight = fontSize * 1.02;
+      const totalHeight = lines.length * lineHeight;
+      let y = startY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
+
+      const brightness = getBrightness(bg);
+
+      let frontColor, layer1, layer2, strokeColor;
+
+      if (brightness > 170) {
+        // Fondo claro
+        frontColor = "#3d5afe";
+        layer1 = "#e53935";
+        layer2 = "#f4b400";
+        strokeColor = "rgba(0,0,0,0.10)";
+      } else {
+        // Fondo oscuro
+        frontColor = "#f4b400";
+        layer1 = "#e53935";
+        layer2 = "#3d5afe";
+        strokeColor = "rgba(255,255,255,0.10)";
+      }
+
+      for (const line of lines) {
+        drawRetro3DLine(line, centerX, y, {
+          frontColor,
+          layer1,
+          layer2,
+          strokeColor,
+          fontSize
+        });
+
+        y += lineHeight;
+      }
+
+      ctx.restore();
+    }
+
+
+    function drawRetro3DLine(line, x, y, opts) {
+      const {
+        frontColor,
+        layer1,
+        layer2,
+        strokeColor,
+        fontSize
+      } = opts;
+
+      // Capa más profunda
+      ctx.save();
+      ctx.fillStyle = layer2;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = Math.max(1, fontSize * 0.02);
+      ctx.fillText(line, x + 10, y + 10);
+      ctx.strokeText(line, x + 10, y + 10);
+      ctx.restore();
+
+      // Capa media
+      ctx.save();
+      ctx.fillStyle = layer1;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = Math.max(1, fontSize * 0.02);
+      ctx.fillText(line, x + 5, y + 5);
+      ctx.strokeText(line, x + 5, y + 5);
+      ctx.restore();
+
+      // Frente
+      ctx.save();
+      ctx.fillStyle = frontColor;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = Math.max(1, fontSize * 0.018);
+      ctx.fillText(line, x, y);
+      ctx.strokeText(line, x, y);
+      ctx.restore();
+    }    
+
 
     /* ========= UTILIDADES DE TEXTO ========= */
 
@@ -821,7 +936,56 @@
       ctx.restore();
     }
 
+    function drawCornerTagRetro3D() {
+      const tag = "@monocastroso";
 
+      ctx.save();
+
+      const padding = 45;
+      const x = CANVAS_SIZE - padding;
+      const y = CANVAS_SIZE - padding;
+
+      const bg = bgColorInput.value;
+      const brightness = getBrightness(bg);
+
+      let frontColor, layer1, layer2, strokeColor;
+
+      if (brightness > 170) {
+        frontColor = "#3d5afe";
+        layer1 = "#e53935";
+        layer2 = "#f4b400";
+        strokeColor = "rgba(0,0,0,0.15)";
+      } else {
+        frontColor = "#f4b400";
+        layer1 = "#e53935";
+        layer2 = "#3d5afe";
+        strokeColor = "rgba(255,255,255,0.15)";
+      }
+
+      const fontSize = 42;
+      ctx.font = `900 ${fontSize}px 'Georgia', 'Times New Roman', serif`;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+
+      // fondo
+      ctx.fillStyle = layer2;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 1.5;
+      ctx.fillText(tag, x + 8, y + 8);
+      ctx.strokeText(tag, x + 8, y + 8);
+
+      // medio
+      ctx.fillStyle = layer1;
+      ctx.fillText(tag, x + 4, y + 4);
+      ctx.strokeText(tag, x + 4, y + 4);
+
+      // frente
+      ctx.fillStyle = frontColor;
+      ctx.fillText(tag, x, y);
+      ctx.strokeText(tag, x, y);
+
+      ctx.restore();
+    }
 
     /* ========= CONTRASTE ========= */
     function getContrastColor(hex) {
@@ -833,10 +997,18 @@
       return brightness > 150 ? "#000000" : "#ffffff";
     }
 
+    function getBrightness(hex) {
+      hex = hex.replace("#", "");
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return (r * 299 + g * 587 + b * 114) / 1000;
+    }
+
     /* ========= DESCARGAR ========= */
     function downloadPNG() {
       const link = document.createElement("a");
-      const mode = toggle.checked ? "brat" : "normal";
+      const mode = modeSelect.value;
       link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
       link.href = canvas.toDataURL("image/png");
       link.click();
