@@ -481,7 +481,7 @@
       let lines = [];
 
       while (fontSize >= minFont) {
-        ctx.font = `${fontSize}px 'HorndonD'`;
+        ctx.font = `${fontSize}px 'Horndon'`;
         lines = wrapText(text.toUpperCase(), boxWidth, ctx);
 
         const lineHeight = fontSize * 1.02;
@@ -494,7 +494,7 @@
         fontSize -= 2;
       }
 
-      ctx.font = `${fontSize}px 'HorndonD'`;
+      ctx.font = `${fontSize}px 'Horndon'`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -760,7 +760,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 4 🐵",
+        "v 5 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -972,7 +972,7 @@
       }
 
       const fontSize = 42;
-      ctx.font = `${fontSize}px 'HorndonD'`;
+      ctx.font = `${fontSize}px 'Horndon'`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
