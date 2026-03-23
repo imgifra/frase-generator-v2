@@ -802,7 +802,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 32 🐵",
+        "v 33 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1063,44 +1063,6 @@
       return (r * 299 + g * 587 + b * 114) / 1000;
     }
 
-    function getRetro3DBackground(hex) {
-      const retroYellow = "#f4c400";
-      const retroBlue   = "#3d5afe";
-      const retroRed    = "#e53935";
-      const retroWhite  = "#ffffff";
-
-      const input = hexToRgb(hex);
-
-      // Si el color está suficientemente cerca del blanco, usar blanco
-      const whiteDistance =
-        Math.pow(input.r - 255, 2) +
-        Math.pow(input.g - 255, 2) +
-        Math.pow(input.b - 255, 2);
-
-      if (whiteDistance < 2000) {
-        return retroWhite;
-      }
-
-      const targetColors = [retroYellow, retroBlue, retroRed];
-
-      let nearest = targetColors[0];
-      let minDistance = Infinity;
-
-      for (const color of targetColors) {
-        const c = hexToRgb(color);
-        const distance =
-          Math.pow(input.r - c.r, 2) +
-          Math.pow(input.g - c.g, 2) +
-          Math.pow(input.b - c.b, 2);
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearest = color;
-        }
-      }
-
-      return nearest;
-    }
 
     function getRetro3DBackground(hex) {
       const retroYellow = "#f4c400";
@@ -1141,6 +1103,49 @@
       return nearest;
     }
 
+    function getRetro3DPalette(bg) {
+      const retroYellow = "#f4c400";
+      const retroBlue   = "#3d5afe";
+      const retroRed    = "#e53935";
+      const retroWhite  = "#ffffff";
+
+      // fondo blanco = modo fucsia
+      if (bg.toLowerCase() === retroWhite) {
+        return {
+          frontColor: "#ff2bd6",
+          midColor: "#a000a8",
+          shadowColor: "#3a003d",
+          strokeColor: "rgba(0,0,0,0.08)"
+        };
+      }
+
+      if (bg.toLowerCase() === retroYellow) {
+        return {
+          frontColor: retroBlue,
+          midColor: retroRed,
+          shadowColor: "#7a001f",
+          strokeColor: "rgba(0,0,0,0.10)"
+        };
+      }
+
+      if (bg.toLowerCase() === retroBlue) {
+        return {
+          frontColor: retroRed,
+          midColor: retroYellow,
+          shadowColor: "#6b5a00",
+          strokeColor: "rgba(0,0,0,0.10)"
+        };
+      }
+
+      // fondo rojo
+      return {
+        frontColor: retroYellow,
+        midColor: retroBlue,
+        shadowColor: "#102a88",
+        strokeColor: "rgba(0,0,0,0.10)"
+      };
+    }    
+    
     function hexToRgb(hex) {
       hex = hex.replace("#", "");
       return {
