@@ -531,60 +531,46 @@
       const {
         frontColor,
         shadowColor,
-        strokeColor,
         fontSize
       } = opts;
 
-      const steps = [
-        { dx: 9, dy: 9, color: shadowColor },
-        { dx: 6, dy: 6, color: frontColor },
-        { dx: 3, dy: 3, color: shadowColor }
-      ];
+      const depth = 10; // grosor total del volumen
 
       ctx.save();
-      ctx.font = `${fontSize}px 'Hornthin', serif`;
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // Dibujar volumen lateral real por capas recortadas
-      for (let i = 0; i < steps.length; i++) {
-        const step = steps[i];
+      // EXTRUSIÓN CONTINUA:
+      // dibujamos desde atrás hacia adelante
+      for (let i = depth; i >= 1; i--) {
+        const t = i / depth;
 
-        const temp = document.createElement("canvas");
-        temp.width = CANVAS_SIZE;
-        temp.height = CANVAS_SIZE;
-        const tctx = temp.getContext("2d");
+        // 3 franjas de color dentro del volumen:
+        // atrás = shadowColor
+        // medio = frontColor
+        // cerca = shadowColor
+        let extrudeColor;
+        if (t > 0.66) {
+          extrudeColor = shadowColor;
+        } else if (t > 0.33) {
+          extrudeColor = frontColor;
+        } else {
+          extrudeColor = shadowColor;
+        }
 
-        tctx.font = `${fontSize}px 'Hornthin', serif`;
-        tctx.textAlign = "center";
-        tctx.textBaseline = "middle";
-
-        // 1. dibuja la capa desplazada
-        tctx.fillStyle = step.color;
-        tctx.fillText(line, x + step.dx, y + step.dy);
-
-        // 2. recorta con la capa anterior (o con el frente)
-        tctx.globalCompositeOperation = "destination-out";
-        tctx.fillStyle = "#000";
-
-        const cutDx = i === steps.length - 1 ? 0 : steps[i + 1].dx;
-        const cutDy = i === steps.length - 1 ? 0 : steps[i + 1].dy;
-
-        tctx.fillText(line, x + cutDx, y + cutDy);
-
-        // 3. pinta solo el lateral sobrante
-        ctx.drawImage(temp, 0, 0);
+        ctx.fillStyle = extrudeColor;
+        ctx.fillText(line, x + i, y + i);
       }
 
-      // Frente
+      // cara frontal
       ctx.fillStyle = frontColor;
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = Math.max(0.8, fontSize * 0.008);
       ctx.fillText(line, x, y);
-      ctx.strokeText(line, x, y);
 
       ctx.restore();
     }
+        
+
 
     /* ========= UTILIDADES DE TEXTO ========= */
 
@@ -772,7 +758,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 10 🐵",
+        "v 11 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
