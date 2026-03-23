@@ -553,9 +553,9 @@
         // medio = frontColor
         // cerca = shadowColor
         let extrudeColor;
-        if (t > 0.66) {
+        if (t > 0.70) {
           extrudeColor = shadowColor;
-        } else if (t > 0.33) {
+        } else if (t > 0.40) {
           extrudeColor = frontColor;
         } else {
           extrudeColor = shadowColor;
@@ -806,7 +806,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 19 🐵",
+        "v 20 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
