@@ -256,6 +256,9 @@
     const watermarkImage = new Image();
     watermarkImage.src = "assets/marca2.png?v=1"; // cache-buster
     watermarkImage.onload = draw;
+    const retroLogoImage = new Image();
+    retroLogoImage.src = "assets/marca3.png?v=1";
+    retroLogoImage.onload = draw;
 
 
     const input = document.getElementById("textInput");
@@ -311,6 +314,7 @@
       if (mode === "brat") {
         drawCornerTagBrat();
       } else if (mode === "retro3d") {
+        drawRetroCornerLogo();
         drawCornerTagRetro3D();
       } else {
         drawCornerTagNormal();
@@ -805,7 +809,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 26 🐵",
+        "v 27 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1030,7 +1034,23 @@
 
       ctx.restore();
     }
-        
+   
+    function drawRetroCornerLogo() {
+      if (!retroLogoImage.complete) return;
+      if (modeSelect.value !== "retro3d") return;
+
+      const size = 130;
+      const padding = 38;
+
+      const x = CANVAS_SIZE - padding - size;
+      const y = CANVAS_SIZE - padding - size;
+
+      ctx.save();
+      ctx.drawImage(retroLogoImage, x, y, size, size);
+      ctx.restore();
+    }
+
+    
 
     /* ========= CONTRASTE ========= */
     function getContrastColor(hex) {
