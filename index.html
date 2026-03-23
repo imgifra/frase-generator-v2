@@ -32,6 +32,15 @@
     src: url('assets/OPTICashew-ExtraBold.woff') format('woff');
     font-weight: 800;
   }
+
+  </style>  <style>
+  @font-face {
+    font-family: 'Horndon';
+    src: url('assets/HorndonD.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
   </style>
 
 
@@ -472,7 +481,7 @@
       let lines = [];
 
       while (fontSize >= minFont) {
-        ctx.font = `900 ${fontSize}px 'Georgia', 'Times New Roman', serif`;
+        ctx.font = `${fontSize}px 'HorndonD'`;
         lines = wrapText(text.toUpperCase(), boxWidth, ctx);
 
         const lineHeight = fontSize * 1.02;
@@ -485,7 +494,7 @@
         fontSize -= 2;
       }
 
-      ctx.font = `900 ${fontSize}px 'Georgia', 'Times New Roman', serif`;
+      ctx.font = `${fontSize}px 'HorndonD'`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -751,7 +760,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 3 🐵",
+        "v 4 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -963,7 +972,7 @@
       }
 
       const fontSize = 42;
-      ctx.font = `900 ${fontSize}px 'Georgia', 'Times New Roman', serif`;
+      ctx.font = `${fontSize}px 'HorndonD'`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
