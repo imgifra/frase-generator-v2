@@ -626,7 +626,7 @@
       ctx.putImageData(imageData, 0, 0);
     }
 
-    function addGrain(targetCtx, amount = 20) {
+    function addGrain(targetCtx, amount = 15) {
       const imageData = targetCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       const data = imageData.data;
 
@@ -806,7 +806,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 30 🐵",
+        "v 31 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
