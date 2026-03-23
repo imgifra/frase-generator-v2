@@ -461,118 +461,101 @@
     }
 
     function drawRetro3D(rawText, bg) {
-      ctx.save();
+  ctx.save();
 
-      const text = rawText.trim();
-      if (!text) {
-        ctx.restore();
-        return;
-      }
+  const text = rawText.trim();
+  if (!text) {
+    ctx.restore();
+    return;
+  }
 
-      const boxWidth = CANVAS_SIZE * 0.82;
-      const boxHeight = CANVAS_SIZE * 0.72;
-      const centerX = CANVAS_SIZE / 2;
-      const startY = CANVAS_SIZE * 0.20;
+  const normalizedBg = getRetro3DBackground(bg);
 
-      const maxFont = 150;
-      const minFont = 38;
+  // forzar el fondo a uno de los 3 oficiales
+  ctx.fillStyle = normalizedBg;
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      let fontSize = maxFont;
-      let lines = [];
+  const boxWidth = CANVAS_SIZE * 0.82;
+  const boxHeight = CANVAS_SIZE * 0.62;
 
-      while (fontSize >= minFont) {
-        ctx.font = `${fontSize}px 'Horndon'`;
-        lines = wrapText(text.toUpperCase(), boxWidth, ctx);
+  const centerX = CANVAS_SIZE / 2;
+  const centerY = CANVAS_SIZE / 2;
 
-        const lineHeight = fontSize * 1.02;
-        const totalHeight = lines.length * lineHeight;
+  const maxFont = 170;
+  const minFont = 38;
 
-        const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
+  let fontSize = maxFont;
+  let lines = [];
 
-        if (widest <= boxWidth && totalHeight <= boxHeight) break;
+  while (fontSize >= minFont) {
+    ctx.font = `${fontSize}px 'HorndonD', serif`;
+    lines = wrapText(text.toUpperCase(), boxWidth, ctx);
 
-        fontSize -= 2;
-      }
+    const lineHeight = fontSize * 0.95;
+    const totalHeight = lines.length * lineHeight;
 
-      ctx.font = `${fontSize}px 'Horndon'`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+    const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
 
-      const lineHeight = fontSize * 1.02;
-      const totalHeight = lines.length * lineHeight;
-      let y = startY + (boxHeight - totalHeight) / 2 + lineHeight / 2;
+    if (widest <= boxWidth && totalHeight <= boxHeight) break;
 
-      const brightness = getBrightness(bg);
+    fontSize -= 2;
+  }
 
-      let frontColor, layer1, layer2, strokeColor;
+  ctx.font = `${fontSize}px 'HorndonD', serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
 
-      if (brightness > 170) {
-        // Fondo claro
-        frontColor = "#3d5afe";
-        layer1 = "#e53935";
-        layer2 = "#f4b400";
-        strokeColor = "rgba(0,0,0,0.10)";
-      } else {
-        // Fondo oscuro
-        frontColor = "#f4b400";
-        layer1 = "#e53935";
-        layer2 = "#3d5afe";
-        strokeColor = "rgba(255,255,255,0.10)";
-      }
+  const lineHeight = fontSize * 0.95;
+  const totalHeight = lines.length * lineHeight;
 
-      for (const line of lines) {
-        drawRetro3DLine(line, centerX, y, {
-          frontColor,
-          layer1,
-          layer2,
-          strokeColor,
-          fontSize
-        });
+  // centrado vertical real
+  let y = centerY - totalHeight / 2 + lineHeight / 2;
 
-        y += lineHeight;
-      }
+  const palette = getRetro3DPalette(normalizedBg);
 
-      ctx.restore();
-    }
+  for (const line of lines) {
+    drawRetro3DLine(line, centerX, y, {
+      frontColor: palette.frontColor,
+      shadowColor: palette.shadowColor,
+      strokeColor: palette.strokeColor,
+      fontSize
+    });
 
+    y += lineHeight;
+  }
+
+  ctx.restore();
+}
 
     function drawRetro3DLine(line, x, y, opts) {
       const {
         frontColor,
-        layer1,
-        layer2,
+        shadowColor,
         strokeColor,
         fontSize
       } = opts;
 
-      // Capa más profunda
+      const offsetX = 7;
+      const offsetY = 7;
+
+      // sombra 3D
       ctx.save();
-      ctx.fillStyle = layer2;
+      ctx.fillStyle = shadowColor;
       ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = Math.max(1, fontSize * 0.02);
-      ctx.fillText(line, x + 10, y + 10);
-      ctx.strokeText(line, x + 10, y + 10);
+      ctx.lineWidth = Math.max(1, fontSize * 0.015);
+      ctx.fillText(line, x + offsetX, y + offsetY);
+      ctx.strokeText(line, x + offsetX, y + offsetY);
       ctx.restore();
 
-      // Capa media
-      ctx.save();
-      ctx.fillStyle = layer1;
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = Math.max(1, fontSize * 0.02);
-      ctx.fillText(line, x + 5, y + 5);
-      ctx.strokeText(line, x + 5, y + 5);
-      ctx.restore();
-
-      // Frente
+      // frente
       ctx.save();
       ctx.fillStyle = frontColor;
       ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = Math.max(1, fontSize * 0.018);
+      ctx.lineWidth = Math.max(1, fontSize * 0.012);
       ctx.fillText(line, x, y);
       ctx.strokeText(line, x, y);
       ctx.restore();
-    }    
-
+    }
 
     /* ========= UTILIDADES DE TEXTO ========= */
 
@@ -954,48 +937,32 @@
       const x = CANVAS_SIZE - padding;
       const y = CANVAS_SIZE - padding;
 
-      const bg = bgColorInput.value;
-      const brightness = getBrightness(bg);
-
-      let frontColor, layer1, layer2, strokeColor;
-
-      if (brightness > 170) {
-        frontColor = "#3d5afe";
-        layer1 = "#e53935";
-        layer2 = "#f4b400";
-        strokeColor = "rgba(0,0,0,0.15)";
-      } else {
-        frontColor = "#f4b400";
-        layer1 = "#e53935";
-        layer2 = "#3d5afe";
-        strokeColor = "rgba(255,255,255,0.15)";
-      }
+      const normalizedBg = getRetro3DBackground(bgColorInput.value);
+      const palette = getRetro3DPalette(normalizedBg);
 
       const fontSize = 42;
-      ctx.font = `${fontSize}px 'Horndon'`;
+      ctx.font = `${fontSize}px 'HorndonD', serif`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
-      // fondo
-      ctx.fillStyle = layer2;
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1.5;
-      ctx.fillText(tag, x + 8, y + 8);
-      ctx.strokeText(tag, x + 8, y + 8);
+      const offsetX = 5;
+      const offsetY = 5;
 
-      // medio
-      ctx.fillStyle = layer1;
-      ctx.fillText(tag, x + 4, y + 4);
-      ctx.strokeText(tag, x + 4, y + 4);
+      // sombra
+      ctx.fillStyle = palette.shadowColor;
+      ctx.strokeStyle = palette.strokeColor;
+      ctx.lineWidth = 1.2;
+      ctx.fillText(tag, x + offsetX, y + offsetY);
+      ctx.strokeText(tag, x + offsetX, y + offsetY);
 
       // frente
-      ctx.fillStyle = frontColor;
+      ctx.fillStyle = palette.frontColor;
       ctx.fillText(tag, x, y);
       ctx.strokeText(tag, x, y);
 
       ctx.restore();
     }
-
+    
     /* ========= CONTRASTE ========= */
     function getContrastColor(hex) {
       hex = hex.replace("#", "");
@@ -1012,6 +979,72 @@
       const g = parseInt(hex.slice(2, 4), 16);
       const b = parseInt(hex.slice(4, 6), 16);
       return (r * 299 + g * 587 + b * 114) / 1000;
+    }
+
+    function getRetro3DBackground(hex) {
+    const retroYellow = "#f4c400";
+    const retroBlue   = "#3d5afe";
+    const retroRed    = "#e53935";
+
+    const targetColors = [retroYellow, retroBlue, retroRed];
+
+    const input = hexToRgb(hex);
+
+    let nearest = targetColors[0];
+    let minDistance = Infinity;
+
+    for (const color of targetColors) {
+      const c = hexToRgb(color);
+      const distance =
+        Math.pow(input.r - c.r, 2) +
+        Math.pow(input.g - c.g, 2) +
+        Math.pow(input.b - c.b, 2);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = color;
+      }
+    }
+
+    return nearest;
+  }
+
+    function getRetro3DPalette(bg) {
+      const retroYellow = "#f4c400";
+      const retroBlue   = "#3d5afe";
+      const retroRed    = "#e53935";
+
+      if (bg.toLowerCase() === retroYellow) {
+        return {
+          frontColor: retroBlue,
+          shadowColor: retroRed,
+          strokeColor: "rgba(0,0,0,0.10)"
+        };
+      }
+
+      if (bg.toLowerCase() === retroBlue) {
+        return {
+          frontColor: retroRed,
+          shadowColor: retroYellow,
+          strokeColor: "rgba(0,0,0,0.10)"
+        };
+      }
+
+      // fondo rojo
+      return {
+        frontColor: retroYellow,
+        shadowColor: retroBlue,
+        strokeColor: "rgba(0,0,0,0.10)"
+      };
+    }
+
+    function hexToRgb(hex) {
+      hex = hex.replace("#", "");
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16)
+      };
     }
 
     /* ========= DESCARGAR ========= */
