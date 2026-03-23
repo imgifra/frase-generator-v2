@@ -535,6 +535,7 @@
       for (const line of lines) {
         drawRetro3DLine(line, centerX, y, {
           frontColor: palette.frontColor,
+          midColor: palette.midColor,
           shadowColor: palette.shadowColor,
           strokeColor: palette.strokeColor,
           fontSize
@@ -549,33 +550,28 @@
     function drawRetro3DLine(line, x, y, opts) {
       const {
         frontColor,
+        midColor,
         shadowColor,
         fontSize
       } = opts;
 
-      const depth = 9; // grosor total del volumen
+      const depth = 9;
 
       ctx.save();
       ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // EXTRUSIÓN CONTINUA:
-      // dibujamos desde atrás hacia adelante
       for (let i = depth; i >= 1; i--) {
         const t = i / depth;
 
-        // 3 franjas de color dentro del volumen:
-        // atrás = shadowColor
-        // medio = frontColor
-        // cerca = shadowColor
         let extrudeColor;
         if (t > 0.70) {
           extrudeColor = shadowColor;
         } else if (t > 0.40) {
-          extrudeColor = frontColor;
+          extrudeColor = midColor;
         } else {
-          extrudeColor = shadowColor;
+          extrudeColor = frontColor;
         }
 
         ctx.fillStyle = extrudeColor;
@@ -806,7 +802,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 31 🐵",
+        "v 32 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1068,60 +1064,81 @@
     }
 
     function getRetro3DBackground(hex) {
-    const retroYellow = "#f4c400";
-    const retroBlue   = "#3d5afe";
-    const retroRed    = "#e53935";
-
-    const targetColors = [retroYellow, retroBlue, retroRed];
-
-    const input = hexToRgb(hex);
-
-    let nearest = targetColors[0];
-    let minDistance = Infinity;
-
-    for (const color of targetColors) {
-      const c = hexToRgb(color);
-      const distance =
-        Math.pow(input.r - c.r, 2) +
-        Math.pow(input.g - c.g, 2) +
-        Math.pow(input.b - c.b, 2);
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearest = color;
-      }
-    }
-
-    return nearest;
-  }
-
-    function getRetro3DPalette(bg) {
       const retroYellow = "#f4c400";
       const retroBlue   = "#3d5afe";
       const retroRed    = "#e53935";
+      const retroWhite  = "#ffffff";
 
-      if (bg.toLowerCase() === retroYellow) {
-        return {
-          frontColor: retroBlue,
-          shadowColor: retroRed,
-          strokeColor: "rgba(0,0,0,0.10)"
-        };
+      const input = hexToRgb(hex);
+
+      // Si el color está suficientemente cerca del blanco, usar blanco
+      const whiteDistance =
+        Math.pow(input.r - 255, 2) +
+        Math.pow(input.g - 255, 2) +
+        Math.pow(input.b - 255, 2);
+
+      if (whiteDistance < 2000) {
+        return retroWhite;
       }
 
-      if (bg.toLowerCase() === retroBlue) {
-        return {
-          frontColor: retroRed,
-          shadowColor: retroYellow,
-          strokeColor: "rgba(0,0,0,0.10)"
-        };
+      const targetColors = [retroYellow, retroBlue, retroRed];
+
+      let nearest = targetColors[0];
+      let minDistance = Infinity;
+
+      for (const color of targetColors) {
+        const c = hexToRgb(color);
+        const distance =
+          Math.pow(input.r - c.r, 2) +
+          Math.pow(input.g - c.g, 2) +
+          Math.pow(input.b - c.b, 2);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = color;
+        }
       }
 
-      // fondo rojo
-      return {
-        frontColor: retroYellow,
-        shadowColor: retroBlue,
-        strokeColor: "rgba(0,0,0,0.10)"
-      };
+      return nearest;
+    }
+
+    function getRetro3DBackground(hex) {
+      const retroYellow = "#f4c400";
+      const retroBlue   = "#3d5afe";
+      const retroRed    = "#e53935";
+      const retroWhite  = "#ffffff";
+
+      const input = hexToRgb(hex);
+
+      // Si el color está suficientemente cerca del blanco, usar blanco
+      const whiteDistance =
+        Math.pow(input.r - 255, 2) +
+        Math.pow(input.g - 255, 2) +
+        Math.pow(input.b - 255, 2);
+
+      if (whiteDistance < 2000) {
+        return retroWhite;
+      }
+
+      const targetColors = [retroYellow, retroBlue, retroRed];
+
+      let nearest = targetColors[0];
+      let minDistance = Infinity;
+
+      for (const color of targetColors) {
+        const c = hexToRgb(color);
+        const distance =
+          Math.pow(input.r - c.r, 2) +
+          Math.pow(input.g - c.g, 2) +
+          Math.pow(input.b - c.b, 2);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = color;
+        }
+      }
+
+      return nearest;
     }
 
     function hexToRgb(hex) {
