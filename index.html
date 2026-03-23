@@ -535,41 +535,56 @@
         fontSize
       } = opts;
 
-      const depth1 = { x: 9, y: 9, color: shadowColor }; // más profunda
-      const depth2 = { x: 6, y: 6, color: frontColor };  // intermedia
-      const depth3 = { x: 3, y: 3, color: shadowColor }; // cercana
+      const steps = [
+        { dx: 9, dy: 9, color: shadowColor },
+        { dx: 6, dy: 6, color: frontColor },
+        { dx: 3, dy: 3, color: shadowColor }
+      ];
 
       ctx.save();
-      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
+      ctx.font = `${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // capa 1 - fondo
-      ctx.fillStyle = depth1.color;
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = Math.max(0.8, fontSize * 0.010);
-      ctx.fillText(line, x + depth1.x, y + depth1.y);
-      ctx.strokeText(line, x + depth1.x, y + depth1.y);
+      // Dibujar volumen lateral real por capas recortadas
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
 
-      // capa 2 - media
-      ctx.fillStyle = depth2.color;
-      ctx.fillText(line, x + depth2.x, y + depth2.y);
-      ctx.strokeText(line, x + depth2.x, y + depth2.y);
+        const temp = document.createElement("canvas");
+        temp.width = CANVAS_SIZE;
+        temp.height = CANVAS_SIZE;
+        const tctx = temp.getContext("2d");
 
-      // capa 3 - cercana
-      ctx.fillStyle = depth3.color;
-      ctx.fillText(line, x + depth3.x, y + depth3.y);
-      ctx.strokeText(line, x + depth3.x, y + depth3.y);
+        tctx.font = `${fontSize}px 'Hornthin', serif`;
+        tctx.textAlign = "center";
+        tctx.textBaseline = "middle";
 
-      // frente
+        // 1. dibuja la capa desplazada
+        tctx.fillStyle = step.color;
+        tctx.fillText(line, x + step.dx, y + step.dy);
+
+        // 2. recorta con la capa anterior (o con el frente)
+        tctx.globalCompositeOperation = "destination-out";
+        tctx.fillStyle = "#000";
+
+        const cutDx = i === steps.length - 1 ? 0 : steps[i + 1].dx;
+        const cutDy = i === steps.length - 1 ? 0 : steps[i + 1].dy;
+
+        tctx.fillText(line, x + cutDx, y + cutDy);
+
+        // 3. pinta solo el lateral sobrante
+        ctx.drawImage(temp, 0, 0);
+      }
+
+      // Frente
       ctx.fillStyle = frontColor;
-      ctx.lineWidth = Math.max(1, fontSize * 0.012);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = Math.max(0.8, fontSize * 0.008);
       ctx.fillText(line, x, y);
       ctx.strokeText(line, x, y);
 
       ctx.restore();
     }
-
 
     /* ========= UTILIDADES DE TEXTO ========= */
 
@@ -757,7 +772,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 9 🐵",
+        "v 10 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
