@@ -35,8 +35,8 @@
 
   </style>  <style>
   @font-face {
-    font-family: 'HorndonD';
-    src: url('assets/HornThin Bold.ttf') format('truetype');
+    font-family: 'Hornthin';
+    src: url('assets/HornThin-Bold.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -488,7 +488,7 @@
   let lines = [];
 
   while (fontSize >= minFont) {
-    ctx.font = `${fontSize}px 'HorndonD', serif`;
+    ctx.font = `${fontSize}px 'Hornthin', serif`;
     lines = wrapText(text.toUpperCase(), boxWidth, ctx);
 
     const lineHeight = fontSize * 0.95;
@@ -501,7 +501,7 @@
     fontSize -= 2;
   }
 
-  ctx.font = `${fontSize}px 'HorndonD', serif`;
+  ctx.font = `${fontSize}px 'Hornthin', serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
@@ -955,7 +955,7 @@
       const palette = getRetro3DPalette(normalizedBg);
 
       const fontSize = 42;
-      ctx.font = `${fontSize}px 'HorndonD', serif`;
+      ctx.font = `${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
