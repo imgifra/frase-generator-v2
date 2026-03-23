@@ -528,8 +528,6 @@
         y += lineHeight;
       }
 
-      drawRetro3DDots(blockCenterY, palette);
-
       ctx.restore();
     }
 
@@ -576,52 +574,6 @@
       ctx.restore();
     }
 
-    function drawRetro3DDots(blockCenterY, palette) {
-      ctx.save();
-
-      const radius = 22;
-      const offset = CANVAS_SIZE * 0.09;
-      const leftX = offset;
-      const rightX = CANVAS_SIZE - offset;
-      const y = blockCenterY;
-
-      const points = [
-        { x: leftX, y },
-        { x: rightX, y }
-      ];
-
-      for (const p of points) {
-        const depth1 = { x: 9, y: 9, color: palette.shadowColor };
-        const depth2 = { x: 6, y: 6, color: palette.frontColor };
-        const depth3 = { x: 3, y: 3, color: palette.shadowColor };
-
-        // capa 1
-        ctx.fillStyle = depth1.color;
-        ctx.beginPath();
-        ctx.arc(p.x + depth1.x, p.y + depth1.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // capa 2
-        ctx.fillStyle = depth2.color;
-        ctx.beginPath();
-        ctx.arc(p.x + depth2.x, p.y + depth2.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // capa 3
-        ctx.fillStyle = depth3.color;
-        ctx.beginPath();
-        ctx.arc(p.x + depth3.x, p.y + depth3.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // frente
-        ctx.fillStyle = palette.frontColor;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-    }
 
     /* ========= UTILIDADES DE TEXTO ========= */
 
@@ -809,7 +761,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 27 🐵",
+        "v 29 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1039,11 +991,11 @@
       if (!retroLogoImage.complete) return;
       if (modeSelect.value !== "retro3d") return;
 
-      const size = 110;
-      const padding = 28;
+      const size = 120;
+      const paddingBottom = 28;
 
-      const x = CANVAS_SIZE - padding - size;
-      const y = CANVAS_SIZE - padding - size;
+      const x = CANVAS_SIZE / 2 - size / 2;
+      const y = CANVAS_SIZE - paddingBottom - size;
 
       ctx.save();
       ctx.drawImage(retroLogoImage, x, y, size, size);
