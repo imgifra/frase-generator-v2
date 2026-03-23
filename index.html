@@ -37,7 +37,7 @@
   @font-face {
     font-family: 'Hornthin';
     src: url('assets/HornThin-Bold.ttf') format('truetype');
-    font-weight: normal;
+    font-weight: bold;
     font-style: normal;
     font-display: swap;
   }
@@ -488,8 +488,8 @@
   let lines = [];
 
   while (fontSize >= minFont) {
-    ctx.font = `${fontSize}px 'Hornthin', serif`;
-    lines = wrapText(text.toUpperCase(), boxWidth, ctx);
+    ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
+    lines = wrapText(text, boxWidth, ctx);
 
     const lineHeight = fontSize * 0.95;
     const totalHeight = lines.length * lineHeight;
@@ -501,7 +501,7 @@
     fontSize -= 2;
   }
 
-  ctx.font = `${fontSize}px 'Hornthin', serif`;
+  ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
@@ -540,7 +540,7 @@
       const depth3 = { x: 3, y: 3, color: shadowColor }; // cercana
 
       ctx.save();
-      ctx.font = `${fontSize}px 'Hornthin', serif`;
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -757,7 +757,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 8 🐵",
+        "v 9 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -955,7 +955,7 @@
       const palette = getRetro3DPalette(normalizedBg);
 
       const fontSize = 42;
-      ctx.font = `${fontSize}px 'Hornthin', serif`;
+      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
 
