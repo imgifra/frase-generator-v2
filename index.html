@@ -577,8 +577,9 @@
       ctx.save();
 
       const radius = 18;
-      const leftX = CANVAS_SIZE * 0.11;
-      const rightX = CANVAS_SIZE * 0.89;
+      const offset = CANVAS_SIZE * 0.09;
+      const leftX = offset;
+      const rightX = CANVAS_SIZE - offset;
       const y = blockCenterY;
 
       const points = [
@@ -805,7 +806,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 15 🐵",
+        "v 16 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
