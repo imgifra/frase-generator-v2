@@ -461,74 +461,73 @@
     }
 
     function drawRetro3D(rawText, bg) {
-  ctx.save();
+      ctx.save();
 
-  const text = rawText.trim();
-  if (!text) {
-    ctx.restore();
-    return;
-  }
+      const text = rawText.trim();
+      if (!text) {
+        ctx.restore();
+        return;
+      }
 
-  const normalizedBg = getRetro3DBackground(bg);
+      const normalizedBg = getRetro3DBackground(bg);
 
-  // forzar el fondo a uno de los 3 oficiales
-  ctx.fillStyle = normalizedBg;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      // forzar el fondo a uno de los 3 oficiales
+      ctx.fillStyle = normalizedBg;
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-  const boxWidth = CANVAS_SIZE * 0.82;
-  const boxHeight = CANVAS_SIZE * 0.62;
+      const boxWidth = CANVAS_SIZE * 0.74;
+      const boxHeight = CANVAS_SIZE * 0.54;
 
-  const centerX = CANVAS_SIZE / 2;
-  const centerY = CANVAS_SIZE / 2;
+      const centerX = CANVAS_SIZE / 2;
+      const centerY = CANVAS_SIZE / 2;
 
-  const maxFont = 170;
-  const minFont = 38;
+      const maxFont = 150;
+      const minFont = 38;
 
-  let fontSize = maxFont;
-  let lines = [];
+      let fontSize = maxFont;
+      let lines = [];
 
-  while (fontSize >= minFont) {
-    ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
-    lines = wrapText(text, boxWidth, ctx);
+      while (fontSize >= minFont) {
+        ctx.font = `${fontSize}px 'Hornthin', serif`;
+        lines = wrapText(text, boxWidth, ctx);
 
-    const lineHeight = fontSize * 0.95;
-    const totalHeight = lines.length * lineHeight;
+        const lineHeight = fontSize * 0.84;
+        const totalHeight = lines.length * lineHeight;
 
-    const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
+        const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
 
-    if (widest <= boxWidth && totalHeight <= boxHeight) break;
+        if (widest <= boxWidth && totalHeight <= boxHeight) break;
 
-    fontSize -= 2;
-  }
+        fontSize -= 2;
+      }
 
-  ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+      ctx.font = `${fontSize}px 'Hornthin', serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
 
-  const lineHeight = fontSize * 0.95;
-  const totalHeight = lines.length * lineHeight;
+      const lineHeight = fontSize * 0.84;
+      const totalHeight = lines.length * lineHeight;
 
-  // centrado vertical real
-  let y = centerY - totalHeight / 2 + lineHeight / 2;
+      let y = centerY - totalHeight / 2 + lineHeight / 2;
 
-  const palette = getRetro3DPalette(normalizedBg);
-  const blockCenterY = centerY;
+      const palette = getRetro3DPalette(normalizedBg);
+      const blockCenterY = centerY;
 
-  for (const line of lines) {
-    drawRetro3DLine(line, centerX, y, {
-      frontColor: palette.frontColor,
-      shadowColor: palette.shadowColor,
-      strokeColor: palette.strokeColor,
-      fontSize
-    });
+      for (const line of lines) {
+        drawRetro3DLine(line, centerX, y, {
+          frontColor: palette.frontColor,
+          shadowColor: palette.shadowColor,
+          strokeColor: palette.strokeColor,
+          fontSize
+        });
 
-    y += lineHeight;
-  }
+        y += lineHeight;
+      }
 
-  drawRetro3DDots(blockCenterY, palette);
+      drawRetro3DDots(blockCenterY, palette);
 
-  ctx.restore();
-}
+      ctx.restore();
+    }
 
     function drawRetro3DLine(line, x, y, opts) {
       const {
@@ -577,11 +576,9 @@
     function drawRetro3DDots(blockCenterY, palette) {
       ctx.save();
 
-      const radius = 22;
-      const depth = 6;
-
-      const leftX = CANVAS_SIZE * 0.17;
-      const rightX = CANVAS_SIZE * 0.83;
+      const radius = 18;
+      const leftX = CANVAS_SIZE * 0.11;
+      const rightX = CANVAS_SIZE * 0.89;
       const y = blockCenterY;
 
       const points = [
@@ -590,13 +587,27 @@
       ];
 
       for (const p of points) {
-        // extrusión
-        for (let i = depth; i >= 1; i--) {
-          ctx.fillStyle = palette.shadowColor;
-          ctx.beginPath();
-          ctx.arc(p.x + i, p.y + i, radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        const depth1 = { x: 9, y: 9, color: palette.shadowColor };
+        const depth2 = { x: 6, y: 6, color: palette.frontColor };
+        const depth3 = { x: 3, y: 3, color: palette.shadowColor };
+
+        // capa 1
+        ctx.fillStyle = depth1.color;
+        ctx.beginPath();
+        ctx.arc(p.x + depth1.x, p.y + depth1.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // capa 2
+        ctx.fillStyle = depth2.color;
+        ctx.beginPath();
+        ctx.arc(p.x + depth2.x, p.y + depth2.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // capa 3
+        ctx.fillStyle = depth3.color;
+        ctx.beginPath();
+        ctx.arc(p.x + depth3.x, p.y + depth3.y, radius, 0, Math.PI * 2);
+        ctx.fill();
 
         // frente
         ctx.fillStyle = palette.frontColor;
@@ -607,7 +618,6 @@
 
       ctx.restore();
     }
-
 
     /* ========= UTILIDADES DE TEXTO ========= */
 
@@ -795,7 +805,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 13 🐵",
+        "v 14 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
