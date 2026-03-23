@@ -475,8 +475,8 @@
       ctx.fillStyle = normalizedBg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      const boxWidth = CANVAS_SIZE * 0.65;
-      const boxHeight = CANVAS_SIZE * 0.65;
+      const boxWidth = CANVAS_SIZE * 0.74;
+      const boxHeight = CANVAS_SIZE * 0.72
 
       const centerX = CANVAS_SIZE / 2;
       const centerY = CANVAS_SIZE / 2;
@@ -491,7 +491,7 @@
         ctx.font = `${fontSize}px 'Hornthin', serif`;
         lines = wrapText(text, boxWidth, ctx);
 
-        const lineHeight = fontSize * 0.84;
+        const lineHeight = fontSize * 0.9;
         const totalHeight = lines.length * lineHeight;
 
         const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
@@ -805,7 +805,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 24 🐵",
+        "v 25 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1002,12 +1002,12 @@
       const normalizedBg = getRetro3DBackground(bgColorInput.value);
       const palette = getRetro3DPalette(normalizedBg);
 
-      const fontSize = 42;
-      const depth = 6; // grosor del volumen
+      const fontSize = 30;
+      const depth = 9; // grosor del volumen
 
       ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
 
       for (let i = depth; i >= 1; i--) {
         const t = i / depth;
