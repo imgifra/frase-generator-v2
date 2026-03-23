@@ -802,7 +802,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 35 🐵",
+        "v 36 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1109,7 +1109,6 @@
       const retroRed    = "#e53935";
       const retroWhite  = "#f6f1e8";
 
-      // fondo blanco = modo fucsia
       if (bg.toLowerCase() === retroWhite) {
         return {
           frontColor: "#ff2bd6",
@@ -1122,8 +1121,8 @@
       if (bg.toLowerCase() === retroYellow) {
         return {
           frontColor: retroBlue,
-          midColor: retroRed,
-          shadowColor: retroBlue,
+          midColor: retroBlue,
+          shadowColor: retroRed,
           strokeColor: "rgba(0,0,0,0.10)"
         };
       }
@@ -1131,8 +1130,8 @@
       if (bg.toLowerCase() === retroBlue) {
         return {
           frontColor: retroRed,
-          midColor: retroYellow,
-          shadowColor: retroRed,
+          midColor: retroRed,
+          shadowColor: retroYellow,
           strokeColor: "rgba(0,0,0,0.10)"
         };
       }
@@ -1140,11 +1139,11 @@
       // fondo rojo
       return {
         frontColor: retroYellow,
-        midColor: retroBlue,
-        shadowColor: retroYellow,
+        midColor: retroYellow,
+        shadowColor: retroBlue,
         strokeColor: "rgba(0,0,0,0.10)"
       };
-    }    
+    }
     
     function hexToRgb(hex) {
       hex = hex.replace("#", "");
