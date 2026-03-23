@@ -512,6 +512,7 @@
   let y = centerY - totalHeight / 2 + lineHeight / 2;
 
   const palette = getRetro3DPalette(normalizedBg);
+  const blockCenterY = centerY;
 
   for (const line of lines) {
     drawRetro3DLine(line, centerX, y, {
@@ -523,6 +524,8 @@
 
     y += lineHeight;
   }
+
+  drawRetro3DDots(blockCenterY, palette);
 
   ctx.restore();
 }
@@ -569,7 +572,41 @@
 
       ctx.restore();
     }
-        
+
+    
+    function drawRetro3DDots(blockCenterY, palette) {
+      ctx.save();
+
+      const radius = 22;
+      const depth = 6;
+
+      const leftX = CANVAS_SIZE * 0.17;
+      const rightX = CANVAS_SIZE * 0.83;
+      const y = blockCenterY;
+
+      const points = [
+        { x: leftX, y },
+        { x: rightX, y }
+      ];
+
+      for (const p of points) {
+        // extrusión
+        for (let i = depth; i >= 1; i--) {
+          ctx.fillStyle = palette.shadowColor;
+          ctx.beginPath();
+          ctx.arc(p.x + i, p.y + i, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // frente
+        ctx.fillStyle = palette.frontColor;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
 
 
     /* ========= UTILIDADES DE TEXTO ========= */
@@ -758,7 +795,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 12 🐵",
+        "v 13 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
