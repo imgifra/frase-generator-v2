@@ -566,12 +566,12 @@
         const t = i / depth;
 
         let extrudeColor;
-        if (t > 0.70) {
-          extrudeColor = shadowColor;
-        } else if (t > 0.40) {
-          extrudeColor = midColor;
+        if (t > 0.66) {
+          extrudeColor = shadowColor;   // capa profunda
+        } else if (t > 0.33) {
+          extrudeColor = midColor;      // capa media
         } else {
-          extrudeColor = frontColor;
+          extrudeColor = shadowColor;   // capa cercana
         }
 
         ctx.fillStyle = extrudeColor;
