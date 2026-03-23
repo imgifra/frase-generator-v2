@@ -36,7 +36,7 @@
   </style>  <style>
   @font-face {
     font-family: 'HorndonD';
-    src: url('assets/HorndonD.ttf') format('truetype');
+    src: url('assets/HornThin Bold.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -535,27 +535,41 @@
         fontSize
       } = opts;
 
-      const offsetX = 7;
-      const offsetY = 7;
+      const depth1 = { x: 9, y: 9, color: shadowColor }; // más profunda
+      const depth2 = { x: 6, y: 6, color: frontColor };  // intermedia
+      const depth3 = { x: 3, y: 3, color: shadowColor }; // cercana
 
-      // sombra 3D
       ctx.save();
-      ctx.fillStyle = shadowColor;
+      ctx.font = `${fontSize}px 'Hornthin', serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // capa 1 - fondo
+      ctx.fillStyle = depth1.color;
       ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = Math.max(1, fontSize * 0.015);
-      ctx.fillText(line, x + offsetX, y + offsetY);
-      ctx.strokeText(line, x + offsetX, y + offsetY);
-      ctx.restore();
+      ctx.lineWidth = Math.max(0.8, fontSize * 0.010);
+      ctx.fillText(line, x + depth1.x, y + depth1.y);
+      ctx.strokeText(line, x + depth1.x, y + depth1.y);
+
+      // capa 2 - media
+      ctx.fillStyle = depth2.color;
+      ctx.fillText(line, x + depth2.x, y + depth2.y);
+      ctx.strokeText(line, x + depth2.x, y + depth2.y);
+
+      // capa 3 - cercana
+      ctx.fillStyle = depth3.color;
+      ctx.fillText(line, x + depth3.x, y + depth3.y);
+      ctx.strokeText(line, x + depth3.x, y + depth3.y);
 
       // frente
-      ctx.save();
       ctx.fillStyle = frontColor;
-      ctx.strokeStyle = strokeColor;
       ctx.lineWidth = Math.max(1, fontSize * 0.012);
       ctx.fillText(line, x, y);
       ctx.strokeText(line, x, y);
+
       ctx.restore();
     }
+
 
     /* ========= UTILIDADES DE TEXTO ========= */
 
@@ -743,7 +757,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 6 🐵",
+        "v 8 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
