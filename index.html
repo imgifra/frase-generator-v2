@@ -805,7 +805,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 25 🐵",
+        "v 26 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -995,9 +995,9 @@
 
       ctx.save();
 
-      const padding = 45;
-      const x = CANVAS_SIZE - padding;
-      const y = CANVAS_SIZE - padding;
+      const padding = 35;
+      const x = CANVAS_SIZE / 2;
+      const y = paddingTop;
 
       const normalizedBg = getRetro3DBackground(bgColorInput.value);
       const palette = getRetro3DPalette(normalizedBg);
