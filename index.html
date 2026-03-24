@@ -8,6 +8,9 @@
   <!-- Felt Tip Roman (modo normal) -->
   <link href="https://fonts.cdnfonts.com/css/felt-tip-roman" rel="stylesheet">
 
+  <!-- Noto Serif para modo Retro 3D -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@700&display=swap" rel="stylesheet">
+
   <!-- Preload de la fuente oficial Brat (Arial Narrow real) -->
   <link rel="preload" 
         href="https://www.bratgenerator.com/sites/g/files/g2000017981/files/2024-03/arial_narrow-webfont.woff"
@@ -33,15 +36,7 @@
     font-weight: 800;
   }
 
-  </style>  <style>
-  @font-face {
-    font-family: 'Hornthin';
-    src: url('assets/HornThin-Bold.ttf') format('truetype');
-    font-weight: bold;
-    font-style: normal;
-    font-display: swap;
-  }
-  </style>
+
 
 
   <!-- Tailwind para layout de controles -->
@@ -507,7 +502,7 @@
       let lines = [];
 
       while (fontSize >= minFont) {
-        ctx.font = `${fontSize}px 'Hornthin', serif`;
+        ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
         lines = wrapText(text, boxWidth, ctx);
 
         const lineHeight = fontSize * 0.9;
@@ -520,7 +515,7 @@
         fontSize -= 2;
       }
 
-      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
+      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -558,7 +553,7 @@
       const depth = 9;
 
       ctx.save();
-      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
+      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -802,7 +797,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 37 🐵",
+        "v 38 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1002,7 +997,7 @@
       const fontSize = 30;
       const depth = 3; // grosor del volumen
 
-      ctx.font = `bold ${fontSize}px 'Hornthin', serif`;
+      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
 
