@@ -1005,9 +1005,9 @@
         const t = i / depth;
 
         let extrudeColor;
-        if (t > 0.70) {
+        if (t > 2/3) {
           extrudeColor = palette.shadowColor;
-        } else if (t > 0.40) {
+        } else if (t > 1/3) {
           extrudeColor = palette.frontColor;
         } else {
           extrudeColor = palette.shadowColor;
