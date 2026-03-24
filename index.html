@@ -71,7 +71,7 @@
   #previewCanvas {
     width: min(90vw, 90vh);
     height: min(90vw, 90vh);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    box-shadow: 0 8px v 3px rgba(0,0,0,0.35);
     border-radius: 25px;
     background: #fff;
     display: block;
@@ -797,7 +797,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 39 🐵",
+        "v 40 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1028,7 +1028,7 @@
       if (modeSelect.value !== "retro3d") return;
 
       const size = 140;
-      const paddingBottom = 35;
+      const paddingBottom = 30;
 
       const x = CANVAS_SIZE / 2 - size / 2;
       const y = CANVAS_SIZE - paddingBottom - size;
