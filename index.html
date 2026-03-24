@@ -484,7 +484,7 @@
       bgCtx.drawImage(canvas, 0, 0);
 
       // aplicar grain SOLO al fondo
-      addGrain(bgCtx, 25);
+      addGrain(bgCtx, 20);
 
       // dibujar fondo texturizado de vuelta
       ctx.drawImage(bgCanvas, 0, 0);
@@ -519,7 +519,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      const lineHeight = fontSize * 0.84;
+      const lineHeight = fontSize * 0.95;
       const totalHeight = lines.length * lineHeight;
 
       let y = centerY - totalHeight / 2 + lineHeight / 2;
@@ -561,9 +561,9 @@
         const t = i / depth;
 
         let extrudeColor;
-        if (t > 0.70) {
+        if (t > 2/3) {
           extrudeColor = shadowColor;   // capa profunda
-        } else if (t > 0.40) {
+        } else if (t > 1/3) {
           extrudeColor = midColor;      // capa media
         } else {
           extrudeColor = shadowColor;   // capa cercana
@@ -797,7 +797,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 38 🐵",
+        "v 39 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
