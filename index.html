@@ -1064,10 +1064,10 @@
       const retroBlue   = "#3d5afe";
       const retroRed    = "#e53935";
       const retroWhite  = "#f6f1e8";
+      const retroBlack  = "#0a0a0a";
 
       const input = hexToRgb(hex);
 
-      // Si el color está suficientemente cerca del blanco, usar blanco
       const whiteDistance =
         Math.pow(input.r - 255, 2) +
         Math.pow(input.g - 255, 2) +
@@ -1075,6 +1075,15 @@
 
       if (whiteDistance < 2000) {
         return retroWhite;
+      }
+
+      const blackDistance =
+        Math.pow(input.r - 10, 2) +
+        Math.pow(input.g - 10, 2) +
+        Math.pow(input.b - 10, 2);
+
+      if (blackDistance < 2000) {
+        return retroBlack;
       }
 
       const targetColors = [retroYellow, retroBlue, retroRed];
@@ -1098,18 +1107,27 @@
       return nearest;
     }
 
+
     function getRetro3DPalette(bg) {
       const retroYellow = "#f4c400";
       const retroBlue   = "#3d5afe";
       const retroRed    = "#e53935";
       const retroWhite  = "#f6f1e8";
+      const retroBlack  = "#0a0a0a";
+      
+      if (bg.toLowerCase() === retroBlack) {
+        return {
+          frontColor: "#39ff14",
+          midColor: "#8a2be2",
+          shadowColor: "#2d0057",
+        };
+      }
 
       if (bg.toLowerCase() === retroWhite) {
         return {
           frontColor: "#ff2bd6",
           midColor: "#ff2bd6",
           shadowColor: "#a000a8",
-          strokeColor: "rgba(0,0,0,0.08)"
         };
       }
 
@@ -1118,7 +1136,6 @@
           frontColor: retroBlue,
           midColor: retroBlue,
           shadowColor: retroRed,
-          strokeColor: "rgba(0,0,0,0.10)"
         };
       }
 
@@ -1127,7 +1144,6 @@
           frontColor: retroRed,
           midColor: retroRed,
           shadowColor: retroYellow,
-          strokeColor: "rgba(0,0,0,0.10)"
         };
       }
 
@@ -1136,7 +1152,6 @@
         frontColor: retroYellow,
         midColor: retroYellow,
         shadowColor: retroBlue,
-        strokeColor: "rgba(0,0,0,0.10)"
       };
     }
     
