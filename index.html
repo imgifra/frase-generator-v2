@@ -484,7 +484,7 @@
       bgCtx.drawImage(canvas, 0, 0);
 
       // aplicar grain SOLO al fondo
-      addGrain(bgCtx, 40);
+      addGrain(bgCtx, 20);
 
       // dibujar fondo texturizado de vuelta
       ctx.drawImage(bgCanvas, 0, 0);
@@ -797,7 +797,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 44 🐵",
+        "v 45 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1113,7 +1113,7 @@
       const retroBlue   = "#3d5afe";
       const retroRed    = "#e53935";
       const retroWhite  = "#f6f1e8";
-      const retroBlack  = "#0a0a0a";
+      const retroBlack  = "#0d0f14";
       
       if (bg.toLowerCase() === retroBlack) {
         return {
