@@ -930,7 +930,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 54 🐵",
+        "v 55 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1308,10 +1308,10 @@
 
     function generateMultiple() {
       const raw = input.value;
-      const phrases = raw.split("\\").map(t => t.trim()).filter(t => t.length > 0);
+      const phrases = raw.split("@").map(t => t.trim()).filter(t => t.length > 0);
 
       if (phrases.length <= 1) {
-        alert("Escribe varias frases separadas por \\");
+        alert("Escribe varias frases separadas por @");
         return;
       }
 
