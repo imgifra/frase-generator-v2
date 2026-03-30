@@ -544,20 +544,20 @@
         const ratio = (maxW === minW) ? 0.5 : (maxW - w) / (maxW - minW);
         const isKeyLine = i === keyIndex;
 
-        let rawScale = 0.82 + ratio * 0.28;
+        let rawScale = 0.84 + ratio * 0.22;
 
         // boost sutil a la línea protagonista
         if (isKeyLine) {
-          rawScale += 0.18;
+          rawScale += 0.10;
         }
 
-        const scale = Math.max(0.87, Math.min(1.12, rawScale));
+        const scale = Math.max(0.90, Math.min(1.10, rawScale));
         const size = fontSize * scale;
 
         return {
           text: line,
           fontSize: size,
-          lineHeight: size * 0.88
+          lineHeight: size * 0.89
         };
       });
 
@@ -651,38 +651,89 @@
     /* ========= UTILIDADES DE TEXTO ========= */
 
     function wrapText(text, maxWidth, ctxLocal) {
-      const words = text.split(/\s+/);
+      const words = text.split(/\s+/).filter(Boolean);
       const lines = [];
-      let line = "";
+      let current = "";
 
+      // 1) Wrap codicioso normal
       for (const w of words) {
-        const testLine = line ? line + " " + w : w;
-        const { width } = ctxLocal.measureText(testLine);
+        const test = current ? current + " " + w : w;
+        const width = ctxLocal.measureText(test).width;
 
-        if (width > maxWidth && line) {
-          lines.push(line);
-          line = w;
+        if (width > maxWidth && current) {
+          lines.push(current);
+          current = w;
         } else {
-          line = testLine;
+          current = test;
         }
       }
 
-      if (line) lines.push(line);
+      if (current) lines.push(current);
 
-      // 🔥 CORRECCIÓN: evitar última línea de una sola palabra
+      // 2) Evitar última línea de una sola palabra
       if (lines.length >= 2) {
         const last = lines[lines.length - 1];
         const prev = lines[lines.length - 2];
 
-        // si la última línea tiene solo una palabra, la subimos
-        if (last.split(" ").length === 1) {
-          lines[lines.length - 2] = prev + " " + last;
-          lines.pop();
+        if (last.split(/\s+/).length === 1) {
+          const merged = prev + " " + last;
+          if (ctxLocal.measureText(merged).width <= maxWidth * 1.12) {
+            lines[lines.length - 2] = merged;
+            lines.pop();
+          }
+        }
+      }
+
+      // 3) Rebalanceo suave entre líneas vecinas
+      function widthOf(line) {
+        return ctxLocal.measureText(line).width;
+      }
+
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < lines.length - 1; i++) {
+          const a = lines[i];
+          const b = lines[i + 1];
+
+          const aWords = a.split(/\s+/);
+          const bWords = b.split(/\s+/);
+
+          if (bWords.length <= 1) continue;
+
+          const aWidth = widthOf(a);
+          const bWidth = widthOf(b);
+
+          // Si la línea de arriba quedó mucho más corta, intenta subir una palabra
+          if (aWidth < bWidth * 0.72) {
+            const candidateA = a + " " + bWords[0];
+            const candidateB = bWords.slice(1).join(" ");
+
+            if (
+              candidateB &&
+              widthOf(candidateA) <= maxWidth &&
+              candidateB.split(/\s+/).length >= 1
+            ) {
+              lines[i] = candidateA;
+              lines[i + 1] = candidateB;
+            }
+          }
         }
       }
 
       return lines;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     function addSubtleTexture(ctx, amount = 8) {
       const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -879,7 +930,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 52 🐵",
+        "v 53 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
