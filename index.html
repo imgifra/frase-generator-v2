@@ -930,7 +930,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 53 🐵",
+        "v 54 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1315,12 +1315,24 @@
         return;
       }
 
+      const originalText = raw;
+      const originalBg = bgColorInput.value;
+      const mode = modeSelect.value;
+
+      const retroCycle = [
+        "#f6f1e8", // retroWhite
+        "#0d0f14", // retroBlack
+        "#f4c400", // retroYellow
+        "#3d5afe", // retroBlue
+        "#e53935"  // retroRed
+      ];
+
       let index = 0;
-      const original = raw;
 
       function next() {
         if (index >= phrases.length) {
-          input.value = original;
+          input.value = originalText;
+          bgColorInput.value = originalBg;
           draw();
           alert("Listo: todas las imágenes fueron generadas.");
           return;
@@ -1328,11 +1340,19 @@
 
         const phrase = phrases[index];
         input.value = phrase;
+
+        // Solo en retro3d: intercalar colores automáticamente
+        if (mode === "retro3d") {
+          bgColorInput.value = retroCycle[index % retroCycle.length];
+        }
+
         draw();
 
         setTimeout(() => {
           const link = document.createElement("a");
-          link.download = "frase_" + (index + 1) + ".png";
+          const safeMode = modeSelect.value;
+          const colorSuffix = mode === "retro3d" ? `_c${(index % retroCycle.length) + 1}` : "";
+          link.download = `frase_${index + 1}_${safeMode}${colorSuffix}.png`;
           link.href = canvas.toDataURL("image/png");
           link.click();
 
@@ -1343,6 +1363,9 @@
 
       next();
     }
+      
+  
+  
   </script>
 
 </body>
