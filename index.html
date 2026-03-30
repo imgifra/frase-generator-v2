@@ -490,7 +490,7 @@
       ctx.drawImage(bgCanvas, 0, 0);
 
       const boxWidth = CANVAS_SIZE * 0.70;
-      const boxHeight = CANVAS_SIZE * 0.65
+      const boxHeight = CANVAS_SIZE * 0.65;
 
       const centerX = CANVAS_SIZE / 2;
       const centerY = CANVAS_SIZE / 2;
@@ -526,18 +526,28 @@
       const minW = Math.min(...widths);
       const maxW = Math.max(...widths);
 
-      // escala automática suave por línea
+      // línea clave: la más corta
+      const shortestIndex = widths.indexOf(minW);
+
       const laidOutLines = lines.map((line, i) => {
         const w = widths[i];
         const ratio = (maxW === minW) ? 0.5 : (maxW - w) / (maxW - minW);
-        const rawScale = 0.82 + ratio * 0.28;
-        const scale = Math.max(0.87, Math.min(1.06, rawScale));
+        const isKeyLine = i === shortestIndex;
+
+        let rawScale = 0.82 + ratio * 0.28;
+
+        // boost sutil a la línea protagonista
+        if (isKeyLine) {
+          rawScale += 0.12;
+        }
+
+        const scale = Math.max(0.87, Math.min(1.12, rawScale));
         const size = fontSize * scale;
 
         return {
           text: line,
           fontSize: size,
-          lineHeight: size * 0.95
+          lineHeight: size * 0.90
         };
       });
 
@@ -589,7 +599,6 @@
 
 
 
-
     function drawRetro3DLine(line, x, y, opts) {
       const {
         frontColor,
@@ -598,7 +607,7 @@
         fontSize
       } = opts;
 
-      const depth = 9;
+      const depth = 6;
 
       ctx.save();
       ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
@@ -845,7 +854,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 50 🐵",
+        "v 51 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
