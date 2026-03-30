@@ -538,7 +538,7 @@
 
         // boost sutil a la línea protagonista
         if (isKeyLine) {
-          rawScale += 0.12;
+          rawScale += 0.18;
         }
 
         const scale = Math.max(0.87, Math.min(1.12, rawScale));
@@ -547,7 +547,7 @@
         return {
           text: line,
           fontSize: size,
-          lineHeight: size * 0.90
+          lineHeight: size * 0.88
         };
       });
 
@@ -607,7 +607,7 @@
         fontSize
       } = opts;
 
-      const depth = 6;
+      const depth = 5;
 
       ctx.save();
       ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
