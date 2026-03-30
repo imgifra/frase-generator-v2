@@ -532,9 +532,9 @@
         const ratio = (maxW === minW) ? 0.5 : (maxW - w) / (maxW - minW);
 
         // variación pequeña: líneas cortas un poco más grandes
-        const scale = 0.80 + ratio * 0.32; // rango aprox 0.92 a 1.05
-        const localFontSize = fontSize * scale;
-        const localLineHeight = localFontSize * 0.95;
+        const centerBias = 1 - Math.abs((i - (lines.length - 1) / 2) / ((lines.length - 1) / 2 || 1));
+        const rawScale = 0.80 + ratio * 0.25 + centerBias * 0.10;
+        const scale = Math.max(0.85, Math.min(1.10, rawScale));
 
         return {
           text: line,
