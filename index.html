@@ -532,8 +532,8 @@
         const ratio = (maxW === minW) ? 0.5 : (maxW - w) / (maxW - minW);
 
         // variación pequeña: líneas cortas un poco más grandes
-        const scale = 0.92 + ratio * 0.13; // rango aprox 0.92 a 1.05
-        const localFontSize = Math.round(fontSize * scale);
+        const scale = 0.80 + ratio * 0.32; // rango aprox 0.92 a 1.05
+        const localFontSize = fontSize * scale;
         const localLineHeight = localFontSize * 0.95;
 
         return {
@@ -847,7 +847,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 48 🐵",
+        "v 49 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
