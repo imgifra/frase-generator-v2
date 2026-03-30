@@ -515,32 +515,50 @@
         fontSize -= 2;
       }
 
-      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      const lineHeight = fontSize * 0.95;
-      const totalHeight = lines.length * lineHeight;
-
-      let y = centerY - totalHeight / 2 + lineHeight / 2;
-
       const palette = getRetro3DPalette(normalizedBg);
-      const blockCenterY = centerY;
 
-      for (const line of lines) {
-        drawRetro3DLine(line, centerX, y, {
+      // medir anchos reales de cada línea con el font base
+      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
+      const widths = lines.map(line => ctx.measureText(line).width);
+      const minW = Math.min(...widths);
+      const maxW = Math.max(...widths);
+
+      // escala automática suave por línea
+      const laidOutLines = lines.map((line, i) => {
+        const w = widths[i];
+        const ratio = (maxW === minW) ? 0.5 : (maxW - w) / (maxW - minW);
+
+        // variación pequeña: líneas cortas un poco más grandes
+        const scale = 0.92 + ratio * 0.13; // rango aprox 0.92 a 1.05
+        const localFontSize = Math.round(fontSize * scale);
+        const localLineHeight = localFontSize * 0.95;
+
+        return {
+          text: line,
+          fontSize: localFontSize,
+          lineHeight: localLineHeight
+        };
+      });
+
+      // altura real del bloque ya con tamaños variables
+      const totalHeight = laidOutLines.reduce((acc, line) => acc + line.lineHeight, 0);
+      let y = centerY - totalHeight / 2;
+
+      for (const line of laidOutLines) {
+        const drawY = y + line.lineHeight / 2;
+
+        drawRetro3DLine(line.text, centerX, drawY, {
           frontColor: palette.frontColor,
           midColor: palette.midColor,
           shadowColor: palette.shadowColor,
-          strokeColor: palette.strokeColor,
-          fontSize
+          fontSize: line.fontSize
         });
 
-        y += lineHeight;
+        y += line.lineHeight;
       }
-
-      ctx.restore();
-    }
 
     function drawRetro3DLine(line, x, y, opts) {
       const {
@@ -797,7 +815,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 47 🐵",
+        "v 48 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
