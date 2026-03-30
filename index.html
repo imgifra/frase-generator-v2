@@ -527,12 +527,22 @@
       const maxW = Math.max(...widths);
 
       // línea clave: la más corta
-      const shortestIndex = widths.indexOf(minW);
+      const validLines = widths.map((w, i) => ({
+        width: w,
+        index: i,
+        text: lines[i]
+      }))
+      .filter(l => l.text.length > 3);
+
+      // fallback por si todo es corto
+      const keyIndex = validLines.length > 0
+        ? validLines.reduce((min, l) => l.width < min.width ? l : min).index
+        : widths.indexOf(minW);
 
       const laidOutLines = lines.map((line, i) => {
         const w = widths[i];
         const ratio = (maxW === minW) ? 0.5 : (maxW - w) / (maxW - minW);
-        const isKeyLine = i === shortestIndex;
+        const isKeyLine = i === keyIndex;
 
         let rawScale = 0.82 + ratio * 0.28;
 
@@ -648,6 +658,7 @@
       for (const w of words) {
         const testLine = line ? line + " " + w : w;
         const { width } = ctxLocal.measureText(testLine);
+
         if (width > maxWidth && line) {
           lines.push(line);
           line = w;
@@ -655,7 +666,21 @@
           line = testLine;
         }
       }
+
       if (line) lines.push(line);
+
+      // 🔥 CORRECCIÓN: evitar última línea de una sola palabra
+      if (lines.length >= 2) {
+        const last = lines[lines.length - 1];
+        const prev = lines[lines.length - 2];
+
+        // si la última línea tiene solo una palabra, la subimos
+        if (last.split(" ").length === 1) {
+          lines[lines.length - 2] = prev + " " + last;
+          lines.pop();
+        }
+      }
+
       return lines;
     }
 
@@ -854,7 +879,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 51 🐵",
+        "v 52 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
