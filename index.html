@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 85 🐵",
+        "v 86 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -957,7 +957,7 @@
       score += Math.abs(0.62 - layout.totalHeight / boxHeight) * 120;
 
       if (widths.length > 1 && widths.at(-1) / widest < 0.55) score += 40;
-      if (layout.lines.length >= 6) score += 60;
+      if (layout.lines.length >= 6) score += 20;
       if (layout.lines.length === 5) score += 18;
 
       for (let i = 1; i < widths.length - 1; i++) {
