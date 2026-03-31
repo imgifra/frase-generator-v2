@@ -853,14 +853,6 @@
       ctx.restore();
     }
 
-    function normalizeRetroText(text) {
-      return String(text || "")
-        .replace(/"/g, "") // ← ESTA LÍNEA
-        .replace(/\s+/g, " ")
-        .replace(/\s+([,.;:!?])/g, "$1")
-        .trim();
-    }
-
     function measureTrackedText(text, tracking = 0) {
       let width = 0;
 
@@ -971,16 +963,12 @@
             if (lastWords.length <= 1) return;
           }
 
-          // evitar cortar bloque entre comillas de forma fea
-          if (hasBrokenQuoteBlock(lines)) return;
-
           if (isValidLineSet(lines, ctx, boxWidth)) {
             results.push(lines);
           }
           return;
         }
 
-        // rango flexible alrededor del promedio esperado
         const ideal = Math.round(targetWordsPerLine);
         const minTake = Math.max(1, ideal - 2);
         const maxTake = Math.min(
@@ -994,16 +982,11 @@
           const lineWords = words.slice(startIndex, startIndex + take);
           const line = lineWords.join(" ");
 
-          // Evitar líneas flojas tipo "de", "la", "en", etc. demasiado solas
+          // evitar líneas flojas tipo "de", "la", "en", etc. demasiado solas
           if (isWeakStandaloneLine(line)) continue;
 
-          // Evitar líneas demasiado cortas en posiciones intermedias
+          // evitar líneas intermedias de una sola palabra
           if (currentLines.length > 0 && lineWords.length === 1) continue;
-
-          // Evitar partir mal frases entre comillas:
-          // si una línea abre comillas pero no las cierra, mejor no aceptarla
-          const quoteCount = (line.match(/"/g) || []).length;
-          if (quoteCount === 1 && !line.trim().endsWith('"')) continue;
 
           currentLines.push(line);
           recurse(startIndex + take, currentLines);
@@ -1013,14 +996,9 @@
 
       recurse(0, []);
 
-      // fallback por si no salió nada
+      // fallback
       if (!results.length) {
-        const fallback = simpleEvenSplit(words, lineCount);
-        if (!hasBrokenQuoteBlock(fallback)) {
-          results.push(fallback);
-        } else {
-          results.push(simpleEvenSplit(words, Math.max(1, lineCount - 1)));
-        }
+        results.push(simpleEvenSplit(words, lineCount));
       }
 
       // deduplicar
@@ -1036,26 +1014,6 @@
       }
 
       return unique.slice(0, 40);
-    }
-
-    function hasBrokenQuoteBlock(lines) {
-      let insideQuote = false;
-
-      for (const line of lines) {
-        const quoteCount = (line.match(/"/g) || []).length;
-
-        if (quoteCount === 0) {
-          continue;
-        }
-
-        // Si hay una sola comilla en la línea, abre o cierra bloque
-        if (quoteCount % 2 === 1) {
-          insideQuote = !insideQuote;
-        }
-      }
-
-      // Si termina "abierto", significa que partimos raro el bloque
-      return insideQuote;
     }
 
     function isValidLineSet(lines, ctx, boxWidth) {
