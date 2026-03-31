@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 69 🐵",
+        "v 70 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -782,7 +782,7 @@
       if (widest > boxWidth * 1.06) return false;
       if (lines.length > 1) {
         const lastW = widths[widths.length - 1];
-        if (lastW < widest * 0.34) return false;
+        if (lastW < widest * 0.20) return false; 
       }
       return true;
     }
@@ -820,8 +820,8 @@
         }
 
         const ideal = Math.round(targetWordsPerLine);
-        const minTake = Math.max(1, ideal - 2);
-        const maxTake = Math.min(remainingWords - (remainingLines - 1), ideal + 2);
+        const minTake = Math.max(1, ideal - 3);
+        const maxTake = Math.min(remainingWords - (remainingLines - 1), ideal + 3);
 
         for (let take = minTake; take <= maxTake; take++) {
           if (startIndex + take > words.length) continue;
@@ -944,7 +944,7 @@
       if (layout.lines.length >= 6) score += 60;
       if (layout.lines.length === 5) score += 18;
 
-      score += ((widest - narrowest) / widest) * 60;
+      score -= ((widest - narrowest) / widest) * 80; 
       score += getLineBreakPenalty(layout.lines.map(l => l.text));
 
       return score;
