@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 60 🐵",
+        "v 61 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1196,6 +1196,25 @@
       };
     }
 
+    function getRetroTracking(text, fontSize, lineWidth, boxWidth) {
+      const density = lineWidth / boxWidth;
+
+      let tracking = 0;
+
+      // líneas cortas: un pelo más cerradas
+      if (density < 0.45) tracking -= fontSize * 0.004;
+
+      // líneas largas: apenas más abiertas
+      if (density > 0.78) tracking += fontSize * 0.002;
+
+      // textos muy grandes: no abrir demasiado
+      if (fontSize > 100) tracking -= fontSize * 0.0015;
+
+      // clamp fino para retro3d
+      tracking = clamp(tracking, -fontSize * 0.006, fontSize * 0.003);
+
+      return tracking;
+    }
 
     function scoreRetroLayout(layout, config) {
       const { boxWidth, boxHeight } = config;
@@ -1701,7 +1720,6 @@
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
     }
-  
   </script>
 
 </body>
