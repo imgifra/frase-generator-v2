@@ -936,8 +936,8 @@
       if (layout.lines.length >= 6) score += 60;
       if (layout.lines.length === 5) score += 18;
       // Penalizar si la primera línea es notablemente más chica que la segunda
-      if (widths.length >= 2 && widths[0] < widths[1] * 0.70) {
-        score += 50;
+      if (widths.length >= 2 && widths[0] < widths[1] * 0.75) {
+        score += 120;
       }
       // Premia contraste de anchos — sin penalizar diferencias entre vecinas
       score -= ((widest - narrowest) / widest) * 80;
