@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 88 🐵",
+        "v 89 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -835,7 +835,7 @@
           if (isWeakStandaloneLine(line)) continue;
 
           // Bloquea líneas de 1 palabra en la primera posición
-          if (currentLines.length === 0 && lineWords.length === 1 && words.length > 2) continue;
+          if (lineWords.length === 1 && words.length > 2 && currentLines.length < (lineCount - 1)) continue;
 
           // Bloquea líneas de 2 palabras cortas en posición intermedia (ej: "el burro", "le diga")
           if (lineWords.length === 2 && currentLines.length > 0) {
