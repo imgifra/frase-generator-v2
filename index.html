@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 78 🐵",
+        "v 79 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -947,11 +947,14 @@
       if (widths.length > 1 && widths.at(-1) / widest < 0.55) score += 40;
       if (layout.lines.length >= 6) score += 60;
       if (layout.lines.length === 5) score += 18;
-      // Penalizar si la primera línea es notablemente más chica que la segunda
-      if (widths.length >= 2 && widths[0] < widths[1] * 0.75) {
-        score += 120;
-      }
-      // Premia contraste de anchos — sin penalizar diferencias entre vecinas
+
+      // Penalizar primera línea dominante (la más ancha no debería ir arriba)
+      if (widths.length >= 2 && widths[0] > widths[1] * 1.15) score += 80;
+
+      // Penalizar primera línea demasiado chica
+      if (widths.length >= 2 && widths[0] < widths[1] * 0.75) score += 120;
+
+      // Premia contraste de anchos
       score -= ((widest - narrowest) / widest) * 80;
       score += getLineBreakPenalty(layout.lines.map(l => l.text));
 
