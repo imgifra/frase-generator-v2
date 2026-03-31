@@ -607,6 +607,343 @@
     }
 
 
+    function normalizeRetroText(text) {
+      return String(text || "")
+        .replace(/\s+/g, " ")
+        .replace(/\s+([,.;:!?])/g, "$1")
+        .trim();
+    }
+
+    function findBestRetroLayout(text, config) {
+      const {
+        ctx,
+        boxWidth,
+        boxHeight,
+        fontFamily,
+        fontWeight,
+        maxFont,
+        minFont
+      } = config;
+
+      const words = text.split(" ").filter(Boolean);
+      if (!words.length) return null;
+
+      let best = null;
+
+      for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 2) {
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+
+        const candidateLineCounts = getCandidateLineCounts(words.length);
+
+        for (const lineCount of candidateLineCounts) {
+          const candidateBreaks = generateBalancedBreaks(words, lineCount, ctx, boxWidth);
+
+          for (const lines of candidateBreaks) {
+            const layout = buildRetroLineLayout(lines, {
+              ctx,
+              boxWidth,
+              boxHeight,
+              fontFamily,
+              fontWeight,
+              baseFontSize: fontSize
+            });
+
+            if (!layout) continue;
+
+            const score = scoreRetroLayout(layout, {
+              boxWidth,
+              boxHeight,
+              text
+            });
+
+            if (!best || score < best.score) {
+              best = { ...layout, score };
+            }
+          }
+        }
+
+        // En cuanto encontramos algo suficientemente bueno con una fuente grande, paramos
+        if (best && best.baseFontSize >= fontSize) {
+          break;
+        }
+      }
+
+      return best;
+    }
+
+    function getCandidateLineCounts(wordCount) {
+      if (wordCount <= 3) return [1, 2];
+      if (wordCount <= 6) return [2, 3];
+      if (wordCount <= 10) return [3, 4, 5];
+      if (wordCount <= 16) return [4, 5, 6];
+      return [5, 6, 7];
+    }
+
+    function generateBalancedBreaks(words, lineCount, ctx, boxWidth) {
+      if (lineCount <= 1) return [[words.join(" ")]];
+
+      const results = [];
+      const targetWordsPerLine = words.length / lineCount;
+
+      function recurse(startIndex, currentLines) {
+        const remainingWords = words.length - startIndex;
+        const remainingLines = lineCount - currentLines.length;
+
+        if (remainingLines === 1) {
+          const finalLine = words.slice(startIndex).join(" ");
+          const lines = [...currentLines, finalLine];
+          if (isValidLineSet(lines, ctx, boxWidth)) {
+            results.push(lines);
+          }
+          return;
+        }
+
+        // rango flexible alrededor del promedio esperado
+        const ideal = Math.round(targetWordsPerLine);
+        const minTake = Math.max(1, ideal - 2);
+        const maxTake = Math.min(
+          remainingWords - (remainingLines - 1),
+          ideal + 2
+        );
+
+        for (let take = minTake; take <= maxTake; take++) {
+          if (startIndex + take > words.length) continue;
+
+          const line = words.slice(startIndex, startIndex + take).join(" ");
+
+          // Evitar líneas flojas tipo "de", "la", "en", etc. demasiado solas
+          if (isWeakStandaloneLine(line)) continue;
+
+          currentLines.push(line);
+          recurse(startIndex + take, currentLines);
+          currentLines.pop();
+        }
+      }
+
+      recurse(0, []);
+
+      // fallback por si no salió nada
+      if (!results.length) {
+        results.push(simpleEvenSplit(words, lineCount));
+      }
+
+      // deduplicar
+      const unique = [];
+      const seen = new Set();
+
+      for (const r of results) {
+        const key = r.join(" | ");
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(r);
+        }
+      }
+
+      return unique.slice(0, 40);
+    }
+
+    function isValidLineSet(lines, ctx, boxWidth) {
+      const widths = lines.map(line => ctx.measureText(line).width);
+      const widest = Math.max(...widths);
+
+      if (widest > boxWidth * 1.06) return false;
+
+      // evitar últimas líneas absurdamente pequeñas
+      if (lines.length > 1) {
+        const lastW = widths[widths.length - 1];
+        const maxW = Math.max(...widths);
+        if (lastW < maxW * 0.34) return false;
+      }
+
+      return true;
+    }
+
+    function simpleEvenSplit(words, lineCount) {
+      const lines = [];
+      let start = 0;
+
+      for (let i = 0; i < lineCount; i++) {
+        const remainingWords = words.length - start;
+        const remainingLines = lineCount - i;
+        const take = Math.ceil(remainingWords / remainingLines);
+
+        lines.push(words.slice(start, start + take).join(" "));
+        start += take;
+      }
+
+      return lines.filter(Boolean);
+    }
+
+    function isWeakStandaloneLine(line) {
+      const weak = new Set([
+        "de", "del", "la", "las", "el", "los",
+        "en", "y", "o", "u", "a", "al",
+        "por", "para", "con", "sin", "pero"
+      ]);
+
+      const parts = line.trim().toLowerCase().split(/\s+/);
+      return parts.length === 1 && weak.has(parts[0]);
+    }
+
+    function buildRetroLineLayout(lines, config) {
+      const {
+        ctx,
+        boxWidth,
+        boxHeight,
+        fontFamily,
+        fontWeight,
+        baseFontSize
+      } = config;
+
+      ctx.font = `${fontWeight} ${baseFontSize}px ${fontFamily}`;
+      const baseWidths = lines.map(line => ctx.measureText(line).width);
+
+      const maxW = Math.max(...baseWidths);
+      const minW = Math.min(...baseWidths);
+
+      const lineData = lines.map((text, i) => {
+        const width = baseWidths[i];
+        const posRatio = lines.length === 1 ? 0.5 : i / (lines.length - 1);
+
+        // Preferir centro ligeramente más fuerte, extremos un poco más contenidos
+        const centerBias = 1 - Math.abs(posRatio - 0.5) * 2; // 1 en centro, 0 en extremos
+        const widthRatio = maxW === minW ? 0.5 : (width - minW) / (maxW - minW);
+
+        // escala muy controlada; nada agresivo
+        let scale = 0.95 + centerBias * 0.05 + widthRatio * 0.03;
+
+        // si la última línea queda algo débil, le damos una ayudita sutil
+        if (i === lines.length - 1 && width < maxW * 0.72) {
+          scale += 0.02;
+        }
+
+        scale = clamp(scale, 0.93, 1.05);
+
+        const fontSize = baseFontSize * scale;
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+
+        const metrics = ctx.measureText(text);
+        const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.74;
+        const descent = metrics.actualBoundingBoxDescent || fontSize * 0.22;
+
+        // tracking mínimo y dinámico
+        const tracking = getRetroTracking(text, fontSize, width, boxWidth);
+
+        // leading óptico: el 3D hace que todo se vea más apretado, así que compensamos un poco
+        const lineHeight = ascent + descent + fontSize * 0.08;
+
+        return {
+          text,
+          width,
+          fontSize,
+          ascent,
+          descent,
+          lineHeight,
+          tracking
+        };
+      });
+
+      const totalHeight = lineData.reduce((acc, l) => acc + l.lineHeight, 0);
+      const widestAdjusted = Math.max(...lineData.map(l => l.width));
+
+      if (totalHeight > boxHeight) return null;
+      if (widestAdjusted > boxWidth * 1.04) return null;
+
+      return {
+        lines: lineData,
+        totalHeight,
+        widest: widestAdjusted,
+        baseFontSize
+      };
+    }
+
+    function getRetroTracking(text, fontSize, lineWidth, boxWidth) {
+      const chars = text.replace(/\s+/g, "").length || 1;
+      const density = lineWidth / boxWidth;
+
+      let tracking = 0;
+
+      // líneas muy cortas y pesadas: un pelo más cerradas
+      if (density < 0.45) tracking -= fontSize * 0.006;
+
+      // líneas largas: neutras o apenas abiertas
+      if (density > 0.78) tracking += fontSize * 0.003;
+
+      // textos grandes: mejor no abrir demasiado
+      if (fontSize > 100) tracking -= fontSize * 0.002;
+
+      // clamp muy suave
+      tracking = clamp(tracking, -fontSize * 0.01, fontSize * 0.008);
+
+      return tracking;
+    }
+
+    function scoreRetroLayout(layout, config) {
+      const { boxWidth, boxHeight } = config;
+      const lines = layout.lines;
+      const widths = lines.map(l => l.width);
+      const widest = Math.max(...widths);
+      const narrowest = Math.min(...widths);
+      const totalHeight = layout.totalHeight;
+
+      let score = 0;
+
+      // Queremos ocupar buen espacio sin reventar
+      const widthUsage = widest / boxWidth;
+      const heightUsage = totalHeight / boxHeight;
+
+      score += Math.abs(0.86 - widthUsage) * 140;
+      score += Math.abs(0.72 - heightUsage) * 120;
+
+      // Penalizar diferencias muy bruscas entre líneas vecinas
+      for (let i = 1; i < widths.length; i++) {
+        const diff = Math.abs(widths[i] - widths[i - 1]) / widest;
+        score += diff * 85;
+      }
+
+      // Penalizar última línea demasiado débil
+      if (widths.length > 1) {
+        const lastRatio = widths[widths.length - 1] / widest;
+        if (lastRatio < 0.45) score += 45;
+        if (lastRatio < 0.35) score += 90;
+      }
+
+      // Penalizar primera línea demasiado débil
+      if (widths.length > 1) {
+        const firstRatio = widths[0] / widest;
+        if (firstRatio < 0.28) score += 30;
+      }
+
+      // Favorecer silueta más orgánica: centro ligeramente más ancho
+      if (widths.length >= 3) {
+        const mid = Math.floor(widths.length / 2);
+        const centerW = widths[mid];
+        const avgEdge = (widths[0] + widths[widths.length - 1]) / 2;
+        if (centerW < avgEdge) score += 25;
+      }
+
+      // Penalizar cantidad de líneas muy extrema
+      if (widths.length === 1) score += 60;
+      if (widths.length > 7) score += 60;
+
+      return score;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
     /* ========= UTILIDADES DE TEXTO ========= */
 
     function wrapText(text, maxWidth, ctxLocal) {
@@ -889,7 +1226,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 56 🐵",
+        "v 57 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
