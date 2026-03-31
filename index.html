@@ -1165,11 +1165,8 @@
         };
       });
 
-      // interlineado completamente constante
-      const avgFontSize =
-        tempLines.reduce((acc, line) => acc + line.fontSize, 0) / tempLines.length;
-
-      const constantLineHeight = avgFontSize * 0.88;
+      // interlineado completamente constante REAL
+      const constantLineHeight = baseFontSize * 0.92;
 
       const lineData = tempLines.map(line => ({
         ...line,
