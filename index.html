@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 68 🐵",
+        "v 69 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -862,10 +862,10 @@
         const rawWidth = baseWidths[i];
 
         let scale = 1.0;
-        if (maxW !== minW) scale += ((rawWidth - minW) / (maxW - minW)) * 0.015;
+        if (maxW !== minW) scale += ((rawWidth - minW) / (maxW - minW)) * 0.38;
         if (i === 0 && lines.length >= 3 && rawWidth / maxW < 0.55) scale += 0.025;
         if (i === lines.length - 1 && rawWidth < maxW * 0.68) scale += 0.012;
-        scale = clamp(scale, 0.96, 1.03);
+        scale = clamp(scale, 0.72, 1.0);
 
         const fontSize = baseFontSize * scale;
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
