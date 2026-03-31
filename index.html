@@ -1127,14 +1127,15 @@
         const widthRatio = maxW === minW ? 0.5 : (rawWidth - minW) / (maxW - minW);
 
         // base suave, pero con un poquito más de vida
-        let scale = 0.965 + centerBias * 0.035 + widthRatio * 0.02;
+        let scale = 0.965 + centerBias * 0.03 + widthRatio * 0.015;
 
         // potenciar primera línea si es corta y el bloque tiene varias líneas
-        if (i === 0 && lines.length > 2) {
-          if (rawWidth < maxW * 0.60) {
-            scale += 0.04;
-          } else if (rawWidth < maxW * 0.72) {
-            scale += 0.02;
+        // potenciar primera línea SOLO si es realmente corta y no rompe equilibrio
+        if (i === 0 && lines.length >= 3) {
+          const firstLineRatio = rawWidth / maxW;
+
+          if (firstLineRatio < 0.55) {
+            scale += 0.025; // suave
           }
         }
 
