@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 66 🐵",
+        "v 67 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -763,10 +763,10 @@
       const palette = getRetro3DPalette(normalizedBg);
 
       const layoutBox = {
-        width: CANVAS_SIZE * 0.72,
-        height: CANVAS_SIZE * 0.68,
+        width: CANVAS_SIZE * 0.82,
+        height: CANVAS_SIZE * 0.56,
         x: CANVAS_SIZE / 2,
-        y: CANVAS_SIZE / 2
+        y: CANVAS_SIZE * 0.53
       };
 
       const fontFamily = "'Noto Serif', serif";
@@ -935,11 +935,11 @@
     }
 
     function getCandidateLineCounts(wordCount) {
-      if (wordCount <= 3) return [1, 2];
-      if (wordCount <= 6) return [2, 3];
-      if (wordCount <= 10) return [3, 4, 5];
-      if (wordCount <= 16) return [4, 5, 6];
-      return [5, 6, 7];
+      if (wordCount <= 4) return [2, 3];
+      if (wordCount <= 8) return [3, 4];
+      if (wordCount <= 12) return [3, 4, 5];
+      if (wordCount <= 16) return [4, 5];
+      return [4, 5, 6];
     }
 
     function generateBalancedBreaks(words, lineCount, ctx, boxWidth) {
@@ -1121,7 +1121,7 @@
         };
       });
 
-      const constantLineHeight = baseFontSize * 0.92;
+      const constantLineHeight = baseFontSize * 1.02;
 
       const lineData = tempLines.map(line => ({
         ...line,
@@ -1158,28 +1158,71 @@
       const widthUsage = widest / boxWidth;
       const heightUsage = totalHeight / boxHeight;
 
-      // uso del espacio (suave)
-      score += Math.abs(0.85 - widthUsage) * 100;
-      score += Math.abs(0.72 - heightUsage) * 90;
+      score += Math.abs(0.88 - widthUsage) * 120;
+      score += Math.abs(0.62 - heightUsage) * 120;
 
-      // evitar cambios bruscos entre líneas (pero leve)
       for (let i = 1; i < widths.length; i++) {
         const diff = Math.abs(widths[i] - widths[i - 1]) / widest;
-        score += diff * 40;
+        score += diff * 55;
       }
 
-      // penalizar última línea muy débil (suave)
       if (widths.length > 1) {
         const lastRatio = widths[widths.length - 1] / widest;
-        if (lastRatio < 0.45) score += 30;
+        if (lastRatio < 0.55) score += 40;
       }
 
-      // evitar extremos raros
-      if (widths.length === 1) score += 40;
-      if (widths.length > 7) score += 40;
+      // castigar exceso de líneas
+      if (lines.length >= 6) score += 60;
+      if (lines.length === 5) score += 18;
+
+      // preferir bloques más compactos visualmente
+      const narrowest = Math.min(...widths);
+      const widthSpread = (widest - narrowest) / widest;
+      score += widthSpread * 60;
+
+      score += getLineBreakPenalty(lines.map(l => l.text));
 
       return score;
     }
+
+
+    function getLineBreakPenalty(lines) {
+      let penalty = 0;
+
+      const weakEnd = new Set([
+        "de", "del", "la", "las", "el", "los",
+        "en", "y", "o", "u", "a", "al",
+        "por", "para", "con", "sin", "pero"
+      ]);
+
+      const weakStart = new Set([
+        "de", "del", "la", "las", "el", "los",
+        "en", "y", "o", "u", "a", "al"
+      ]);
+
+      for (let i = 0; i < lines.length - 1; i++) {
+        const currentWords = lines[i].trim().toLowerCase().split(/\s+/);
+        const nextWords = lines[i + 1].trim().toLowerCase().split(/\s+/);
+
+        const lastWord = currentWords[currentWords.length - 1]?.replace(/[“”"'.,;:!?]/g, "");
+        const firstNext = nextWords[0]?.replace(/[“”"'.,;:!?]/g, "");
+
+        if (weakEnd.has(lastWord)) penalty += 35;
+        if (weakStart.has(firstNext)) penalty += 28;
+
+        // castigar líneas de solo 2 palabras si ambas son débiles o poco informativas
+        if (currentWords.length === 2) {
+          const weakCount = currentWords.filter(w =>
+            weakEnd.has(w.replace(/[“”"'.,;:!?]/g, ""))
+          ).length;
+          if (weakCount >= 1) penalty += 18;
+        }
+      }
+
+      return penalty;
+    }
+
+
 
 
 
