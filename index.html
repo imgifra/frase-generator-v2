@@ -460,138 +460,89 @@
       ctx.restore();
     }
 
+
+
     function drawRetro3D(rawText, bg) {
-      ctx.save();
+  ctx.save();
 
-      const text = rawText.trim();
-      if (!text) {
-        ctx.restore();
-        return;
-      }
+  const text = normalizeRetroText(rawText);
+  if (!text) {
+    ctx.restore();
+    return;
+  }
 
-      const normalizedBg = getRetro3DBackground(bg);
+  const normalizedBg = getRetro3DBackground(bg);
 
-      ctx.fillStyle = normalizedBg;
-      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  // Fondo base
+  ctx.fillStyle = normalizedBg;
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // guardar fondo en un canvas aparte
-      const bgCanvas = document.createElement("canvas");
-      bgCanvas.width = CANVAS_SIZE;
-      bgCanvas.height = CANVAS_SIZE;
-      const bgCtx = bgCanvas.getContext("2d");
+  // Grain del fondo en canvas aparte
+  const bgCanvas = document.createElement("canvas");
+  bgCanvas.width = CANVAS_SIZE;
+  bgCanvas.height = CANVAS_SIZE;
+  const bgCtx = bgCanvas.getContext("2d");
 
-      // copiar fondo
-      bgCtx.drawImage(canvas, 0, 0);
+  bgCtx.drawImage(canvas, 0, 0);
+  addGrain(bgCtx, 28); // un poco más visible, pero todavía controlado
+  ctx.drawImage(bgCanvas, 0, 0);
 
-      // aplicar grain SOLO al fondo
-      addGrain(bgCtx, 20);
+  const palette = getRetro3DPalette(normalizedBg);
 
-      // dibujar fondo texturizado de vuelta
-      ctx.drawImage(bgCanvas, 0, 0);
+  const layoutBox = {
+    width: CANVAS_SIZE * 0.72,
+    height: CANVAS_SIZE * 0.68,
+    x: CANVAS_SIZE / 2,
+    y: CANVAS_SIZE / 2
+  };
 
-      const boxWidth = CANVAS_SIZE * 0.70;
-      const boxHeight = CANVAS_SIZE * 0.65;
+  const fontFamily = "'Noto Serif', serif";
+  const fontWeight = 700;
+  const maxFont = 132;
+  const minFont = 34;
 
-      const centerX = CANVAS_SIZE / 2;
-      const centerY = CANVAS_SIZE / 2;
+  // 1) Buscar el mejor layout global
+  const bestLayout = findBestRetroLayout(text, {
+    ctx,
+    boxWidth: layoutBox.width,
+    boxHeight: layoutBox.height,
+    fontFamily,
+    fontWeight,
+    maxFont,
+    minFont
+  });
 
-      const maxFont = 130;
-      const minFont = 38;
+  if (!bestLayout || !bestLayout.lines.length) {
+    ctx.restore();
+    return;
+  }
 
-      let fontSize = maxFont;
-      let lines = [];
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
 
-      while (fontSize >= minFont) {
-        ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
-        lines = wrapText(text, boxWidth, ctx);
+  // 2) Dibujar bloque con leading óptico real
+  const totalHeight = bestLayout.lines.reduce((acc, line) => acc + line.lineHeight, 0);
+  let y = layoutBox.y - totalHeight / 2;
 
-        const estimatedLineHeight = fontSize * 0.92;
-        const totalHeight = lines.length * estimatedLineHeight;
-        const widest = Math.max(...lines.map(line => ctx.measureText(line).width));
+  for (const line of bestLayout.lines) {
+    const drawY = y + line.ascent;
 
-        if (widest <= boxWidth && totalHeight <= boxHeight) break;
+    drawRetro3DLine(line.text, layoutBox.x, drawY, {
+      frontColor: palette.frontColor,
+      midColor: palette.midColor,
+      shadowColor: palette.shadowColor,
+      fontSize: line.fontSize,
+      tracking: line.tracking
+    });
 
-        fontSize -= 2;
-      }
+    y += line.lineHeight;
+  }
 
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
+  // Marca opcional: si luego quieres moverla o apagarla, mejor dejarla aparte
+  // drawRetroSignature(layoutBox.x, y + 24);
 
-      const palette = getRetro3DPalette(normalizedBg);
-
-      // medir anchos reales de cada línea con el font base
-      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
-      const widths = lines.map(line => ctx.measureText(line).width);
-      const minW = Math.min(...widths);
-      const maxW = Math.max(...widths);
-
-      // línea clave: la más corta, ignorando líneas demasiado cortas
-      const validLines = widths.map((w, i) => ({
-        width: w,
-        index: i,
-        text: lines[i]
-      })).filter(l => l.text.length > 3);
-
-      const keyIndex = validLines.length > 0
-        ? validLines.reduce((min, l) => l.width < min.width ? l : min).index
-        : widths.indexOf(minW);
-
-      const laidOutLines = lines.map((line, i) => {
-        const w = widths[i];
-        const ratio = (maxW === minW) ? 0.5 : (maxW - w) / (maxW - minW);
-        const isKeyLine = i === keyIndex;
-
-        let rawScale = 0.84 + ratio * 0.22;
-
-        if (isKeyLine) {
-          rawScale += 0.10;
-        }
-
-        const scale = Math.max(0.90, Math.min(1.10, rawScale));
-        const size = fontSize * scale;
-
-        // medir caja real de la línea
-        ctx.font = `700 ${size}px 'Noto Serif', serif`;
-        const metrics = ctx.measureText(line);
-
-        const ascent = metrics.actualBoundingBoxAscent || size * 0.72;
-        const descent = metrics.actualBoundingBoxDescent || size * 0.22;
-
-        // margen extra para que no choquen descendentes/acentos/comillas
-        const extraLeading = size * 0.06;
-
-        const lineHeight = ascent + descent + extraLeading;
-
-        return {
-          text: line,
-          fontSize: size,
-          ascent,
-          descent,
-          lineHeight
-        };
-      });
-
-      // altura real del bloque
-      const totalHeight = laidOutLines.reduce((acc, line) => acc + line.lineHeight, 0);
-      let y = centerY - totalHeight / 2;
-
-      for (const line of laidOutLines) {
-        const drawY = y + line.ascent;
-
-        drawRetro3DLine(line.text, centerX, drawY, {
-          frontColor: palette.frontColor,
-          midColor: palette.midColor,
-          shadowColor: palette.shadowColor,
-          fontSize: line.fontSize
-        });
-
-        y += line.lineHeight;
-      }
-
-      ctx.restore();
-    }
-
-
+  ctx.restore();
+}
 
 
 
@@ -938,7 +889,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 55 🐵",
+        "v 56 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
