@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 72 🐵",
+        "v 73 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -935,7 +935,10 @@
       if (widths.length > 1 && widths.at(-1) / widest < 0.55) score += 40;
       if (layout.lines.length >= 6) score += 60;
       if (layout.lines.length === 5) score += 18;
-
+      // Penalizar si la primera línea es notablemente más chica que la segunda
+      if (widths.length >= 2 && widths[0] < widths[1] * 0.70) {
+        score += 50;
+      }
       // Premia contraste de anchos — sin penalizar diferencias entre vecinas
       score -= ((widest - narrowest) / widest) * 80;
       score += getLineBreakPenalty(layout.lines.map(l => l.text));
@@ -1017,7 +1020,7 @@
         width:  CANVAS_SIZE * 0.82,
         height: CANVAS_SIZE * 0.72,  // ← subido de 0.56
         x: CANVAS_SIZE / 2,
-        y: CANVAS_SIZE * 0.53
+        y: CANVAS_SIZE / 2 
       };
 
       const bestLayout = findBestRetroLayout(rawText, {
