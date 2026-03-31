@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 63 🐵",
+        "v 64 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -757,7 +757,7 @@
       const bgCtx = bgCanvas.getContext("2d");
 
       bgCtx.drawImage(canvas, 0, 0);
-      addGrain(bgCtx, 28); // un poco más visible, pero todavía controlado
+      addGrain(bgCtx, 28);
       ctx.drawImage(bgCanvas, 0, 0);
 
       const palette = getRetro3DPalette(normalizedBg);
@@ -774,7 +774,6 @@
       const maxFont = 132;
       const minFont = 34;
 
-      // 1) Buscar el mejor layout global
       const bestLayout = findBestRetroLayout(text, {
         ctx,
         boxWidth: layoutBox.width,
@@ -791,16 +790,17 @@
       }
 
       ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
+      ctx.textBaseline = "middle";
 
-      // 2) Dibujar bloque con leading óptico real
-      const totalHeight = bestLayout.lines.reduce((acc, line) => acc + line.lineHeight, 0);
-      let y = layoutBox.y - totalHeight / 2;
+      const lineCount = bestLayout.lines.length;
+      const constantLineHeight = bestLayout.lines[0].lineHeight;
+      const totalHeight = lineCount * constantLineHeight;
+
+      // centro exacto del bloque
+      let y = layoutBox.y - totalHeight / 2 + constantLineHeight / 2;
 
       for (const line of bestLayout.lines) {
-        const drawY = y + line.ascent;
-
-        drawRetro3DLine(line.text, layoutBox.x, drawY, {
+        drawRetro3DLine(line.text, layoutBox.x, y, {
           frontColor: palette.frontColor,
           midColor: palette.midColor,
           shadowColor: palette.shadowColor,
@@ -808,11 +808,8 @@
           tracking: line.tracking
         });
 
-        y += line.lineHeight;
+        y += constantLineHeight;
       }
-
-      // Marca opcional: si luego quieres moverla o apagarla, mejor dejarla aparte
-      // drawRetroSignature(layoutBox.x, y + 24);
 
       ctx.restore();
     }
@@ -1165,7 +1162,6 @@
         };
       });
 
-      // interlineado completamente constante REAL
       const constantLineHeight = baseFontSize * 0.92;
 
       const lineData = tempLines.map(line => ({
