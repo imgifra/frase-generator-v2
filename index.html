@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 90 🐵",
+        "v 91 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -897,7 +897,7 @@
         };
       });
 
-      const lineData = tempLines.map(line => ({ ...line, lineHeight: line.fontSize * 0.98 }));
+      const lineData = tempLines.map(line => ({ ...line, lineHeight: line.fontSize * 0.88 }));
       const totalHeight = lineData.reduce((acc, l) => acc + l.lineHeight, 0);
       const widestAdjusted = Math.max(...lineData.map(l => l.width));
 
