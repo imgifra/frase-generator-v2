@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 74 🐵",
+        "v 75 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -770,7 +770,9 @@
       const weak = new Set([
         "de", "del", "la", "las", "el", "los",
         "en", "y", "o", "u", "a", "al",
-        "por", "para", "con", "sin", "pero"
+        "por", "para", "con", "sin", "pero",
+        "le", "me", "te", "se", "lo", "que",  // ← agregar
+        "si", "no", "ni", "su", "sus"          // ← agregar
       ]);
       const parts = line.trim().toLowerCase().split(/\s+/);
       return parts.length === 1 && weak.has(parts[0]);
@@ -895,7 +897,9 @@
       const weakEnd = new Set([
         "de", "del", "la", "las", "el", "los",
         "en", "y", "o", "u", "a", "al",
-        "por", "para", "con", "sin", "pero"
+        "por", "para", "con", "sin", "pero",
+        "le", "me", "te", "se", "lo", "que",
+        "si", "no", "ni", "su", "sus"
       ]);
       const weakStart = new Set([
         "de", "del", "la", "las", "el", "los",
