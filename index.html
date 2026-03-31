@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 77 🐵",
+        "v 78 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -771,8 +771,10 @@
         "de", "del", "la", "las", "el", "los",
         "en", "y", "o", "u", "a", "al",
         "por", "para", "con", "sin", "pero",
-        "le", "me", "te", "se", "lo", "que",  // ← agregar
-        "si", "no", "ni", "su", "sus"          // ← agregar
+        "le", "me", "te", "se", "lo", "que",
+        "si", "no", "ni", "su", "sus",
+        "un", "una", "unos", "unas",  // ← agregar
+        "es", "era", "fue", "son" 
       ]);
       const parts = line.trim().toLowerCase().split(/\s+/);
       return parts.length === 1 && weak.has(parts[0]);
@@ -899,14 +901,18 @@
         "en", "y", "o", "u", "a", "al",
         "por", "para", "con", "sin", "pero",
         "le", "me", "te", "se", "lo", "que",
-        "si", "no", "ni", "su", "sus"
+        "si", "no", "ni", "su", "sus",
+        "un", "una", "unos", "unas",  // ← agregar
+        "es", "era", "fue", "son" 
       ]);
       const weakStart = new Set([
         "de", "del", "la", "las", "el", "los",
         "en", "y", "o", "u", "a", "al",
         "por", "para", "con", "sin", "pero",
         "le", "me", "te", "se", "lo", "que",
-        "si", "no", "ni", "su", "sus"
+        "si", "no", "ni", "su", "sus",
+        "un", "una", "unos", "unas",  // ← agregar
+        "es", "era", "fue", "son" 
       ]);
       let penalty = 0;
       for (let i = 0; i < lines.length - 1; i++) {
