@@ -515,7 +515,7 @@
       }
 
       ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      ctx.textBaseline = "alphabetic";
 
       const palette = getRetro3DPalette(normalizedBg);
 
@@ -558,7 +558,7 @@
         const descent = metrics.actualBoundingBoxDescent || size * 0.22;
 
         // margen extra para que no choquen descendentes/acentos/comillas
-        const extraLeading = size * 0.08;
+        const extraLeading = size * 0.06;
 
         const lineHeight = ascent + descent + extraLeading;
 
@@ -576,7 +576,7 @@
       let y = centerY - totalHeight / 2;
 
       for (const line of laidOutLines) {
-        const drawY = y + line.lineHeight / 2;
+        const drawY = y + line.ascent;
 
         drawRetro3DLine(line.text, centerX, drawY, {
           frontColor: palette.frontColor,
@@ -625,7 +625,7 @@
         fontSize
       } = opts;
 
-      const depth = 5;
+      const depth = 9;
 
       ctx.save();
       ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
@@ -938,7 +938,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 54 🐵",
+        "v 55 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
