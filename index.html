@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 58 🐵",
+        "v 59 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1126,31 +1126,44 @@
         const centerBias = 1 - Math.abs(posRatio - 0.5) * 2;
         const widthRatio = maxW === minW ? 0.5 : (rawWidth - minW) / (maxW - minW);
 
-        // Mucho más suave que antes
-        let scale = 0.965 + centerBias * 0.035 + widthRatio * 0.002;
+        // base suave, pero con un poquito más de vida
+        let scale = 0.965 + centerBias * 0.035 + widthRatio * 0.02;
 
-        // pequeña ayuda al cierre si queda muy débil
-        if (i === lines.length - 1 && rawWidth < maxW * 0.68) {
-          scale += 0.012;
+        // potenciar primera línea si es corta y el bloque tiene varias líneas
+        if (i === 0 && lines.length > 2) {
+          if (rawWidth < maxW * 0.60) {
+            scale += 0.04;
+          } else if (rawWidth < maxW * 0.72) {
+            scale += 0.02;
+          }
         }
 
-        scale = clamp(scale, 0.96, 1.03);
+        // pequeña ayuda al cierre si queda débil
+        if (i === lines.length - 1) {
+          if (rawWidth < maxW * 0.68) {
+            scale += 0.015;
+          } else {
+            scale += 0.008;
+          }
+        }
+
+        scale = clamp(scale, 0.96, 1.06);
 
         const fontSize = baseFontSize * scale;
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
-        // primero calcula tracking con el ancho natural de esa línea
+        // tracking según ancho natural
         const naturalWidth = ctx.measureText(text).width;
         const tracking = getRetroTracking(text, fontSize, naturalWidth, boxWidth);
 
-        // luego mide el ancho real con tracking
+        // ancho real con tracking
         const trackedWidth = measureTrackedText(text, tracking);
 
         const metrics = ctx.measureText(text);
         const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.74;
         const descent = metrics.actualBoundingBoxDescent || fontSize * 0.22;
 
-        // leading óptico un poco más cómodo
+        // leading óptico cómodo
         const lineHeight = ascent + descent + fontSize * 0.09;
 
         return {
