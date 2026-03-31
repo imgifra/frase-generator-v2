@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 79 🐵",
+        "v 80 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -866,7 +866,7 @@
         const rawWidth = baseWidths[i];
 
         const widthRatio = maxW === 0 ? 0 : rawWidth / maxW;
-        const scale = clamp(0.60 + widthRatio * 0.40, 0.60, 1.0);
+        const scale = clamp(0.55 + widthRatio * 0.45, 0.55, 1.0);
 
         const fontSize = baseFontSize * scale;
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
@@ -955,7 +955,7 @@
       if (widths.length >= 2 && widths[0] < widths[1] * 0.75) score += 120;
 
       // Premia contraste de anchos
-      score -= ((widest - narrowest) / widest) * 80;
+      score -= ((widest - narrowest) / widest) * 140;
       score += getLineBreakPenalty(layout.lines.map(l => l.text));
 
       return score;
