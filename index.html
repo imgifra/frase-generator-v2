@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 61 🐵",
+        "v 62 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1165,22 +1165,16 @@
         };
       });
 
-      // lineHeight base común para que el bloque respire parejo
+      // interlineado completamente constante
       const avgFontSize =
         tempLines.reduce((acc, line) => acc + line.fontSize, 0) / tempLines.length;
 
-      const baseLineHeight = avgFontSize * 0.86;
+      const constantLineHeight = avgFontSize * 0.88;
 
-      const lineData = tempLines.map(line => {
-        // mínima corrección por seguridad si una línea realmente necesita más espacio
-        const minSafeHeight = line.ascent + line.descent + line.fontSize * 0.03;
-        const lineHeight = Math.max(baseLineHeight, minSafeHeight);
-
-        return {
-          ...line,
-          lineHeight
-        };
-      });
+      const lineData = tempLines.map(line => ({
+        ...line,
+        lineHeight: constantLineHeight
+      }));
 
       const totalHeight = lineData.reduce((acc, l) => acc + l.lineHeight, 0);
       const widestAdjusted = Math.max(...lineData.map(l => l.width));
@@ -1194,7 +1188,7 @@
         widest: widestAdjusted,
         baseFontSize
       };
-    }
+    }  
 
     function getRetroTracking(text, fontSize, lineWidth, boxWidth) {
       const density = lineWidth / boxWidth;
