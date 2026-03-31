@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 64 🐵",
+        "v 65 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1143,23 +1143,7 @@
     }  
 
     function getRetroTracking(text, fontSize, lineWidth, boxWidth) {
-      const density = lineWidth / boxWidth;
-
-      let tracking = 0;
-
-      // líneas cortas: un pelo más cerradas
-      if (density < 0.45) tracking -= fontSize * 0.004;
-
-      // líneas largas: apenas más abiertas
-      if (density > 0.78) tracking += fontSize * 0.002;
-
-      // textos muy grandes: no abrir demasiado
-      if (fontSize > 100) tracking -= fontSize * 0.0015;
-
-      // clamp fino para retro3d
-      tracking = clamp(tracking, -fontSize * 0.006, fontSize * 0.003);
-
-      return tracking;
+      return fontSize * 0.01; // constante, estable
     }
 
     function scoreRetroLayout(layout, config) {
@@ -1174,66 +1158,29 @@
       const widthUsage = widest / boxWidth;
       const heightUsage = totalHeight / boxHeight;
 
-      // ocupación general
-      score += Math.abs(0.84 - widthUsage) * 140;
-      score += Math.abs(0.72 - heightUsage) * 115;
+      // uso del espacio (suave)
+      score += Math.abs(0.85 - widthUsage) * 100;
+      score += Math.abs(0.72 - heightUsage) * 90;
 
-      // diferencias bruscas entre líneas vecinas
+      // evitar cambios bruscos entre líneas (pero leve)
       for (let i = 1; i < widths.length; i++) {
         const diff = Math.abs(widths[i] - widths[i - 1]) / widest;
-        score += diff * 90;
+        score += diff * 40;
       }
 
-      // castigo extra a silueta muy irregular respecto al promedio
-      const avgWidth = widths.reduce((a, b) => a + b, 0) / widths.length;
-      for (const w of widths) {
-        const variance = Math.abs(w - avgWidth) / widest;
-        score += variance * 45;
-      }
-
-      // primera y última línea débiles
+      // penalizar última línea muy débil (suave)
       if (widths.length > 1) {
-        const firstRatio = widths[0] / widest;
         const lastRatio = widths[widths.length - 1] / widest;
-
-        if (firstRatio < 0.32) score += 25;
-        if (firstRatio < 0.26) score += 50;
-
-        if (lastRatio < 0.48) score += 40;
-        if (lastRatio < 0.38) score += 85;
+        if (lastRatio < 0.45) score += 30;
       }
 
-      // castigar "panza" central exagerada
-      if (widths.length >= 3) {
-        const mid = Math.floor(widths.length / 2);
-        const centerW = widths[mid];
-        const avgNeighbors =
-          mid > 0 && mid < widths.length - 1
-            ? (widths[mid - 1] + widths[mid + 1]) / 2
-            : centerW;
-
-        const bulge = (centerW - avgNeighbors) / widest;
-        if (bulge > 0.12) score += bulge * 180;
-        if (bulge > 0.18) score += 40;
-      }
-
-      // preferir centro orgánico, pero sin obligarlo demasiado
-      if (widths.length >= 3) {
-        const mid = Math.floor(widths.length / 2);
-        const centerW = widths[mid];
-        const edgeAvg = (widths[0] + widths[widths.length - 1]) / 2;
-
-        if (centerW < edgeAvg * 0.92) {
-          score += 20;
-        }
-      }
-
-      // evitar extremos raros de cantidad de líneas
-      if (widths.length === 1) score += 60;
-      if (widths.length > 7) score += 60;
+      // evitar extremos raros
+      if (widths.length === 1) score += 40;
+      if (widths.length > 7) score += 40;
 
       return score;
     }
+
 
 
 /* ========= OVERLAYS / BRANDING ========= */
