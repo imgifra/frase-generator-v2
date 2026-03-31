@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 65 🐵",
+        "v 66 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -738,8 +738,8 @@
     function drawRetro3D(rawText, bg) {
       ctx.save();
 
-      const text = normalizeRetroText(rawText);
-      if (!text) {
+      const text = rawText;
+      if (!text || !text.trim()) {
         ctx.restore();
         return;
       }
@@ -888,7 +888,7 @@
         minFont
       } = config;
 
-      const words = text.split(" ").filter(Boolean);
+      const words = text.trim().split(/\s+/);
       if (!words.length) return null;
 
       let best = null;
@@ -946,7 +946,7 @@
       if (lineCount <= 1) return [[words.join(" ")]];
 
       const results = [];
-      const targetWordsPerLine = words.length / lineCount;
+      const targetWordsPerLine = Math.max(1, words.length / lineCount);
 
       function recurse(startIndex, currentLines) {
         const remainingWords = words.length - startIndex;
