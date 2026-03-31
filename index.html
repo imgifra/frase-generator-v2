@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 67 🐵",
+        "v 68 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -734,212 +734,68 @@
 
 
 
-/* ========= MODE: RETRO 3D ========= */
-    function drawRetro3D(rawText, bg) {
-      ctx.save();
+    /* ========= MODE: RETRO 3D ========= */
 
-      const text = rawText;
-      if (!text || !text.trim()) {
-        ctx.restore();
-        return;
-      }
-
-      const normalizedBg = getRetro3DBackground(bg);
-
-      // Fondo base
-      ctx.fillStyle = normalizedBg;
-      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-      // Grain del fondo en canvas aparte
-      const bgCanvas = document.createElement("canvas");
-      bgCanvas.width = CANVAS_SIZE;
-      bgCanvas.height = CANVAS_SIZE;
-      const bgCtx = bgCanvas.getContext("2d");
-
-      bgCtx.drawImage(canvas, 0, 0);
-      addGrain(bgCtx, 28);
-      ctx.drawImage(bgCanvas, 0, 0);
-
-      const palette = getRetro3DPalette(normalizedBg);
-
-      const layoutBox = {
-        width: CANVAS_SIZE * 0.82,
-        height: CANVAS_SIZE * 0.56,
-        x: CANVAS_SIZE / 2,
-        y: CANVAS_SIZE * 0.53
-      };
-
-      const fontFamily = "'Noto Serif', serif";
-      const fontWeight = 700;
-      const maxFont = 132;
-      const minFont = 34;
-
-      const bestLayout = findBestRetroLayout(text, {
-        ctx,
-        boxWidth: layoutBox.width,
-        boxHeight: layoutBox.height,
-        fontFamily,
-        fontWeight,
-        maxFont,
-        minFont
-      });
-
-      if (!bestLayout || !bestLayout.lines.length) {
-        ctx.restore();
-        return;
-      }
-
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      const lineCount = bestLayout.lines.length;
-      const constantLineHeight = bestLayout.lines[0].lineHeight;
-      const totalHeight = lineCount * constantLineHeight;
-
-      // centro exacto del bloque
-      let y = layoutBox.y - totalHeight / 2 + constantLineHeight / 2;
-
-      for (const line of bestLayout.lines) {
-        drawRetro3DLine(line.text, layoutBox.x, y, {
-          frontColor: palette.frontColor,
-          midColor: palette.midColor,
-          shadowColor: palette.shadowColor,
-          fontSize: line.fontSize,
-          tracking: line.tracking
-        });
-
-        y += constantLineHeight;
-      }
-
-      ctx.restore();
-    }
-
-    function drawRetro3DLine(line, x, y, opts) {
-      const {
-        frontColor,
-        midColor,
-        shadowColor,
-        fontSize,
-        tracking = 0
-      } = opts;
-
-      const depth = Math.max(4, Math.round(fontSize * 0.085));
-
-      ctx.save();
-      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-
-      const totalWidth = measureTrackedText(line, tracking);
-      const startX = x - totalWidth / 2;
-
-      for (let i = depth; i >= 1; i--) {
-        const t = i / depth;
-
-        let extrudeColor;
-        if (t > 0.66) {
-          extrudeColor = shadowColor;
-        } else if (t > 0.33) {
-          extrudeColor = midColor;
-        } else {
-          extrudeColor = shadowColor;
-        }
-
-        drawTrackedText(line, startX + i, y + i, extrudeColor, tracking);
-      }
-
-      drawTrackedText(line, startX, y, frontColor, tracking);
-
-      ctx.restore();
-    }
+    // ── Utilidades de texto ──────────────────────────────────────────────────────
 
     function measureTrackedText(text, tracking = 0) {
       let width = 0;
-
       for (let i = 0; i < text.length; i++) {
         width += ctx.measureText(text[i]).width;
-        if (i < text.length - 1) {
-          width += tracking;
-        }
+        if (i < text.length - 1) width += tracking;
       }
-
       return width;
     }
 
     function drawTrackedText(text, x, y, color, tracking = 0) {
       ctx.fillStyle = color;
-
       let cursorX = x;
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
+      for (const ch of text) {
         ctx.fillText(ch, cursorX, y);
         cursorX += ctx.measureText(ch).width + tracking;
       }
     }
 
-    function findBestRetroLayout(text, config) {
-      const {
-        ctx,
-        boxWidth,
-        boxHeight,
-        fontFamily,
-        fontWeight,
-        maxFont,
-        minFont
-      } = config;
-
-      const words = text.trim().split(/\s+/);
-      if (!words.length) return null;
-
-      let best = null;
-
-      for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 2) {
-        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-
-        const candidateLineCounts = getCandidateLineCounts(words.length);
-
-        for (const lineCount of candidateLineCounts) {
-          const candidateBreaks = generateBalancedBreaks(words, lineCount, ctx, boxWidth);
-
-          for (const lines of candidateBreaks) {
-            const layout = buildRetroLineLayout(lines, {
-              ctx,
-              boxWidth,
-              boxHeight,
-              fontFamily,
-              fontWeight,
-              baseFontSize: fontSize
-            });
-
-            if (!layout) continue;
-
-            const score = scoreRetroLayout(layout, {
-              boxWidth,
-              boxHeight,
-              text
-            });
-
-            if (!best || score < best.score) {
-              best = { ...layout, score };
-            }
-          }
-        }
-
-        // En cuanto encontramos algo suficientemente bueno con una fuente grande, paramos
-        if (best && best.baseFontSize >= fontSize) {
-          break;
-        }
-      }
-
-      return best;
-    }
+    // ── Generación de layout ─────────────────────────────────────────────────────
 
     function getCandidateLineCounts(wordCount) {
-      if (wordCount <= 4) return [2, 3];
-      if (wordCount <= 8) return [3, 4];
+      if (wordCount <= 4)  return [2, 3];
+      if (wordCount <= 8)  return [3, 4];
       if (wordCount <= 12) return [3, 4, 5];
       if (wordCount <= 16) return [4, 5];
       return [4, 5, 6];
+    }
+
+    function isWeakStandaloneLine(line) {
+      const weak = new Set([
+        "de", "del", "la", "las", "el", "los",
+        "en", "y", "o", "u", "a", "al",
+        "por", "para", "con", "sin", "pero"
+      ]);
+      const parts = line.trim().toLowerCase().split(/\s+/);
+      return parts.length === 1 && weak.has(parts[0]);
+    }
+
+    function isValidLineSet(lines, ctx, boxWidth) {
+      const widths = lines.map(line => ctx.measureText(line).width);
+      const widest = Math.max(...widths);
+      if (widest > boxWidth * 1.06) return false;
+      if (lines.length > 1) {
+        const lastW = widths[widths.length - 1];
+        if (lastW < widest * 0.34) return false;
+      }
+      return true;
+    }
+
+    function simpleEvenSplit(words, lineCount) {
+      const lines = [];
+      let start = 0;
+      for (let i = 0; i < lineCount; i++) {
+        const take = Math.ceil((words.length - start) / (lineCount - i));
+        lines.push(words.slice(start, start + take).join(" "));
+        start += take;
+      }
+      return lines.filter(Boolean);
     }
 
     function generateBalancedBreaks(words, lineCount, ctx, boxWidth) {
@@ -952,42 +808,27 @@
         const remainingWords = words.length - startIndex;
         const remainingLines = lineCount - currentLines.length;
 
-        // Caso final: construir última línea
         if (remainingLines === 1) {
           const finalLine = words.slice(startIndex).join(" ");
           const lines = [...currentLines, finalLine];
-
-          // evitar última línea demasiado floja
           if (lines.length > 1) {
             const lastWords = finalLine.trim().split(/\s+/).filter(Boolean);
             if (lastWords.length <= 1) return;
           }
-
-          if (isValidLineSet(lines, ctx, boxWidth)) {
-            results.push(lines);
-          }
+          if (isValidLineSet(lines, ctx, boxWidth)) results.push(lines);
           return;
         }
 
         const ideal = Math.round(targetWordsPerLine);
         const minTake = Math.max(1, ideal - 2);
-        const maxTake = Math.min(
-          remainingWords - (remainingLines - 1),
-          ideal + 2
-        );
+        const maxTake = Math.min(remainingWords - (remainingLines - 1), ideal + 2);
 
         for (let take = minTake; take <= maxTake; take++) {
           if (startIndex + take > words.length) continue;
-
           const lineWords = words.slice(startIndex, startIndex + take);
           const line = lineWords.join(" ");
-
-          // evitar líneas flojas tipo "de", "la", "en", etc. demasiado solas
           if (isWeakStandaloneLine(line)) continue;
-
-          // evitar líneas intermedias de una sola palabra
           if (currentLines.length > 0 && lineWords.length === 1) continue;
-
           currentLines.push(line);
           recurse(startIndex + take, currentLines);
           currentLines.pop();
@@ -996,234 +837,228 @@
 
       recurse(0, []);
 
-      // fallback
-      if (!results.length) {
-        results.push(simpleEvenSplit(words, lineCount));
-      }
+      if (!results.length) results.push(simpleEvenSplit(words, lineCount));
 
-      // deduplicar
-      const unique = [];
       const seen = new Set();
-
-      for (const r of results) {
-        const key = r.join(" | ");
-        if (!seen.has(key)) {
+      return results
+        .filter(r => {
+          const key = r.join(" | ");
+          if (seen.has(key)) return false;
           seen.add(key);
-          unique.push(r);
-        }
-      }
-
-      return unique.slice(0, 40);
-    }
-
-    function isValidLineSet(lines, ctx, boxWidth) {
-      const widths = lines.map(line => ctx.measureText(line).width);
-      const widest = Math.max(...widths);
-
-      if (widest > boxWidth * 1.06) return false;
-
-      // evitar últimas líneas absurdamente pequeñas
-      if (lines.length > 1) {
-        const lastW = widths[widths.length - 1];
-        const maxW = Math.max(...widths);
-        if (lastW < maxW * 0.34) return false;
-      }
-
-      return true;
-    }
-
-    function simpleEvenSplit(words, lineCount) {
-      const lines = [];
-      let start = 0;
-
-      for (let i = 0; i < lineCount; i++) {
-        const remainingWords = words.length - start;
-        const remainingLines = lineCount - i;
-        const take = Math.ceil(remainingWords / remainingLines);
-
-        lines.push(words.slice(start, start + take).join(" "));
-        start += take;
-      }
-
-      return lines.filter(Boolean);
-    }
-
-    function isWeakStandaloneLine(line) {
-      const weak = new Set([
-        "de", "del", "la", "las", "el", "los",
-        "en", "y", "o", "u", "a", "al",
-        "por", "para", "con", "sin", "pero"
-      ]);
-
-      const parts = line.trim().toLowerCase().split(/\s+/);
-      return parts.length === 1 && weak.has(parts[0]);
+          return true;
+        })
+        .slice(0, 40);
     }
 
     function buildRetroLineLayout(lines, config) {
-      const {
-        ctx,
-        boxWidth,
-        boxHeight,
-        fontFamily,
-        fontWeight,
-        baseFontSize
-      } = config;
+      const { ctx, boxWidth, boxHeight, fontFamily, fontWeight, baseFontSize } = config;
 
       ctx.font = `${fontWeight} ${baseFontSize}px ${fontFamily}`;
       const baseWidths = lines.map(line => ctx.measureText(line).width);
-
       const maxW = Math.max(...baseWidths);
       const minW = Math.min(...baseWidths);
 
       const tempLines = lines.map((text, i) => {
         const rawWidth = baseWidths[i];
-        const posRatio = lines.length === 1 ? 0.5 : i / (lines.length - 1);
 
-        const centerBias = 1 - Math.abs(posRatio - 0.5) * 2;
-        const widthRatio = maxW === minW ? 0.5 : (rawWidth - minW) / (maxW - minW);
-
-        let scale = 0.965 + centerBias * 0.03 + widthRatio * 0.015;
-
-        // pequeña ayuda a primera línea si es claramente corta
-        if (i === 0 && lines.length >= 3) {
-          const firstLineRatio = rawWidth / maxW;
-          if (firstLineRatio < 0.55) {
-            scale += 0.025;
-          }
-        }
-
-        // pequeña ayuda al cierre
-        if (i === lines.length - 1 && rawWidth < maxW * 0.68) {
-          scale += 0.012;
-        }
-
+        let scale = 1.0;
+        if (maxW !== minW) scale += ((rawWidth - minW) / (maxW - minW)) * 0.015;
+        if (i === 0 && lines.length >= 3 && rawWidth / maxW < 0.55) scale += 0.025;
+        if (i === lines.length - 1 && rawWidth < maxW * 0.68) scale += 0.012;
         scale = clamp(scale, 0.96, 1.03);
 
         const fontSize = baseFontSize * scale;
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
-        const naturalWidth = ctx.measureText(text).width;
-        const tracking = getRetroTracking(text, fontSize, naturalWidth, boxWidth);
+        const tracking = fontSize * 0.01;
         const trackedWidth = measureTrackedText(text, tracking);
-
         const metrics = ctx.measureText(text);
-        const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.74;
-        const descent = metrics.actualBoundingBoxDescent || fontSize * 0.22;
 
         return {
           text,
           width: trackedWidth,
-          naturalWidth,
           fontSize,
-          ascent,
-          descent,
+          ascent: metrics.actualBoundingBoxAscent || fontSize * 0.74,
+          descent: metrics.actualBoundingBoxDescent || fontSize * 0.22,
           tracking
         };
       });
 
       const constantLineHeight = baseFontSize * 1.02;
-
-      const lineData = tempLines.map(line => ({
-        ...line,
-        lineHeight: constantLineHeight
-      }));
-
-      const totalHeight = lineData.reduce((acc, l) => acc + l.lineHeight, 0);
+      const lineData = tempLines.map(line => ({ ...line, lineHeight: constantLineHeight }));
+      const totalHeight = lineData.length * constantLineHeight;
       const widestAdjusted = Math.max(...lineData.map(l => l.width));
 
       if (totalHeight > boxHeight) return null;
       if (widestAdjusted > boxWidth * 1.03) return null;
 
-      return {
-        lines: lineData,
-        totalHeight,
-        widest: widestAdjusted,
-        baseFontSize
-      };
-    }  
-
-    function getRetroTracking(text, fontSize, lineWidth, boxWidth) {
-      return fontSize * 0.01; // constante, estable
+      return { lines: lineData, totalHeight, widest: widestAdjusted, baseFontSize };
     }
-
-    function scoreRetroLayout(layout, config) {
-      const { boxWidth, boxHeight } = config;
-      const lines = layout.lines;
-      const widths = lines.map(l => l.width);
-      const widest = Math.max(...widths);
-      const totalHeight = layout.totalHeight;
-
-      let score = 0;
-
-      const widthUsage = widest / boxWidth;
-      const heightUsage = totalHeight / boxHeight;
-
-      score += Math.abs(0.88 - widthUsage) * 120;
-      score += Math.abs(0.62 - heightUsage) * 120;
-
-      for (let i = 1; i < widths.length; i++) {
-        const diff = Math.abs(widths[i] - widths[i - 1]) / widest;
-        score += diff * 55;
-      }
-
-      if (widths.length > 1) {
-        const lastRatio = widths[widths.length - 1] / widest;
-        if (lastRatio < 0.55) score += 40;
-      }
-
-      // castigar exceso de líneas
-      if (lines.length >= 6) score += 60;
-      if (lines.length === 5) score += 18;
-
-      // preferir bloques más compactos visualmente
-      const narrowest = Math.min(...widths);
-      const widthSpread = (widest - narrowest) / widest;
-      score += widthSpread * 60;
-
-      score += getLineBreakPenalty(lines.map(l => l.text));
-
-      return score;
-    }
-
 
     function getLineBreakPenalty(lines) {
-      let penalty = 0;
-
       const weakEnd = new Set([
         "de", "del", "la", "las", "el", "los",
         "en", "y", "o", "u", "a", "al",
         "por", "para", "con", "sin", "pero"
       ]);
-
       const weakStart = new Set([
         "de", "del", "la", "las", "el", "los",
         "en", "y", "o", "u", "a", "al"
       ]);
 
+      let penalty = 0;
       for (let i = 0; i < lines.length - 1; i++) {
         const currentWords = lines[i].trim().toLowerCase().split(/\s+/);
-        const nextWords = lines[i + 1].trim().toLowerCase().split(/\s+/);
+        const nextWords   = lines[i + 1].trim().toLowerCase().split(/\s+/);
+        const lastWord    = currentWords.at(-1)?.replace(/["""'.,;:!?]/g, "");
+        const firstNext   = nextWords[0]?.replace(/["""'.,;:!?]/g, "");
 
-        const lastWord = currentWords[currentWords.length - 1]?.replace(/[“”"'.,;:!?]/g, "");
-        const firstNext = nextWords[0]?.replace(/[“”"'.,;:!?]/g, "");
-
-        if (weakEnd.has(lastWord)) penalty += 35;
+        if (weakEnd.has(lastWord))   penalty += 35;
         if (weakStart.has(firstNext)) penalty += 28;
 
-        // castigar líneas de solo 2 palabras si ambas son débiles o poco informativas
         if (currentWords.length === 2) {
           const weakCount = currentWords.filter(w =>
-            weakEnd.has(w.replace(/[“”"'.,;:!?]/g, ""))
+            weakEnd.has(w.replace(/["""'.,;:!?]/g, ""))
           ).length;
           if (weakCount >= 1) penalty += 18;
         }
       }
-
       return penalty;
     }
 
+    function scoreRetroLayout(layout, config) {
+      const { boxWidth, boxHeight } = config;
+      const widths = layout.lines.map(l => l.width);
+      const widest = Math.max(...widths);
+      const narrowest = Math.min(...widths);
 
+      let score = 0;
+      score += Math.abs(0.88 - widest / boxWidth) * 120;
+      score += Math.abs(0.62 - layout.totalHeight / boxHeight) * 120;
 
+      for (let i = 1; i < widths.length; i++) {
+        score += (Math.abs(widths[i] - widths[i - 1]) / widest) * 55;
+      }
+
+      if (widths.length > 1 && widths.at(-1) / widest < 0.55) score += 40;
+      if (layout.lines.length >= 6) score += 60;
+      if (layout.lines.length === 5) score += 18;
+
+      score += ((widest - narrowest) / widest) * 60;
+      score += getLineBreakPenalty(layout.lines.map(l => l.text));
+
+      return score;
+    }
+
+    function findBestRetroLayout(text, config) {
+      const { ctx, boxWidth, boxHeight, fontFamily, fontWeight, maxFont, minFont } = config;
+      const words = text.trim().split(/\s+/);
+      if (!words.length) return null;
+
+      let best = null;
+
+      for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 2) {
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+
+        for (const lineCount of getCandidateLineCounts(words.length)) {
+          for (const lines of generateBalancedBreaks(words, lineCount, ctx, boxWidth)) {
+            const layout = buildRetroLineLayout(lines, {
+              ctx, boxWidth, boxHeight, fontFamily, fontWeight, baseFontSize: fontSize
+            });
+            if (!layout) continue;
+
+            const score = scoreRetroLayout(layout, { boxWidth, boxHeight, text });
+            if (!best || score < best.score) best = { ...layout, score };
+          }
+        }
+
+        if (best && best.baseFontSize >= fontSize) break;
+      }
+
+      return best;
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────────────
+
+    function drawRetro3DLine(line, x, y, opts) {
+      const { frontColor, midColor, shadowColor, fontSize, tracking = 0 } = opts;
+      const depth = Math.max(4, Math.round(fontSize * 0.085));
+
+      ctx.save();
+      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+
+      const totalWidth = measureTrackedText(line, tracking);
+      const startX = x - totalWidth / 2;
+
+      for (let i = depth; i >= 1; i--) {
+        const t = i / depth;
+        const extrudeColor = t > 0.66 ? shadowColor : t > 0.33 ? midColor : shadowColor;
+        drawTrackedText(line, startX + i, y + i, extrudeColor, tracking);
+      }
+
+      drawTrackedText(line, startX, y, frontColor, tracking);
+      ctx.restore();
+    }
+
+    function drawRetro3D(rawText, bg) {
+      ctx.save();
+
+      if (!rawText?.trim()) { ctx.restore(); return; }
+
+      const normalizedBg = getRetro3DBackground(bg);
+      ctx.fillStyle = normalizedBg;
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      const bgCanvas = document.createElement("canvas");
+      bgCanvas.width = CANVAS_SIZE;
+      bgCanvas.height = CANVAS_SIZE;
+      const bgCtx = bgCanvas.getContext("2d");
+      bgCtx.drawImage(canvas, 0, 0);
+      addGrain(bgCtx, 28);
+      ctx.drawImage(bgCanvas, 0, 0);
+
+      const palette = getRetro3DPalette(normalizedBg);
+      const layoutBox = {
+        width:  CANVAS_SIZE * 0.82,
+        height: CANVAS_SIZE * 0.56,
+        x: CANVAS_SIZE / 2,
+        y: CANVAS_SIZE * 0.53
+      };
+
+      const bestLayout = findBestRetroLayout(rawText, {
+        ctx,
+        boxWidth:   layoutBox.width,
+        boxHeight:  layoutBox.height,
+        fontFamily: "'Noto Serif', serif",
+        fontWeight: 700,
+        maxFont:    132,
+        minFont:    34
+      });
+
+      if (!bestLayout?.lines.length) { ctx.restore(); return; }
+
+      ctx.textAlign    = "center";
+      ctx.textBaseline = "middle";
+
+      const { lines } = bestLayout;
+      const constantLineHeight = lines[0].lineHeight;
+      let y = layoutBox.y - (lines.length * constantLineHeight) / 2 + constantLineHeight / 2;
+
+      for (const line of lines) {
+        drawRetro3DLine(line.text, layoutBox.x, y, {
+          frontColor:  palette.frontColor,
+          midColor:    palette.midColor,
+          shadowColor: palette.shadowColor,
+          fontSize:    line.fontSize,
+          tracking:    line.tracking
+        });
+        y += constantLineHeight;
+      }
+
+      ctx.restore();
+    }
 
 
 /* ========= OVERLAYS / BRANDING ========= */
