@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 83 🐵",
+        "v 84 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -839,8 +839,12 @@
 
           // Bloquea líneas de 2 palabras cortas en posición intermedia (ej: "el burro", "le diga")
           if (lineWords.length === 2 && currentLines.length > 0) {
-            const bothShort = lineWords.every(w => w.length <= 5);
-            if (bothShort) continue;
+            const firstWordWeak = [
+              "de","del","la","las","el","los","en","y","o","u","a","al",
+              "por","para","con","sin","pero","le","me","te","se","lo","que",
+              "si","no","ni","su","sus","un","una","es","era","fue","son"
+            ].includes(lineWords[0].toLowerCase());
+            if (firstWordWeak) continue;
           }
 
           currentLines.push(line);
@@ -1352,21 +1356,6 @@
 
 
 /* ========= VISUAL UTILS ========= */
-    function addSubtleTexture(ctx, amount = 8) {
-      const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      const data = imageData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const noise = (Math.random() - 0.5) * amount;
-
-        data[i] += noise * 0.3;
-        data[i + 1] += noise * 0.3;
-        data[i + 2] += noise * 0.3;
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-    }
-
     function addGrain(targetCtx, amount = 15) {
       const imageData = targetCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       const data = imageData.data;
