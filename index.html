@@ -245,6 +245,9 @@
   </div>
 
   <script>
+
+    /* ========= SETUP / INIT ========= */
+
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
     // Marca de agua como imagen
@@ -282,6 +285,10 @@
     multiBtn.onclick = generateMultiple;
     document.querySelector(".control-panel").appendChild(multiBtn);
 
+
+
+/* ========= APP FLOW ========= */
+
     function draw() {
       const text = input.value.trim();
       const bg = bgColorInput.value;
@@ -317,9 +324,93 @@
       }
     }
 
+    function drawPlaceholder() {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.font = "42px 'Felt Tip Roman', cursive";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        "v 55 🐵",
+        CANVAS_SIZE / 2,
+        CANVAS_SIZE / 2
+      );
+      ctx.restore();
+    }
+
+    function downloadPNG() {
+      const link = document.createElement("a");
+      const mode = modeSelect.value;
+      link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function generateMultiple() {
+      const raw = input.value;
+      const phrases = raw.split("@").map(t => t.trim()).filter(t => t.length > 0);
+
+      if (phrases.length <= 1) {
+        alert("Escribe varias frases separadas por @");
+        return;
+      }
+
+      const originalText = raw;
+      const originalBg = bgColorInput.value;
+      const mode = modeSelect.value;
+
+      const retroCycle = [
+        "#f6f1e8", // retroWhite
+        "#0d0f14", // retroBlack
+        "#f4c400", // retroYellow
+        "#3d5afe", // retroBlue
+        "#e53935"  // retroRed
+      ];
+
+      let index = 0;
+
+      function next() {
+        if (index >= phrases.length) {
+          input.value = originalText;
+          bgColorInput.value = originalBg;
+          draw();
+          alert("Listo: todas las imágenes fueron generadas.");
+          return;
+        }
+
+        const phrase = phrases[index];
+        input.value = phrase;
+
+        // Solo en retro3d: intercalar colores automáticamente
+        if (mode === "retro3d") {
+          bgColorInput.value = retroCycle[index % retroCycle.length];
+        }
+
+        draw();
+
+        setTimeout(() => {
+          const link = document.createElement("a");
+          const safeMode = modeSelect.value;
+          const colorSuffix = mode === "retro3d" ? `_c${(index % retroCycle.length) + 1}` : "";
+          link.download = `frase_${index + 1}_${safeMode}${colorSuffix}.png`;
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+
+          index++;
+          next();
+        }, 250);
+      }
+
+      next();
+    }
 
 
-    /* ========= MODO NORMAL (con caja estilo BRAT) ========= */
+
+
+
+
+
+/* ========= MODE: NORMAL ========= */
     function drawNormal(text, bg) {
       ctx.save();
 
@@ -385,8 +476,82 @@
       ctx.restore();
     }
 
+    function wrapText(text, maxWidth, ctxLocal) {
+      const words = text.split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = "";
 
-    /* ========= MODO BRAT ========= */
+      // 1) Wrap codicioso normal
+      for (const w of words) {
+        const test = current ? current + " " + w : w;
+        const width = ctxLocal.measureText(test).width;
+
+        if (width > maxWidth && current) {
+          lines.push(current);
+          current = w;
+        } else {
+          current = test;
+        }
+      }
+
+      if (current) lines.push(current);
+
+      // 2) Evitar última línea de una sola palabra
+      if (lines.length >= 2) {
+        const last = lines[lines.length - 1];
+        const prev = lines[lines.length - 2];
+
+        if (last.split(/\s+/).length === 1) {
+          const merged = prev + " " + last;
+          if (ctxLocal.measureText(merged).width <= maxWidth * 1.12) {
+            lines[lines.length - 2] = merged;
+            lines.pop();
+          }
+        }
+      }
+
+      // 3) Rebalanceo suave entre líneas vecinas
+      function widthOf(line) {
+        return ctxLocal.measureText(line).width;
+      }
+
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < lines.length - 1; i++) {
+          const a = lines[i];
+          const b = lines[i + 1];
+
+          const aWords = a.split(/\s+/);
+          const bWords = b.split(/\s+/);
+
+          if (bWords.length <= 1) continue;
+
+          const aWidth = widthOf(a);
+          const bWidth = widthOf(b);
+
+          // Si la línea de arriba quedó mucho más corta, intenta subir una palabra
+          if (aWidth < bWidth * 0.72) {
+            const candidateA = a + " " + bWords[0];
+            const candidateB = bWords.slice(1).join(" ");
+
+            if (
+              candidateB &&
+              widthOf(candidateA) <= maxWidth &&
+              candidateB.split(/\s+/).length >= 1
+            ) {
+              lines[i] = candidateA;
+              lines[i + 1] = candidateB;
+            }
+          }
+        }
+      }
+
+      return lines;
+    }
+
+
+/* ========= MODE: BRAT ========= */
+
+
     function drawBrat(rawText, bg) {
       ctx.save();
 
@@ -459,6 +624,125 @@
 
       ctx.restore();
     }
+
+    function wrapWordsToLines(text, maxWidth, ctxLocal) {
+      const words = text.split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = [];
+
+      // --- 1. Wrap codicioso normal ---
+      words.forEach(w => {
+        const test = [...current, w].join(" ");
+        const width = ctxLocal.measureText(test).width;
+        if (width > maxWidth && current.length > 0) {
+          lines.push(current);
+          current = [w];
+        } else {
+          current.push(w);
+        }
+      });
+
+      if (current.length) lines.push(current);
+
+      // --- 2. Balanceo: evitar líneas de 1 palabra si se puede ---
+      const naturalSpace = ctxLocal.measureText(" ").width;
+
+      function lineWidth(line) {
+        if (!line.length) return 0;
+        const wordsWidth = line.reduce(
+          (acc, w) => acc + ctxLocal.measureText(w).width,
+          0
+        );
+        const gaps = line.length - 1;
+        return wordsWidth + gaps * naturalSpace;
+      }
+
+      // Recorremos de arriba hacia abajo,
+      // moviendo palabras de la siguiente línea a la actual
+      for (let i = 0; i < lines.length - 1; i++) {
+        let line = lines[i];
+        let next = lines[i + 1];
+
+        // Mientras esta línea tenga 1 palabra
+        // y la siguiente tenga al menos 2, intentamos subir una palabra
+        while (line.length === 1 && next && next.length >= 2) {
+          const candidate = [...line, next[0]];
+          if (lineWidth(candidate) <= maxWidth) {
+            // Sí cabe: subimos la primera palabra de la siguiente línea
+            line = candidate;
+            next = next.slice(1);
+            lines[i] = line;
+            if (next.length) {
+              lines[i + 1] = next;
+            } else {
+              // Si dejamos vacía la siguiente línea, la quitamos
+              lines.splice(i + 1, 1);
+              break;
+            }
+          } else {
+            // No cabe "no está" juntos, nos quedamos como estamos
+            break;
+          }
+        }
+      }
+
+      return lines;
+    }
+
+    function drawJustifiedLine(words, x, y, lineWidth, ctx) {
+      if (!words || words.length === 0) return;
+
+      ctx.save();
+      ctx.filter = "blur(5px)";
+      ctx.textBaseline = "top";
+
+      const gaps = words.length - 1;
+      const wordWidths = words.map(w => ctx.measureText(w).width);
+      const wordsWidth = wordWidths.reduce((a, b) => a + b, 0);
+
+      // Una sola palabra: no podemos justificar sin deformar → pegada a la izquierda
+      if (gaps === 0) {
+        ctx.fillText(words[0], x, y);
+        ctx.restore();
+        return;
+      }
+
+      // Espacio libre que hay que repartir en los huecos
+      const freeSpace = lineWidth - wordsWidth;
+
+      let spaceSize;
+      if (freeSpace <= 0) {
+        // Línea ya muy llena → usamos espacio natural
+        spaceSize = ctx.measureText(" ").width;
+      } else {
+        // 💚 Justificado real: repartimos TODO el espacio libre entre los huecos
+        spaceSize = freeSpace / gaps;
+      }
+
+      let cursorX = x;
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        ctx.fillText(w, cursorX, y);
+        if (i < gaps) {
+          cursorX += wordWidths[i] + spaceSize;
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function drawJustifiedLineTall(words, x, y, lineWidth, ctx) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(1, BRAT_STRETCH_Y);
+      drawJustifiedLine(words, 0, 0, lineWidth, ctx);
+      ctx.restore();
+    }
+
+
+
+/* ========= MODE: RETRO 3D ========= */
+
 
     function drawRetro3D(rawText, bg) {
       ctx.save();
@@ -581,34 +865,6 @@
       ctx.restore();
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     function drawRetro3DLine(line, x, y, opts) {
       const {
         frontColor,
@@ -647,243 +903,51 @@
       ctx.restore();
     }
 
-
-    /* ========= UTILIDADES DE TEXTO ========= */
-
-    function wrapText(text, maxWidth, ctxLocal) {
-      const words = text.split(/\s+/).filter(Boolean);
-      const lines = [];
-      let current = "";
-
-      // 1) Wrap codicioso normal
-      for (const w of words) {
-        const test = current ? current + " " + w : w;
-        const width = ctxLocal.measureText(test).width;
-
-        if (width > maxWidth && current) {
-          lines.push(current);
-          current = w;
-        } else {
-          current = test;
-        }
-      }
-
-      if (current) lines.push(current);
-
-      // 2) Evitar última línea de una sola palabra
-      if (lines.length >= 2) {
-        const last = lines[lines.length - 1];
-        const prev = lines[lines.length - 2];
-
-        if (last.split(/\s+/).length === 1) {
-          const merged = prev + " " + last;
-          if (ctxLocal.measureText(merged).width <= maxWidth * 1.12) {
-            lines[lines.length - 2] = merged;
-            lines.pop();
-          }
-        }
-      }
-
-      // 3) Rebalanceo suave entre líneas vecinas
-      function widthOf(line) {
-        return ctxLocal.measureText(line).width;
-      }
-
-      for (let pass = 0; pass < 2; pass++) {
-        for (let i = 0; i < lines.length - 1; i++) {
-          const a = lines[i];
-          const b = lines[i + 1];
-
-          const aWords = a.split(/\s+/);
-          const bWords = b.split(/\s+/);
-
-          if (bWords.length <= 1) continue;
-
-          const aWidth = widthOf(a);
-          const bWidth = widthOf(b);
-
-          // Si la línea de arriba quedó mucho más corta, intenta subir una palabra
-          if (aWidth < bWidth * 0.72) {
-            const candidateA = a + " " + bWords[0];
-            const candidateB = bWords.slice(1).join(" ");
-
-            if (
-              candidateB &&
-              widthOf(candidateA) <= maxWidth &&
-              candidateB.split(/\s+/).length >= 1
-            ) {
-              lines[i] = candidateA;
-              lines[i + 1] = candidateB;
-            }
-          }
-        }
-      }
-
-      return lines;
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    function addSubtleTexture(ctx, amount = 8) {
-      const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      const data = imageData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const noise = (Math.random() - 0.5) * amount;
-
-        data[i] += noise * 0.3;
-        data[i + 1] += noise * 0.3;
-        data[i + 2] += noise * 0.3;
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-    }
-
-    function addGrain(targetCtx, amount = 15) {
-      const imageData = targetCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      const data = imageData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const noise = (Math.random() - 0.5) * amount;
-
-        data[i]     += noise;
-        data[i + 1] += noise;
-        data[i + 2] += noise;
-      }
-
-      targetCtx.putImageData(imageData, 0, 0);
-    }
-    
-    // Para brat: cada línea es array de palabras
-    function wrapWordsToLines(text, maxWidth, ctxLocal) {
-      const words = text.split(/\s+/).filter(Boolean);
-      const lines = [];
-      let current = [];
-
-      // --- 1. Wrap codicioso normal ---
-      words.forEach(w => {
-        const test = [...current, w].join(" ");
-        const width = ctxLocal.measureText(test).width;
-        if (width > maxWidth && current.length > 0) {
-          lines.push(current);
-          current = [w];
-        } else {
-          current.push(w);
-        }
-      });
-
-      if (current.length) lines.push(current);
-
-      // --- 2. Balanceo: evitar líneas de 1 palabra si se puede ---
-      const naturalSpace = ctxLocal.measureText(" ").width;
-
-      function lineWidth(line) {
-        if (!line.length) return 0;
-        const wordsWidth = line.reduce(
-          (acc, w) => acc + ctxLocal.measureText(w).width,
-          0
-        );
-        const gaps = line.length - 1;
-        return wordsWidth + gaps * naturalSpace;
-      }
-
-      // Recorremos de arriba hacia abajo,
-      // moviendo palabras de la siguiente línea a la actual
-      for (let i = 0; i < lines.length - 1; i++) {
-        let line = lines[i];
-        let next = lines[i + 1];
-
-        // Mientras esta línea tenga 1 palabra
-        // y la siguiente tenga al menos 2, intentamos subir una palabra
-        while (line.length === 1 && next && next.length >= 2) {
-          const candidate = [...line, next[0]];
-          if (lineWidth(candidate) <= maxWidth) {
-            // Sí cabe: subimos la primera palabra de la siguiente línea
-            line = candidate;
-            next = next.slice(1);
-            lines[i] = line;
-            if (next.length) {
-              lines[i + 1] = next;
-            } else {
-              // Si dejamos vacía la siguiente línea, la quitamos
-              lines.splice(i + 1, 1);
-              break;
-            }
-          } else {
-            // No cabe "no está" juntos, nos quedamos como estamos
-            break;
-          }
-        }
-      }
-
-      return lines;
-    }
-
-
-    // Justificado real: ajusta solo espacios, no el tamaño de las letras
-    function drawJustifiedLine(words, x, y, lineWidth, ctx) {
-      if (!words || words.length === 0) return;
+    function drawCornerTagRetro3D() {
+      const tag = "@monacastrosa";
 
       ctx.save();
-      ctx.filter = "blur(5px)";
+
+      const padding = 35;
+      const x = CANVAS_SIZE / 2;
+      const y = 35;
+
+      const normalizedBg = getRetro3DBackground(bgColorInput.value);
+      const palette = getRetro3DPalette(normalizedBg);
+
+      const fontSize = 30;
+      const depth = 3; // grosor del volumen
+
+      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
+      ctx.textAlign = "center";
       ctx.textBaseline = "top";
 
-      const gaps = words.length - 1;
-      const wordWidths = words.map(w => ctx.measureText(w).width);
-      const wordsWidth = wordWidths.reduce((a, b) => a + b, 0);
+      for (let i = depth; i >= 1; i--) {
+        const t = i / depth;
 
-      // Una sola palabra: no podemos justificar sin deformar → pegada a la izquierda
-      if (gaps === 0) {
-        ctx.fillText(words[0], x, y);
-        ctx.restore();
-        return;
-      }
-
-      // Espacio libre que hay que repartir en los huecos
-      const freeSpace = lineWidth - wordsWidth;
-
-      let spaceSize;
-      if (freeSpace <= 0) {
-        // Línea ya muy llena → usamos espacio natural
-        spaceSize = ctx.measureText(" ").width;
-      } else {
-        // 💚 Justificado real: repartimos TODO el espacio libre entre los huecos
-        spaceSize = freeSpace / gaps;
-      }
-
-      let cursorX = x;
-      for (let i = 0; i < words.length; i++) {
-        const w = words[i];
-        ctx.fillText(w, cursorX, y);
-        if (i < gaps) {
-          cursorX += wordWidths[i] + spaceSize;
+        let extrudeColor;
+        if (t > 2/3) {
+          extrudeColor = palette.shadowColor;
+        } else if (t > 1/3) {
+          extrudeColor = palette.frontColor;
+        } else {
+          extrudeColor = palette.shadowColor;
         }
+
+        ctx.fillStyle = extrudeColor;
+        ctx.fillText(tag, x + i, y + i);
       }
 
+      ctx.fillStyle = palette.frontColor;
+      ctx.fillText(tag, x, y);
+
       ctx.restore();
     }
+   
 
-    // Misma línea, pero estirada verticalmente (letras más altas)
-    function drawJustifiedLineTall(words, x, y, lineWidth, ctx) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(1, BRAT_STRETCH_Y);
-      drawJustifiedLine(words, 0, 0, lineWidth, ctx);
-      ctx.restore();
-    }
 
-    /* ========= WATERMARK logo ========= */
+
+/* ========= OVERLAYS / BRANDING ========= */
     function drawWatermark() {
       if (!watermarkImage.complete) return;
 
@@ -921,22 +985,6 @@
       ctx.drawImage(temp, 0, 0);
       ctx.restore();
     }
-
-    /* ========= PLACEHOLDER ========= */
-    function drawPlaceholder() {
-      ctx.save();
-      ctx.fillStyle = "rgba(0,0,0,0.35)";
-      ctx.font = "42px 'Felt Tip Roman', cursive";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(
-        "v 55 🐵",
-        CANVAS_SIZE / 2,
-        CANVAS_SIZE / 2
-      );
-      ctx.restore();
-    }
-
 
     function drawAEStyleText() {
       const textLines = ["\u00A0MONA", "\u00A0\u00A0\u00A0\u00A0CASTROSA"];
@@ -1018,7 +1066,6 @@
       ctx.restore();
     }
 
-    /* ========= Marca inferior derecha estilo BRAT con sombra dinámica ========= */
     function drawCornerTagBrat() {
       const tag = "@monacastrosa";
 
@@ -1071,7 +1118,6 @@
       ctx.restore();
     }
 
-    /* ========= Marca inferior derecha para MODO NORMAL ========= */
     function drawCornerTagNormal() {
       const tag = "@monacastrosa";
 
@@ -1115,47 +1161,6 @@
       ctx.restore();
     }
 
-    function drawCornerTagRetro3D() {
-      const tag = "@monacastrosa";
-
-      ctx.save();
-
-      const padding = 35;
-      const x = CANVAS_SIZE / 2;
-      const y = 35;
-
-      const normalizedBg = getRetro3DBackground(bgColorInput.value);
-      const palette = getRetro3DPalette(normalizedBg);
-
-      const fontSize = 30;
-      const depth = 3; // grosor del volumen
-
-      ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-
-      for (let i = depth; i >= 1; i--) {
-        const t = i / depth;
-
-        let extrudeColor;
-        if (t > 2/3) {
-          extrudeColor = palette.shadowColor;
-        } else if (t > 1/3) {
-          extrudeColor = palette.frontColor;
-        } else {
-          extrudeColor = palette.shadowColor;
-        }
-
-        ctx.fillStyle = extrudeColor;
-        ctx.fillText(tag, x + i, y + i);
-      }
-
-      ctx.fillStyle = palette.frontColor;
-      ctx.fillText(tag, x, y);
-
-      ctx.restore();
-    }
-   
     function drawRetroCornerLogo() {
       if (!retroLogoImage.complete) return;
       if (modeSelect.value !== "retro3d") return;
@@ -1173,7 +1178,23 @@
 
     
 
-    /* ========= CONTRASTE ========= */
+/* ========= VISUAL UTILS ========= */
+
+    function addGrain(targetCtx, amount = 15) {
+      const imageData = targetCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      const data = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const noise = (Math.random() - 0.5) * amount;
+
+        data[i]     += noise;
+        data[i + 1] += noise;
+        data[i + 2] += noise;
+      }
+
+      targetCtx.putImageData(imageData, 0, 0);
+    }
+
     function getContrastColor(hex) {
       hex = hex.replace("#", "");
       const r = parseInt(hex.slice(0, 2), 16);
@@ -1190,7 +1211,6 @@
       const b = parseInt(hex.slice(4, 6), 16);
       return (r * 299 + g * 587 + b * 114) / 1000;
     }
-
 
     function getRetro3DBackground(hex) {
       const retroYellow = "#f4c400";
@@ -1239,7 +1259,6 @@
 
       return nearest;
     }
-
 
     function getRetro3DPalette(bg) {
       const retroYellow = "#f4c400";
@@ -1297,74 +1316,10 @@
       };
     }
 
-    /* ========= DESCARGAR ========= */
-    function downloadPNG() {
-      const link = document.createElement("a");
-      const mode = modeSelect.value;
-      link.download = "nachozorra_" + mode + "_" + Date.now() + ".png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    }
 
-    function generateMultiple() {
-      const raw = input.value;
-      const phrases = raw.split("@").map(t => t.trim()).filter(t => t.length > 0);
 
-      if (phrases.length <= 1) {
-        alert("Escribe varias frases separadas por @");
-        return;
-      }
 
-      const originalText = raw;
-      const originalBg = bgColorInput.value;
-      const mode = modeSelect.value;
 
-      const retroCycle = [
-        "#f6f1e8", // retroWhite
-        "#0d0f14", // retroBlack
-        "#f4c400", // retroYellow
-        "#3d5afe", // retroBlue
-        "#e53935"  // retroRed
-      ];
-
-      let index = 0;
-
-      function next() {
-        if (index >= phrases.length) {
-          input.value = originalText;
-          bgColorInput.value = originalBg;
-          draw();
-          alert("Listo: todas las imágenes fueron generadas.");
-          return;
-        }
-
-        const phrase = phrases[index];
-        input.value = phrase;
-
-        // Solo en retro3d: intercalar colores automáticamente
-        if (mode === "retro3d") {
-          bgColorInput.value = retroCycle[index % retroCycle.length];
-        }
-
-        draw();
-
-        setTimeout(() => {
-          const link = document.createElement("a");
-          const safeMode = modeSelect.value;
-          const colorSuffix = mode === "retro3d" ? `_c${(index % retroCycle.length) + 1}` : "";
-          link.download = `frase_${index + 1}_${safeMode}${colorSuffix}.png`;
-          link.href = canvas.toDataURL("image/png");
-          link.click();
-
-          index++;
-          next();
-        }, 250);
-      }
-
-      next();
-    }
-      
-  
   
   </script>
 
