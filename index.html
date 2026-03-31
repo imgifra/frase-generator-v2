@@ -855,6 +855,7 @@
 
     function normalizeRetroText(text) {
       return String(text || "")
+        .replace(/"/g, "") // ← ESTA LÍNEA
         .replace(/\s+/g, " ")
         .replace(/\s+([,.;:!?])/g, "$1")
         .trim();
