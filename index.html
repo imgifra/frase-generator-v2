@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 57 🐵",
+        "v 58 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -822,35 +822,36 @@
         frontColor,
         midColor,
         shadowColor,
-        fontSize
+        fontSize,
+        tracking = 0
       } = opts;
 
-      const depth = 9;
+      const depth = Math.max(4, Math.round(fontSize * 0.085));
 
       ctx.save();
       ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
-      ctx.textAlign = "center";
+      ctx.textAlign = "left";
       ctx.textBaseline = "middle";
+
+      const totalWidth = measureTrackedText(line, tracking);
+      const startX = x - totalWidth / 2;
 
       for (let i = depth; i >= 1; i--) {
         const t = i / depth;
 
         let extrudeColor;
-        if (t > 2/3) {
-          extrudeColor = shadowColor;   // capa profunda
-        } else if (t > 1/3) {
-          extrudeColor = midColor;      // capa media
+        if (t > 0.66) {
+          extrudeColor = shadowColor;
+        } else if (t > 0.33) {
+          extrudeColor = midColor;
         } else {
-          extrudeColor = shadowColor;   // capa cercana
+          extrudeColor = shadowColor;
         }
 
-        ctx.fillStyle = extrudeColor;
-        ctx.fillText(line, x + i, y + i);
+        drawTrackedText(line, startX + i, y + i, extrudeColor, tracking);
       }
 
-      // cara frontal
-      ctx.fillStyle = frontColor;
-      ctx.fillText(line, x, y);
+      drawTrackedText(line, startX, y, frontColor, tracking);
 
       ctx.restore();
     }
@@ -860,6 +861,30 @@
         .replace(/\s+/g, " ")
         .replace(/\s+([,.;:!?])/g, "$1")
         .trim();
+    }
+
+    function measureTrackedText(text, tracking = 0) {
+      let width = 0;
+
+      for (let i = 0; i < text.length; i++) {
+        width += ctx.measureText(text[i]).width;
+        if (i < text.length - 1) {
+          width += tracking;
+        }
+      }
+
+      return width;
+    }
+
+    function drawTrackedText(text, x, y, color, tracking = 0) {
+      ctx.fillStyle = color;
+
+      let cursorX = x;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        ctx.fillText(ch, cursorX, y);
+        cursorX += ctx.measureText(ch).width + tracking;
+      }
     }
 
     function findBestRetroLayout(text, config) {
@@ -937,9 +962,20 @@
         const remainingWords = words.length - startIndex;
         const remainingLines = lineCount - currentLines.length;
 
+        // Caso final: construir última línea
         if (remainingLines === 1) {
           const finalLine = words.slice(startIndex).join(" ");
           const lines = [...currentLines, finalLine];
+
+          // evitar última línea demasiado floja
+          if (lines.length > 1) {
+            const lastWords = finalLine.trim().split(/\s+/).filter(Boolean);
+            if (lastWords.length <= 1) return;
+          }
+
+          // evitar cortar bloque entre comillas de forma fea
+          if (hasBrokenQuoteBlock(lines)) return;
+
           if (isValidLineSet(lines, ctx, boxWidth)) {
             results.push(lines);
           }
@@ -957,10 +993,19 @@
         for (let take = minTake; take <= maxTake; take++) {
           if (startIndex + take > words.length) continue;
 
-          const line = words.slice(startIndex, startIndex + take).join(" ");
+          const lineWords = words.slice(startIndex, startIndex + take);
+          const line = lineWords.join(" ");
 
           // Evitar líneas flojas tipo "de", "la", "en", etc. demasiado solas
           if (isWeakStandaloneLine(line)) continue;
+
+          // Evitar líneas demasiado cortas en posiciones intermedias
+          if (currentLines.length > 0 && lineWords.length === 1) continue;
+
+          // Evitar partir mal frases entre comillas:
+          // si una línea abre comillas pero no las cierra, mejor no aceptarla
+          const quoteCount = (line.match(/"/g) || []).length;
+          if (quoteCount === 1 && !line.trim().endsWith('"')) continue;
 
           currentLines.push(line);
           recurse(startIndex + take, currentLines);
@@ -972,7 +1017,12 @@
 
       // fallback por si no salió nada
       if (!results.length) {
-        results.push(simpleEvenSplit(words, lineCount));
+        const fallback = simpleEvenSplit(words, lineCount);
+        if (!hasBrokenQuoteBlock(fallback)) {
+          results.push(fallback);
+        } else {
+          results.push(simpleEvenSplit(words, Math.max(1, lineCount - 1)));
+        }
       }
 
       // deduplicar
@@ -988,6 +1038,26 @@
       }
 
       return unique.slice(0, 40);
+    }
+
+    function hasBrokenQuoteBlock(lines) {
+      let insideQuote = false;
+
+      for (const line of lines) {
+        const quoteCount = (line.match(/"/g) || []).length;
+
+        if (quoteCount === 0) {
+          continue;
+        }
+
+        // Si hay una sola comilla en la línea, abre o cierra bloque
+        if (quoteCount % 2 === 1) {
+          insideQuote = !insideQuote;
+        }
+      }
+
+      // Si termina "abierto", significa que partimos raro el bloque
+      return insideQuote;
     }
 
     function isValidLineSet(lines, ctx, boxWidth) {
@@ -1050,39 +1120,43 @@
       const minW = Math.min(...baseWidths);
 
       const lineData = lines.map((text, i) => {
-        const width = baseWidths[i];
+        const rawWidth = baseWidths[i];
         const posRatio = lines.length === 1 ? 0.5 : i / (lines.length - 1);
 
-        // Preferir centro ligeramente más fuerte, extremos un poco más contenidos
-        const centerBias = 1 - Math.abs(posRatio - 0.5) * 2; // 1 en centro, 0 en extremos
-        const widthRatio = maxW === minW ? 0.5 : (width - minW) / (maxW - minW);
+        const centerBias = 1 - Math.abs(posRatio - 0.5) * 2;
+        const widthRatio = maxW === minW ? 0.5 : (rawWidth - minW) / (maxW - minW);
 
-        // escala muy controlada; nada agresivo
-        let scale = 0.95 + centerBias * 0.05 + widthRatio * 0.03;
+        // Mucho más suave que antes
+        let scale = 0.97 + centerBias * 0.025 + widthRatio * 0.015;
 
-        // si la última línea queda algo débil, le damos una ayudita sutil
-        if (i === lines.length - 1 && width < maxW * 0.72) {
-          scale += 0.02;
+        // pequeña ayuda al cierre si queda muy débil
+        if (i === lines.length - 1 && rawWidth < maxW * 0.68) {
+          scale += 0.012;
         }
 
-        scale = clamp(scale, 0.93, 1.05);
+        scale = clamp(scale, 0.96, 1.03);
 
         const fontSize = baseFontSize * scale;
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+
+        // primero calcula tracking con el ancho natural de esa línea
+        const naturalWidth = ctx.measureText(text).width;
+        const tracking = getRetroTracking(text, fontSize, naturalWidth, boxWidth);
+
+        // luego mide el ancho real con tracking
+        const trackedWidth = measureTrackedText(text, tracking);
 
         const metrics = ctx.measureText(text);
         const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.74;
         const descent = metrics.actualBoundingBoxDescent || fontSize * 0.22;
 
-        // tracking mínimo y dinámico
-        const tracking = getRetroTracking(text, fontSize, width, boxWidth);
-
-        // leading óptico: el 3D hace que todo se vea más apretado, así que compensamos un poco
-        const lineHeight = ascent + descent + fontSize * 0.08;
+        // leading óptico un poco más cómodo
+        const lineHeight = ascent + descent + fontSize * 0.09;
 
         return {
           text,
-          width,
+          width: trackedWidth,
+          naturalWidth,
           fontSize,
           ascent,
           descent,
@@ -1095,7 +1169,7 @@
       const widestAdjusted = Math.max(...lineData.map(l => l.width));
 
       if (totalHeight > boxHeight) return null;
-      if (widestAdjusted > boxWidth * 1.04) return null;
+      if (widestAdjusted > boxWidth * 1.03) return null;
 
       return {
         lines: lineData,
@@ -1121,7 +1195,7 @@
       if (fontSize > 100) tracking -= fontSize * 0.002;
 
       // clamp muy suave
-      tracking = clamp(tracking, -fontSize * 0.01, fontSize * 0.008);
+      tracking = clamp(tracking, -fontSize * 0.006, fontSize * 0.003);
 
       return tracking;
     }
@@ -1131,52 +1205,73 @@
       const lines = layout.lines;
       const widths = lines.map(l => l.width);
       const widest = Math.max(...widths);
-      const narrowest = Math.min(...widths);
       const totalHeight = layout.totalHeight;
 
       let score = 0;
 
-      // Queremos ocupar buen espacio sin reventar
       const widthUsage = widest / boxWidth;
       const heightUsage = totalHeight / boxHeight;
 
-      score += Math.abs(0.86 - widthUsage) * 140;
-      score += Math.abs(0.72 - heightUsage) * 120;
+      // ocupación general
+      score += Math.abs(0.84 - widthUsage) * 140;
+      score += Math.abs(0.72 - heightUsage) * 115;
 
-      // Penalizar diferencias muy bruscas entre líneas vecinas
+      // diferencias bruscas entre líneas vecinas
       for (let i = 1; i < widths.length; i++) {
         const diff = Math.abs(widths[i] - widths[i - 1]) / widest;
-        score += diff * 85;
+        score += diff * 90;
       }
 
-      // Penalizar última línea demasiado débil
-      if (widths.length > 1) {
-        const lastRatio = widths[widths.length - 1] / widest;
-        if (lastRatio < 0.45) score += 45;
-        if (lastRatio < 0.35) score += 90;
+      // castigo extra a silueta muy irregular respecto al promedio
+      const avgWidth = widths.reduce((a, b) => a + b, 0) / widths.length;
+      for (const w of widths) {
+        const variance = Math.abs(w - avgWidth) / widest;
+        score += variance * 45;
       }
 
-      // Penalizar primera línea demasiado débil
+      // primera y última línea débiles
       if (widths.length > 1) {
         const firstRatio = widths[0] / widest;
-        if (firstRatio < 0.28) score += 30;
+        const lastRatio = widths[widths.length - 1] / widest;
+
+        if (firstRatio < 0.32) score += 25;
+        if (firstRatio < 0.26) score += 50;
+
+        if (lastRatio < 0.48) score += 40;
+        if (lastRatio < 0.38) score += 85;
       }
 
-      // Favorecer silueta más orgánica: centro ligeramente más ancho
+      // castigar "panza" central exagerada
       if (widths.length >= 3) {
         const mid = Math.floor(widths.length / 2);
         const centerW = widths[mid];
-        const avgEdge = (widths[0] + widths[widths.length - 1]) / 2;
-        if (centerW < avgEdge) score += 25;
+        const avgNeighbors =
+          mid > 0 && mid < widths.length - 1
+            ? (widths[mid - 1] + widths[mid + 1]) / 2
+            : centerW;
+
+        const bulge = (centerW - avgNeighbors) / widest;
+        if (bulge > 0.12) score += bulge * 180;
+        if (bulge > 0.18) score += 40;
       }
 
-      // Penalizar cantidad de líneas muy extrema
+      // preferir centro orgánico, pero sin obligarlo demasiado
+      if (widths.length >= 3) {
+        const mid = Math.floor(widths.length / 2);
+        const centerW = widths[mid];
+        const edgeAvg = (widths[0] + widths[widths.length - 1]) / 2;
+
+        if (centerW < edgeAvg * 0.92) {
+          score += 20;
+        }
+      }
+
+      // evitar extremos raros de cantidad de líneas
       if (widths.length === 1) score += 60;
       if (widths.length > 7) score += 60;
 
       return score;
     }
-
 
 
 /* ========= OVERLAYS / BRANDING ========= */
