@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 75 🐵",
+        "v 76 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -903,9 +903,11 @@
       ]);
       const weakStart = new Set([
         "de", "del", "la", "las", "el", "los",
-        "en", "y", "o", "u", "a", "al"
+        "en", "y", "o", "u", "a", "al",
+        "por", "para", "con", "sin", "pero",
+        "le", "me", "te", "se", "lo", "que",
+        "si", "no", "ni", "su", "sus"
       ]);
-
       let penalty = 0;
       for (let i = 0; i < lines.length - 1; i++) {
         const currentWords = lines[i].trim().toLowerCase().split(/\s+/);
@@ -1024,7 +1026,7 @@
         width:  CANVAS_SIZE * 0.82,
         height: CANVAS_SIZE * 0.72,  // ← subido de 0.56
         x: CANVAS_SIZE / 2,
-        y: CANVAS_SIZE / 2 
+        y: CANVAS_SIZE / 0.48 
       };
 
       const bestLayout = findBestRetroLayout(rawText, {
@@ -1091,14 +1093,6 @@
 
       ctx.restore();
     }
-
-    
-
-
-
-    
-
-
 
 
 
