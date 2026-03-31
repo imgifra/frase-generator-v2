@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 81 🐵",
+        "v 82 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -831,9 +831,18 @@
           if (startIndex + take > words.length) continue;
           const lineWords = words.slice(startIndex, startIndex + take);
           const line = lineWords.join(" ");
+
           if (isWeakStandaloneLine(line)) continue;
-          // Solo bloquea líneas de 1 palabra en la primera posición
+
+          // Bloquea líneas de 1 palabra en la primera posición
           if (currentLines.length === 0 && lineWords.length === 1 && words.length > 2) continue;
+
+          // Bloquea líneas de 2 palabras cortas en posición intermedia (ej: "el burro", "le diga")
+          if (lineWords.length === 2 && currentLines.length > 0) {
+            const bothShort = lineWords.every(w => w.length <= 5);
+            if (bothShort) continue;
+          }
+
           currentLines.push(line);
           recurse(startIndex + take, currentLines);
           currentLines.pop();
@@ -854,6 +863,7 @@
         })
         .slice(0, 40);
     }
+    
 
     function buildRetroLineLayout(lines, config) {
       const { ctx, boxWidth, boxHeight, fontFamily, fontWeight, baseFontSize } = config;
@@ -949,7 +959,7 @@
       if (layout.lines.length === 5) score += 18;
 
       for (let i = 1; i < widths.length - 1; i++) {
-        if (widths[i] < widest * 0.45) score += 60;
+        if (widths[i] < widest * 0.50) score += 120;
       }
 
       // Penalizar primera línea dominante (la más ancha no debería ir arriba)
