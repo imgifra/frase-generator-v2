@@ -1127,7 +1127,7 @@
         const widthRatio = maxW === minW ? 0.5 : (rawWidth - minW) / (maxW - minW);
 
         // Mucho más suave que antes
-        let scale = 0.97 + centerBias * 0.025 + widthRatio * 0.015;
+        let scale = 0.965 + centerBias * 0.035 + widthRatio * 0.002;
 
         // pequeña ayuda al cierre si queda muy débil
         if (i === lines.length - 1 && rawWidth < maxW * 0.68) {
