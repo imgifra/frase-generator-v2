@@ -330,7 +330,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 59 🐵",
+        "v 60 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1119,53 +1119,40 @@
       const maxW = Math.max(...baseWidths);
       const minW = Math.min(...baseWidths);
 
-      const lineData = lines.map((text, i) => {
+      const tempLines = lines.map((text, i) => {
         const rawWidth = baseWidths[i];
         const posRatio = lines.length === 1 ? 0.5 : i / (lines.length - 1);
 
         const centerBias = 1 - Math.abs(posRatio - 0.5) * 2;
         const widthRatio = maxW === minW ? 0.5 : (rawWidth - minW) / (maxW - minW);
 
-        // base suave, pero con un poquito más de vida
         let scale = 0.965 + centerBias * 0.03 + widthRatio * 0.015;
 
-        // potenciar primera línea si es corta y el bloque tiene varias líneas
-        // potenciar primera línea SOLO si es realmente corta y no rompe equilibrio
+        // pequeña ayuda a primera línea si es claramente corta
         if (i === 0 && lines.length >= 3) {
           const firstLineRatio = rawWidth / maxW;
-
           if (firstLineRatio < 0.55) {
-            scale += 0.025; // suave
+            scale += 0.025;
           }
         }
 
-        // pequeña ayuda al cierre si queda débil
-        if (i === lines.length - 1) {
-          if (rawWidth < maxW * 0.68) {
-            scale += 0.015;
-          } else {
-            scale += 0.008;
-          }
+        // pequeña ayuda al cierre
+        if (i === lines.length - 1 && rawWidth < maxW * 0.68) {
+          scale += 0.012;
         }
 
-        scale = clamp(scale, 0.96, 1.06);
+        scale = clamp(scale, 0.96, 1.03);
 
         const fontSize = baseFontSize * scale;
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
 
-        // tracking según ancho natural
         const naturalWidth = ctx.measureText(text).width;
         const tracking = getRetroTracking(text, fontSize, naturalWidth, boxWidth);
-
-        // ancho real con tracking
         const trackedWidth = measureTrackedText(text, tracking);
 
         const metrics = ctx.measureText(text);
         const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.74;
         const descent = metrics.actualBoundingBoxDescent || fontSize * 0.22;
-
-        // leading óptico cómodo
-        const lineHeight = ascent + descent + fontSize * 0.09;
 
         return {
           text,
@@ -1174,8 +1161,24 @@
           fontSize,
           ascent,
           descent,
-          lineHeight,
           tracking
+        };
+      });
+
+      // lineHeight base común para que el bloque respire parejo
+      const avgFontSize =
+        tempLines.reduce((acc, line) => acc + line.fontSize, 0) / tempLines.length;
+
+      const baseLineHeight = avgFontSize * 0.86;
+
+      const lineData = tempLines.map(line => {
+        // mínima corrección por seguridad si una línea realmente necesita más espacio
+        const minSafeHeight = line.ascent + line.descent + line.fontSize * 0.03;
+        const lineHeight = Math.max(baseLineHeight, minSafeHeight);
+
+        return {
+          ...line,
+          lineHeight
         };
       });
 
@@ -1193,26 +1196,6 @@
       };
     }
 
-    function getRetroTracking(text, fontSize, lineWidth, boxWidth) {
-      const chars = text.replace(/\s+/g, "").length || 1;
-      const density = lineWidth / boxWidth;
-
-      let tracking = 0;
-
-      // líneas muy cortas y pesadas: un pelo más cerradas
-      if (density < 0.45) tracking -= fontSize * 0.006;
-
-      // líneas largas: neutras o apenas abiertas
-      if (density > 0.78) tracking += fontSize * 0.003;
-
-      // textos grandes: mejor no abrir demasiado
-      if (fontSize > 100) tracking -= fontSize * 0.002;
-
-      // clamp muy suave
-      tracking = clamp(tracking, -fontSize * 0.006, fontSize * 0.003);
-
-      return tracking;
-    }
 
     function scoreRetroLayout(layout, config) {
       const { boxWidth, boxHeight } = config;
