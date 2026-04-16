@@ -1,0 +1,14 @@
+en sheet cambiar estado a 
+lista_para_render
+
+levantar el sevidor
+npx http-server . -p 8080
+
+en otra terminal correr para renderizar
+node scripts/render-from-sheet.js
+
+luego subir con 
+node scripts/upload-from-sheet.js
+
+por ultimo publicar
+node scripts/publish-from-sheet.js

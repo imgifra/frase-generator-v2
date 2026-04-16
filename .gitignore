@@ -1,0 +1,7 @@
+.env 
+node_modules/ 
+output/ 
+[main 9819a1e] primer commitecho
+ 1 file changed, 13 insertions(+)
+ create mode 100644 service_account.json
+service_account.json 

@@ -250,13 +250,26 @@
 
     const canvas = document.getElementById("previewCanvas");
     const ctx = canvas.getContext("2d");
+
+    const assetsReady = {
+      watermark: false,
+      retroLogo: false
+    };
+
     // Marca de agua como imagen
     const watermarkImage = new Image();
-    watermarkImage.src = "assets/marca2.png?v=1"; // cache-buster
-    watermarkImage.onload = draw;
+    watermarkImage.src = "assets/marca2.png?v=1";
+    watermarkImage.onload = () => {
+      assetsReady.watermark = true;
+      draw();
+    };
+
     const retroLogoImage = new Image();
     retroLogoImage.src = "assets/marca3.png?v=1";
-    retroLogoImage.onload = draw;
+    retroLogoImage.onload = () => {
+      assetsReady.retroLogo = true;
+      draw();
+    };
 
 
     const input = document.getElementById("textInput");
@@ -269,8 +282,35 @@
     const BRAT_STRETCH_Y = 1.3; // alto de letras en modo brat
 
     // Eventos
-    window.addEventListener("load", draw);
-    document.fonts.ready.then(draw);
+    function applyUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+
+      const text = params.get("text");
+      const mode = params.get("mode");
+      const bg = params.get("bg");
+
+      if (text !== null) {
+        input.value = text;
+      }
+
+      if (mode !== null && ["normal", "brat", "retro3d"].includes(mode)) {
+        modeSelect.value = mode;
+      }
+
+      if (bg !== null) {
+        bgColorInput.value = bg;
+      }
+    }
+
+    // Eventos
+    window.addEventListener("load", () => {
+      applyUrlParams();
+      draw();
+    });
+
+    document.fonts.ready.then(() => {
+      draw();
+    });
 
     input.addEventListener("input", draw);
     bgColorInput.addEventListener("input", draw);
@@ -1316,7 +1356,13 @@
       };
     }
 
+    function getCanvasBase64() {
+      return canvas.toDataURL("image/png");
+    }
 
+    window.getCanvasBase64 = getCanvasBase64;
+    window.draw = draw;
+    window.assetsReady = assetsReady;
 
 
 
