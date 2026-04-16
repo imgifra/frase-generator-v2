@@ -4,8 +4,8 @@ const path = require("path");
 const { google } = require("googleapis");
 const { publishImagePost } = require("./instagram-lib");
 const { deleteImage } = require("./upload-lib");
+const { getSheetsAuth } = require("./google-auth");
 
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, "..", "service_account.json");
 const SHEET_ID = process.env.SHEET_ID || "1LgDI-wWKXAaLAQoJCJDA4k0Grtra-I4pWnUtz3Gj__M";
 const WORKSHEET_NAME = process.env.WORKSHEET_NAME || "Hoja 1";
 
@@ -18,11 +18,7 @@ function nowIsoLocal() {
 }
 
 async function getSheetsClient() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: SERVICE_ACCOUNT_FILE,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-  });
-
+  const auth = getSheetsAuth();
   const authClient = await auth.getClient();
 
   return google.sheets({

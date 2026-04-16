@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
+"scripts": {
+    "start": "node scripts/pipeline.js",
     "render": "node scripts/render.js",
     "render:sheet": "node scripts/render-from-sheet.js",
     "pipeline": "node scripts/pipeline.js"
-  },
+},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/imgifra/frase-generator-v2.git"

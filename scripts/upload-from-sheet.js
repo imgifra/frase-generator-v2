@@ -4,8 +4,8 @@ require("dotenv").config();
 const path = require("path");
 const { google } = require("googleapis");
 const { uploadImage } = require("./upload-lib");
+const { getSheetsAuth } = require("./google-auth");
 
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, "..", "service_account.json");
 const SHEET_ID = process.env.SHEET_ID || "1LgDI-wWKXAaLAQoJCJDA4k0Grtra-I4pWnUtz3Gj__M";
 const WORKSHEET_NAME = process.env.WORKSHEET_NAME || "Hoja 1";
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
@@ -19,11 +19,7 @@ function nowIsoLocal() {
 }
 
 async function getSheetsClient() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: SERVICE_ACCOUNT_FILE,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-  });
-
+  const auth = getSheetsAuth();
   const authClient = await auth.getClient();
 
   return google.sheets({
