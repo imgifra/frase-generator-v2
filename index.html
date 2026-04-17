@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 67 🐵",
+        "v 68 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1319,14 +1319,23 @@
       targetCtx.save();
 
       targetCtx.fillStyle = hexToRgba(patternColor, alpha);
-      targetCtx.font = "700 24px 'Noto Serif', serif";
+      targetCtx.font = "700 22px 'Noto Serif', serif";
       targetCtx.textAlign = "left";
       targetCtx.textBaseline = "middle";
 
       const text = "@monacastrosa";
-      const stepX = CANVAS_WIDTH / 5;   // 216 si el ancho es 1080
-      const stepY = 30;
-      const startX = -stepX / 2;        // -108
+
+      // 🔥 medir el ancho REAL del texto
+      const textWidth = targetCtx.measureText(text).width;
+
+      // controla el espacio entre palabras
+      const gap = 40; 
+      const stepX = textWidth + gap;
+
+      const stepY = 32;
+
+      // arranca medio texto antes para continuidad
+      const startX = -stepX / 2;
 
       for (let y = 20; y < CANVAS_HEIGHT + 60; y += stepY) {
         for (let x = startX; x < CANVAS_WIDTH + stepX; x += stepX) {
