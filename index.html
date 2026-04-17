@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 92 🐵",
+        "v 93 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1292,13 +1292,10 @@
     
 
 /* ========= VISUAL UTILS ========= */
-
     function drawRetroPattern(targetCtx, bg) {
       const palette = getRetro3DPalette(bg);
-
       let patternColor;
       let alpha;
-
       if (bg.toLowerCase() === "#0d0f14") {
         patternColor = palette.frontColor;
         alpha = 0.07;
@@ -1325,23 +1322,33 @@
       const text = "@monacastrosa";
       const amplitude = 10;
 
-      // Medir el ancho de cada carácter
       const charWidths = [];
       for (const ch of text) {
         charWidths.push(targetCtx.measureText(ch).width);
       }
       const totalTextWidth = charWidths.reduce((a, b) => a + b, 0);
 
-      // stepX: divisor exacto de CANVAS_WIDTH → tiling horizontal
+      // horizontal tileable
       const reps = Math.round(CANVAS_WIDTH / (totalTextWidth + 10));
       const stepX = CANVAS_WIDTH / reps;
       const scale = stepX / totalTextWidth;
 
-      // stepY: divisor exacto de CANVAS_HEIGHT → tiling vertical
+      // sampleStep proporcional al ancho medio de carácter
+      const avgCharWidth = (totalTextWidth / text.length) * scale;
+      const sampleStep = Math.max(2, avgCharWidth * 0.5);
+
+      // vertical tileable
       const rowsCount = Math.round(CANVAS_HEIGHT / 28);
       const stepY = CANVAS_HEIGHT / rowsCount;
 
-      for (let row = 0, baseY = 0; baseY < CANVAS_HEIGHT + stepY / 2; row++, baseY += stepY){
+      // arranca un paso antes para cubrir borde superior con cualquier amplitude
+      const startY = -(stepY + amplitude);
+
+      for (
+        let row = 0, baseY = startY;
+        baseY < CANVAS_HEIGHT + stepY + amplitude;
+        row++, baseY += stepY
+      ) {
         const rowShift = (row % 2) * (stepX / 2);
         const startX = -stepX / 2 + rowShift;
 
@@ -1357,9 +1364,9 @@
               baseY + Math.sin((2 * Math.PI * cx) / CANVAS_WIDTH) * amplitude;
 
             const waveYNext =
-              baseY + Math.sin((2 * Math.PI * (cx + 1)) / CANVAS_WIDTH) * amplitude;
+              baseY + Math.sin((2 * Math.PI * (cx + sampleStep)) / CANVAS_WIDTH) * amplitude;
 
-            const angle = Math.atan2(waveYNext - waveY, 1);
+            const angle = Math.atan2(waveYNext - waveY, sampleStep);
 
             targetCtx.save();
             targetCtx.translate(cx, waveY);
@@ -1375,7 +1382,6 @@
 
       targetCtx.restore();
     }
-
 
 
 
