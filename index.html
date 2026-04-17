@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 73 🐵",
+        "v 74 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1336,8 +1336,10 @@
 
       const startX = -stepX / 2;
 
-      for (let y = 20; y < CANVAS_HEIGHT + 60; y += stepY) {
-        for (let x = startX; x < CANVAS_WIDTH + stepX; x += stepX) {
+      for (let y = 20, row = 0; y < CANVAS_HEIGHT + 60; y += stepY, row++) {
+        const offset = row % 2 === 0 ? -stepX / 2 : 0;
+
+        for (let x = offset; x < CANVAS_WIDTH + stepX; x += stepX) {
           targetCtx.fillText(text, x, y);
         }
       }
