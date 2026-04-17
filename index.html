@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 91 🐵",
+        "v 92 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1341,7 +1341,7 @@
       const rowsCount = Math.round(CANVAS_HEIGHT / 28);
       const stepY = CANVAS_HEIGHT / rowsCount;
 
-      for (let row = 0, baseY = 0; baseY < CANVAS_HEIGHT; row++, baseY += stepY) {
+      for (let row = 0, baseY = 0; baseY < CANVAS_HEIGHT + stepY / 2; row++, baseY += stepY){
         const rowShift = (row % 2) * (stepX / 2);
         const startX = -stepX / 2 + rowShift;
 
