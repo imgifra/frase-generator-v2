@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 90 🐵",
+        "v 91 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1323,7 +1323,6 @@
       targetCtx.textBaseline = "middle";
 
       const text = "@monacastrosa";
-      const stepY = 28;
       const amplitude = 10;
 
       // Medir el ancho de cada carácter
@@ -1333,23 +1332,25 @@
       }
       const totalTextWidth = charWidths.reduce((a, b) => a + b, 0);
 
-      // ← CLAVE: stepX debe ser divisor exacto de CANVAS_WIDTH
-      // Encontramos cuántas repeticiones caben y ajustamos el gap
+      // stepX: divisor exacto de CANVAS_WIDTH → tiling horizontal
       const reps = Math.round(CANVAS_WIDTH / (totalTextWidth + 10));
-      const stepX = CANVAS_WIDTH / reps; // gap distribuido automáticamente
+      const stepX = CANVAS_WIDTH / reps;
+      const scale = stepX / totalTextWidth;
 
-      for (let row = 0, baseY = 20; baseY < CANVAS_HEIGHT + 60; row++, baseY += stepY) {
+      // stepY: divisor exacto de CANVAS_HEIGHT → tiling vertical
+      const rowsCount = Math.round(CANVAS_HEIGHT / 28);
+      const stepY = CANVAS_HEIGHT / rowsCount;
+
+      for (let row = 0, baseY = 0; baseY < CANVAS_HEIGHT; row++, baseY += stepY) {
         const rowShift = (row % 2) * (stepX / 2);
         const startX = -stepX / 2 + rowShift;
 
         for (let tileX = startX; tileX < CANVAS_WIDTH + stepX; tileX += stepX) {
-          // Escalar caracteres para que llenen exactamente stepX
-          const scale = stepX / totalTextWidth;
           let cursorX = tileX;
 
           for (let i = 0; i < text.length; i++) {
             const ch = text[i];
-            const cw = charWidths[i] * scale; // ← ancho escalado
+            const cw = charWidths[i] * scale;
             const cx = cursorX + cw / 2;
 
             const waveY =
@@ -1363,7 +1364,6 @@
             targetCtx.save();
             targetCtx.translate(cx, waveY);
             targetCtx.rotate(angle);
-            // Escalar horizontalmente el carácter
             targetCtx.scale(scale, 1);
             targetCtx.fillText(ch, -charWidths[i] / 2, 0);
             targetCtx.restore();
@@ -1375,8 +1375,6 @@
 
       targetCtx.restore();
     }
-
-
 
 
 
