@@ -371,7 +371,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 56 🐵",
+        "v 57 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1235,35 +1235,35 @@
       if (bg.toLowerCase() === "#0d0f14") {
         // fondo negro
         patternColor = palette.frontColor; // verde neón
-        alpha = 0.07;
+        alpha = 0.04;
       } else if (bg.toLowerCase() === "#f6f1e8") {
         // fondo crema
         patternColor = "#7f7a72";
-        alpha = 0.08;
+        alpha = 0.04;
       } else if (bg.toLowerCase() === "#f4c400") {
         // amarillo
         patternColor = "#8c2f2f";
-        alpha = 0.07;
+        alpha = 0.04;
       } else if (bg.toLowerCase() === "#3d5afe") {
         // azul
         patternColor = "#f4c400";
-        alpha = 0.06;
+        alpha = 0.04;
       } else {
         // rojo
         patternColor = "#f4c400";
-        alpha = 0.06;
+        alpha = 0.04;
       }
 
       targetCtx.save();
 
       targetCtx.fillStyle = hexToRgba(patternColor, alpha);
-      targetCtx.font = "600 30px Arial, sans-serif";
+      targetCtx.font = "700 22px 'Noto Serif', serif";
       targetCtx.textAlign = "left";
       targetCtx.textBaseline = "middle";
 
-      const text = "MONACASTROSA";
-      const stepX = 250;
-      const stepY = 56;
+      const text = "@monacastrosa";
+      const stepX = 300;
+      const stepY = 30;
 
       for (let y = 30; y < CANVAS_SIZE + 60; y += stepY) {
         for (let x = 20; x < CANVAS_SIZE + 200; x += stepX) {
