@@ -188,6 +188,7 @@ async function main() {
   console.log(`Renderizando carrusel ${selectedCarouselId} con ${groupRows.length} slides`);
 
   const lastPublishedBg = getLastPublishedBg(rows, headerMap);
+  const carouselBg = getNextColor(lastPublishedBg);
   let currentBg = getNextColor(lastPublishedBg);
 
   for (const item of groupRows) {
