@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 84 🐵",
+        "v 85 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1317,10 +1317,8 @@
       targetCtx.textBaseline = "middle";
 
       const text = "@monacastrosa";
-      const gap = 10;
       const stepY = 28;
       const amplitude = 6;
-      const cycles = 1;
 
       // Medir el ancho de cada carácter
       const charWidths = [];
@@ -1328,32 +1326,40 @@
         charWidths.push(targetCtx.measureText(ch).width);
       }
       const totalTextWidth = charWidths.reduce((a, b) => a + b, 0);
-      const stepX = totalTextWidth + gap;
+
+      // ← CLAVE: stepX debe ser divisor exacto de CANVAS_WIDTH
+      // Encontramos cuántas repeticiones caben y ajustamos el gap
+      const reps = Math.round(CANVAS_WIDTH / (totalTextWidth + 10));
+      const stepX = CANVAS_WIDTH / reps; // gap distribuido automáticamente
 
       for (let row = 0, baseY = 20; baseY < CANVAS_HEIGHT + 60; row++, baseY += stepY) {
         const rowShift = (row % 2) * (stepX / 2);
         const startX = -stepX / 2 + rowShift;
 
         for (let tileX = startX; tileX < CANVAS_WIDTH + stepX; tileX += stepX) {
+          // Escalar caracteres para que llenen exactamente stepX
+          const scale = stepX / totalTextWidth;
           let cursorX = tileX;
 
           for (let i = 0; i < text.length; i++) {
             const ch = text[i];
-            const cw = charWidths[i];
-            const cx = cursorX + cw / 2; // sin normalizar → tileable
+            const cw = charWidths[i] * scale; // ← ancho escalado
+            const cx = cursorX + cw / 2;
 
             const waveY =
-              baseY + Math.sin((2 * Math.PI * cycles * cx) / CANVAS_WIDTH) * amplitude;
+              baseY + Math.sin((2 * Math.PI * cx) / CANVAS_WIDTH) * amplitude;
 
             const waveYNext =
-              baseY + Math.sin((2 * Math.PI * cycles * (cx + 1)) / CANVAS_WIDTH) * amplitude;
+              baseY + Math.sin((2 * Math.PI * (cx + 1)) / CANVAS_WIDTH) * amplitude;
 
             const angle = Math.atan2(waveYNext - waveY, 1);
 
             targetCtx.save();
             targetCtx.translate(cx, waveY);
             targetCtx.rotate(angle);
-            targetCtx.fillText(ch, -cw / 2, 0);
+            // Escalar horizontalmente el carácter
+            targetCtx.scale(scale, 1);
+            targetCtx.fillText(ch, -charWidths[i] / 2, 0);
             targetCtx.restore();
 
             cursorX += cw;
@@ -1363,7 +1369,6 @@
 
       targetCtx.restore();
     }
-
 
 
 
