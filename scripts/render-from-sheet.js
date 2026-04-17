@@ -1,12 +1,19 @@
 require("dotenv").config();
 
-const path = require("path");
 const { google } = require("googleapis");
 const { renderPhrase } = require("./render-lib");
 const { getSheetsAuth } = require("./google-auth");
 
 const SHEET_ID = process.env.SHEET_ID || "1LgDI-wWKXAaLAQoJCJDA4k0Grtra-I4pWnUtz3Gj__M";
 const WORKSHEET_NAME = process.env.WORKSHEET_NAME || "Hoja 1";
+
+const BG_SEQUENCE = [
+  "#f4c400", // retroYellow
+  "#3d5afe", // retroBlue
+  "#e53935", // retroRed
+  "#f6f1e8", // retroWhite
+  "#0d0f14"  // retroBlack
+];
 
 function normalizeValue(value) {
   return (value || "").toString().trim();
@@ -47,20 +54,6 @@ function colToLetter(colNumber) {
   return letter;
 }
 
-async function updateCell(sheets, rowNumber, colNumber, value) {
-  const colLetter = colToLetter(colNumber);
-  const range = `${WORKSHEET_NAME}!${colLetter}${rowNumber}`;
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
-      values: [[value]]
-    }
-  });
-}
-
 async function updateCellsBatch(sheets, updates) {
   const data = updates.map((item) => ({
     range: `${WORKSHEET_NAME}!${colToLetter(item.col)}${item.row}`,
@@ -76,12 +69,41 @@ async function updateCellsBatch(sheets, updates) {
   });
 }
 
+function getNextBgFromLastPublished(rows, headerMap) {
+  let lastPublishedBg = "";
+
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const row = rows[i];
+    const estado = normalizeValue(row[headerMap["estado"]]);
+    const bg = normalizeValue(row[headerMap["bg"]]).toLowerCase();
+
+    if (estado === "publicado" && bg) {
+      lastPublishedBg = bg;
+      break;
+    }
+  }
+
+  if (!lastPublishedBg) {
+    return BG_SEQUENCE[0];
+  }
+
+  const currentIndex = BG_SEQUENCE.findIndex(
+    (color) => color.toLowerCase() === lastPublishedBg
+  );
+
+  if (currentIndex === -1) {
+    return BG_SEQUENCE[0];
+  }
+
+  return BG_SEQUENCE[(currentIndex + 1) % BG_SEQUENCE.length];
+}
+
 async function main() {
   const sheets = await getSheetsClient();
 
   const readRes = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: `${WORKSHEET_NAME}!A:T`
+    range: `${WORKSHEET_NAME}!A:Z`
   });
 
   const rows = readRes.data.values || [];
@@ -138,7 +160,7 @@ async function main() {
   const fraseOriginal = normalizeValue(row[headerMap["frase_original"]]);
   const fraseCorregida = normalizeValue(row[headerMap["frase_corregida"]]);
   const mode = normalizeValue(row[headerMap["modo"]]) || "normal";
-  const bg = normalizeValue(row[headerMap["bg"]]) || "#ffffff";
+  const bg = getNextBgFromLastPublished(rows, headerMap);
 
   const textToRender = fraseCorregida || fraseOriginal;
 
@@ -147,12 +169,18 @@ async function main() {
   }
 
   console.log(`Procesando fila ${rowNumber}: ${textToRender}`);
+  console.log(`Color asignado a fila ${rowNumber}: ${bg}`);
 
   await updateCellsBatch(sheets, [
     {
       row: rowNumber,
       col: headerMap["estado"] + 1,
       value: "procesando_render"
+    },
+    {
+      row: rowNumber,
+      col: headerMap["bg"] + 1,
+      value: bg
     },
     {
       row: rowNumber,
@@ -198,7 +226,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado"] + 1,
-        value: "error"
+        value: "error_render"
       },
       {
         row: rowNumber,
