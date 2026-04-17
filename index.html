@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 79 🐵",
+        "v 80 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1324,21 +1324,22 @@
       targetCtx.textBaseline = "middle";
 
       const text = "@monacastrosa";
-
       const textWidth = targetCtx.measureText(text).width;
       const gap = 10;
       const stepX = textWidth + gap;
       const stepY = 28;
-      const startX = -stepX / 2;
 
-      const amplitude = 1000;
-      const cycles = 1; // una onda completa en todo el ancho
+      const amplitude = 6;
+      const cycles = 1;
 
-      for (let baseY = 20; baseY < CANVAS_HEIGHT + 60; baseY += stepY) {
+      for (let row = 0, baseY = 20; baseY < CANVAS_HEIGHT + 60; row++, baseY += stepY) {
+        // corrimiento horizontal entre filas
+        const rowShift = (row % 2) * (stepX / 2);
+        const startX = -stepX / 2 + rowShift;
+
         for (let x = startX; x < CANVAS_WIDTH + stepX; x += stepX) {
           const normalizedX = ((x % CANVAS_WIDTH) + CANVAS_WIDTH) % CANVAS_WIDTH;
 
-          // la fila horizontal completa describe una onda
           const waveY =
             baseY +
             Math.sin((2 * Math.PI * cycles * normalizedX) / CANVAS_WIDTH) * amplitude;
