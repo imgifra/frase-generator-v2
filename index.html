@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 83 🐵",
+        "v 84 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1317,7 +1317,7 @@
       targetCtx.textBaseline = "middle";
 
       const text = "@monacastrosa";
-      const gap = 9;
+      const gap = 10;
       const stepY = 28;
       const amplitude = 6;
       const cycles = 1;
@@ -1340,21 +1340,15 @@
           for (let i = 0; i < text.length; i++) {
             const ch = text[i];
             const cw = charWidths[i];
-
-            // La onda se calcula en el centro del carácter
-            const cx = cursorX + cw / 2;
-            const normalizedX = ((cx % CANVAS_WIDTH) + CANVAS_WIDTH) % CANVAS_WIDTH;
+            const cx = cursorX + cw / 2; // sin normalizar → tileable
 
             const waveY =
-              baseY +
-              Math.sin((2 * Math.PI * cycles * normalizedX) / CANVAS_WIDTH) * amplitude;
+              baseY + Math.sin((2 * Math.PI * cycles * cx) / CANVAS_WIDTH) * amplitude;
 
-            // Opcional: rotar cada letra tangente a la onda
-            const dx = 0.01;
             const waveYNext =
-              baseY +
-              Math.sin((2 * Math.PI * cycles * (normalizedX + dx * CANVAS_WIDTH)) / CANVAS_WIDTH) * amplitude;
-            const angle = Math.atan2(waveYNext - waveY, dx * CANVAS_WIDTH);
+              baseY + Math.sin((2 * Math.PI * cycles * (cx + 1)) / CANVAS_WIDTH) * amplitude;
+
+            const angle = Math.atan2(waveYNext - waveY, 1);
 
             targetCtx.save();
             targetCtx.translate(cx, waveY);
