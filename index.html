@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 71 🐵",
+        "v 72 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1319,7 +1319,7 @@
       targetCtx.save();
 
       targetCtx.fillStyle = hexToRgba(patternColor, alpha);
-      targetCtx.font = "700 22px 'Noto Serif', serif";
+      targetCtx.font = "700 24px 'Noto Serif', serif";
       targetCtx.textAlign = "left";
       targetCtx.textBaseline = "middle";
 
@@ -1329,7 +1329,7 @@
       const textWidth = targetCtx.measureText(text).width;
 
       // compacto
-      const gap = 9;
+      const gap = 5;
       const stepX = textWidth + gap;
 
       const stepY = 28; // 🔥 importante: baja también el vertical
