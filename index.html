@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 66 🐵",
+        "v 67 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1324,11 +1324,12 @@
       targetCtx.textBaseline = "middle";
 
       const text = "@monacastrosa";
-      const stepX = 200;
+      const stepX = CANVAS_WIDTH / 5;   // 216 si el ancho es 1080
       const stepY = 30;
+      const startX = -stepX / 2;        // -108
 
       for (let y = 20; y < CANVAS_HEIGHT + 60; y += stepY) {
-        for (let x = 10; x < CANVAS_WIDTH + 200; x += stepX) {
+        for (let x = startX; x < CANVAS_WIDTH + stepX; x += stepX) {
           targetCtx.fillText(text, x, y);
         }
       }
