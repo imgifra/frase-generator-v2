@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v69 🐵",
+        "v 70 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1325,16 +1325,15 @@
 
       const text = "@monacastrosa";
 
-      // 🔥 medir el ancho REAL del texto
+      // 🔥 medir ancho real
       const textWidth = targetCtx.measureText(text).width;
 
-      // controla el espacio entre palabras
-      const gap = 10; 
+      // compacto
+      const gap = 10;
       const stepX = textWidth + gap;
 
-      const stepY = 32;
+      const stepY = 28; // 🔥 importante: baja también el vertical
 
-      // arranca medio texto antes para continuidad
       const startX = -stepX / 2;
 
       for (let y = 20; y < CANVAS_HEIGHT + 60; y += stepY) {
