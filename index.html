@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 85 🐵",
+        "v 86 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1002,55 +1002,61 @@
 
       const margin = 38;
       const len = 90;
-      const depthOffset = 5;
-
-      // color principal de la línea y "sombra/extrusión"
-      const front = hexToRgba(palette.frontColor, 1);
-      const shadow = hexToRgba(palette.shadowColor, 1);
+      const depth = 6;
 
       ctx.lineCap = "square";
       ctx.lineWidth = 7;
 
+      function drawCornerLines(paths, front, shadow) {
+        // capas de extrusión (igual que drawRetro3DLine)
+        for (let i = depth; i >= 1; i--) {
+          const t = i / depth;
 
-      function cornerTopRight(x, y) {
-        ctx.strokeStyle = shadow;
-        ctx.beginPath();
-        ctx.moveTo(x - len + depthOffset, y + depthOffset);
-        ctx.lineTo(x + depthOffset, y + depthOffset);
-        ctx.lineTo(x + depthOffset, y + len + depthOffset);
-        ctx.stroke();
+          let extrudeColor;
+          if (t > 0.7) {
+            extrudeColor = shadow;
+          } else if (t > 0.4) {
+            extrudeColor = front; // midColor = frontColor en tu paleta
+          } else {
+            extrudeColor = shadow;
+          }
 
+          ctx.strokeStyle = extrudeColor;
+          ctx.beginPath();
+          for (const [mx, my, lx, ly] of paths) {
+            ctx.moveTo(mx + i, my + i);
+            ctx.lineTo(lx + i, ly + i);
+          }
+          ctx.stroke();
+        }
+
+        // cara frontal
         ctx.strokeStyle = front;
         ctx.beginPath();
-        ctx.moveTo(x - len, y);
-        ctx.lineTo(x, y);
-        ctx.lineTo(x, y + len);
+        for (const [mx, my, lx, ly] of paths) {
+          ctx.moveTo(mx, my);
+          ctx.lineTo(lx, ly);
+        }
         ctx.stroke();
       }
 
-      function cornerBottomLeft(x, y) {
-        ctx.strokeStyle = shadow;
-        ctx.beginPath();
-        ctx.moveTo(x + depthOffset, y - len + depthOffset);
-        ctx.lineTo(x + depthOffset, y + depthOffset);
-        ctx.lineTo(x + len + depthOffset, y + depthOffset);
-        ctx.stroke();
+      const front  = palette.frontColor;
+      const shadow = palette.shadowColor;
 
-        ctx.strokeStyle = front;
-        ctx.beginPath();
-        ctx.moveTo(x, y - len);
-        ctx.lineTo(x, y);
-        ctx.lineTo(x + len, y);
-        ctx.stroke();
-      }
+      // esquina superior derecha: dos segmentos (horizontal + vertical)
+      drawCornerLines([
+        [CANVAS_WIDTH - margin - len, margin, CANVAS_WIDTH - margin, margin],       // horizontal
+        [CANVAS_WIDTH - margin,       margin, CANVAS_WIDTH - margin, margin + len]  // vertical
+      ], front, shadow);
 
-
-      cornerTopRight(CANVAS_WIDTH - margin, margin);
-      cornerBottomLeft(margin, CANVAS_HEIGHT - margin);
+      // esquina inferior izquierda
+      drawCornerLines([
+        [margin, CANVAS_HEIGHT - margin - len, margin, CANVAS_HEIGHT - margin],       // vertical
+        [margin, CANVAS_HEIGHT - margin,       margin + len, CANVAS_HEIGHT - margin]  // horizontal
+      ], front, shadow);
 
       ctx.restore();
     }
-      
 
 
 
