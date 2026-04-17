@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 77 🐵",
+        "v 78 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1331,15 +1331,19 @@
       const stepY = 28;
       const startX = -stepX / 2;
 
-      const amplitude = 1000;
-      const cycles = 1; // 1 onda completa en todo el ancho
+      const amplitude = 6;
+      const cycles = 1; // una onda completa en todo el ancho
 
-      for (let y = 20; y < CANVAS_HEIGHT + 60; y += stepY) {
+      for (let baseY = 20; baseY < CANVAS_HEIGHT + 60; baseY += stepY) {
         for (let x = startX; x < CANVAS_WIDTH + stepX; x += stepX) {
           const normalizedX = ((x % CANVAS_WIDTH) + CANVAS_WIDTH) % CANVAS_WIDTH;
-          const waveOffset = Math.sin((2 * Math.PI * cycles * normalizedX) / CANVAS_WIDTH) * amplitude;
 
-          targetCtx.fillText(text, x, y + waveOffset);
+          // la fila horizontal completa describe una onda
+          const waveY =
+            baseY +
+            Math.sin((2 * Math.PI * cycles * normalizedX) / CANVAS_WIDTH) * amplitude;
+
+          targetCtx.fillText(text, x, waveY);
         }
       }
 
