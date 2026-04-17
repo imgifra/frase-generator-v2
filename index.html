@@ -371,7 +371,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 59 🐵",
+        "v 60 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -1004,29 +1004,12 @@
       const depthOffset = 5;
 
       // color principal de la línea y "sombra/extrusión"
-      const front = hexToRgba(palette.frontColor, 0.32);
-      const shadow = hexToRgba(palette.shadowColor, 0.28);
+      const front = hexToRgba(palette.frontColor, 1);
+      const shadow = hexToRgba(palette.shadowColor, 1);
 
       ctx.lineCap = "square";
       ctx.lineWidth = 7;
 
-      function cornerTopLeft(x, y) {
-        // extrusión
-        ctx.strokeStyle = shadow;
-        ctx.beginPath();
-        ctx.moveTo(x + depthOffset, y + len + depthOffset);
-        ctx.lineTo(x + depthOffset, y + depthOffset);
-        ctx.lineTo(x + len + depthOffset, y + depthOffset);
-        ctx.stroke();
-
-        // frente
-        ctx.strokeStyle = front;
-        ctx.beginPath();
-        ctx.moveTo(x, y + len);
-        ctx.lineTo(x, y);
-        ctx.lineTo(x + len, y);
-        ctx.stroke();
-      }
 
       function cornerTopRight(x, y) {
         ctx.strokeStyle = shadow;
@@ -1060,26 +1043,9 @@
         ctx.stroke();
       }
 
-      function cornerBottomRight(x, y) {
-        ctx.strokeStyle = shadow;
-        ctx.beginPath();
-        ctx.moveTo(x - len + depthOffset, y + depthOffset);
-        ctx.lineTo(x + depthOffset, y + depthOffset);
-        ctx.lineTo(x + depthOffset, y - len + depthOffset);
-        ctx.stroke();
 
-        ctx.strokeStyle = front;
-        ctx.beginPath();
-        ctx.moveTo(x - len, y);
-        ctx.lineTo(x, y);
-        ctx.lineTo(x, y - len);
-        ctx.stroke();
-      }
-
-      cornerTopLeft(margin, margin);
       cornerTopRight(CANVAS_SIZE - margin, margin);
       cornerBottomLeft(margin, CANVAS_SIZE - margin);
-      cornerBottomRight(CANVAS_SIZE - margin, CANVAS_SIZE - margin);
 
       ctx.restore();
     }
