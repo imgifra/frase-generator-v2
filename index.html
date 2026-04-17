@@ -795,22 +795,27 @@
 
       const normalizedBg = getRetro3DBackground(bg);
 
+      // 1. fondo base en canvas principal
       ctx.fillStyle = normalizedBg;
       ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // guardar fondo en un canvas aparte
+      // 2. construir fondo en canvas aparte
       const bgCanvas = document.createElement("canvas");
       bgCanvas.width = CANVAS_SIZE;
       bgCanvas.height = CANVAS_SIZE;
       const bgCtx = bgCanvas.getContext("2d");
 
-      // copiar fondo
-      bgCtx.drawImage(canvas, 0, 0);
+      // fondo plano
+      bgCtx.fillStyle = normalizedBg;
+      bgCtx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // aplicar grain SOLO al fondo
-      addGrain(bgCtx, 20);
+      // patrón de marca
+      drawRetroPattern(bgCtx, normalizedBg);
 
-      // dibujar fondo texturizado de vuelta
+      // grain solo al fondo
+      addGrain(bgCtx, 14);
+
+      // dibujar fondo compuesto de vuelta
       ctx.drawImage(bgCanvas, 0, 0);
 
       const boxWidth = CANVAS_SIZE * 0.70;
@@ -1220,6 +1225,65 @@
 
 /* ========= VISUAL UTILS ========= */
 
+    function drawRetroPattern(targetCtx, bg) {
+      const palette = getRetro3DPalette(bg);
+
+      // Color del patrón según fondo
+      let patternColor;
+      let alpha;
+
+      if (bg.toLowerCase() === "#0d0f14") {
+        // fondo negro
+        patternColor = palette.frontColor; // verde neón
+        alpha = 0.07;
+      } else if (bg.toLowerCase() === "#f6f1e8") {
+        // fondo crema
+        patternColor = "#7f7a72";
+        alpha = 0.08;
+      } else if (bg.toLowerCase() === "#f4c400") {
+        // amarillo
+        patternColor = "#8c2f2f";
+        alpha = 0.07;
+      } else if (bg.toLowerCase() === "#3d5afe") {
+        // azul
+        patternColor = "#f4c400";
+        alpha = 0.06;
+      } else {
+        // rojo
+        patternColor = "#f4c400";
+        alpha = 0.06;
+      }
+
+      targetCtx.save();
+
+      targetCtx.fillStyle = hexToRgba(patternColor, alpha);
+      targetCtx.font = "600 30px Arial, sans-serif";
+      targetCtx.textAlign = "left";
+      targetCtx.textBaseline = "middle";
+
+      const text = "MONACASTROSA";
+      const stepX = 250;
+      const stepY = 56;
+
+      for (let y = 30; y < CANVAS_SIZE + 60; y += stepY) {
+        for (let x = 20; x < CANVAS_SIZE + 200; x += stepX) {
+          targetCtx.fillText(text, x, y);
+        }
+      }
+
+      targetCtx.restore();
+    }
+
+
+
+
+
+
+
+
+
+
+
     function addGrain(targetCtx, amount = 15) {
       const imageData = targetCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       const data = imageData.data;
@@ -1355,6 +1419,17 @@
         b: parseInt(hex.slice(4, 6), 16)
       };
     }
+
+    function hexToRgba(hex, alpha) {
+      const { r, g, b } = hexToRgb(hex);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+
+
+
+
+
 
     function getCanvasBase64() {
       return canvas.toDataURL("image/png");
