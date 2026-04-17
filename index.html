@@ -371,7 +371,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 58 🐵",
+        "v 59 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -818,6 +818,8 @@
       // dibujar fondo compuesto de vuelta
       ctx.drawImage(bgCanvas, 0, 0);
 
+      drawRetroLines();
+
       const boxWidth = CANVAS_SIZE * 0.70;
       const boxHeight = CANVAS_SIZE * 0.65;
 
@@ -988,7 +990,100 @@
 
       ctx.restore();
     }
-   
+
+
+
+    function drawRetroLines() {
+      ctx.save();
+
+      const normalizedBg = getRetro3DBackground(bgColorInput.value);
+      const palette = getRetro3DPalette(normalizedBg);
+
+      const margin = 38;
+      const len = 90;
+      const depthOffset = 5;
+
+      // color principal de la línea y "sombra/extrusión"
+      const front = hexToRgba(palette.frontColor, 0.32);
+      const shadow = hexToRgba(palette.shadowColor, 0.28);
+
+      ctx.lineCap = "square";
+      ctx.lineWidth = 7;
+
+      function cornerTopLeft(x, y) {
+        // extrusión
+        ctx.strokeStyle = shadow;
+        ctx.beginPath();
+        ctx.moveTo(x + depthOffset, y + len + depthOffset);
+        ctx.lineTo(x + depthOffset, y + depthOffset);
+        ctx.lineTo(x + len + depthOffset, y + depthOffset);
+        ctx.stroke();
+
+        // frente
+        ctx.strokeStyle = front;
+        ctx.beginPath();
+        ctx.moveTo(x, y + len);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + len, y);
+        ctx.stroke();
+      }
+
+      function cornerTopRight(x, y) {
+        ctx.strokeStyle = shadow;
+        ctx.beginPath();
+        ctx.moveTo(x - len + depthOffset, y + depthOffset);
+        ctx.lineTo(x + depthOffset, y + depthOffset);
+        ctx.lineTo(x + depthOffset, y + len + depthOffset);
+        ctx.stroke();
+
+        ctx.strokeStyle = front;
+        ctx.beginPath();
+        ctx.moveTo(x - len, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y + len);
+        ctx.stroke();
+      }
+
+      function cornerBottomLeft(x, y) {
+        ctx.strokeStyle = shadow;
+        ctx.beginPath();
+        ctx.moveTo(x + depthOffset, y - len + depthOffset);
+        ctx.lineTo(x + depthOffset, y + depthOffset);
+        ctx.lineTo(x + len + depthOffset, y + depthOffset);
+        ctx.stroke();
+
+        ctx.strokeStyle = front;
+        ctx.beginPath();
+        ctx.moveTo(x, y - len);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + len, y);
+        ctx.stroke();
+      }
+
+      function cornerBottomRight(x, y) {
+        ctx.strokeStyle = shadow;
+        ctx.beginPath();
+        ctx.moveTo(x - len + depthOffset, y + depthOffset);
+        ctx.lineTo(x + depthOffset, y + depthOffset);
+        ctx.lineTo(x + depthOffset, y - len + depthOffset);
+        ctx.stroke();
+
+        ctx.strokeStyle = front;
+        ctx.beginPath();
+        ctx.moveTo(x - len, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y - len);
+        ctx.stroke();
+      }
+
+      cornerTopLeft(margin, margin);
+      cornerTopRight(CANVAS_SIZE - margin, margin);
+      cornerBottomLeft(margin, CANVAS_SIZE - margin);
+      cornerBottomRight(CANVAS_SIZE - margin, CANVAS_SIZE - margin);
+
+      ctx.restore();
+    }
+      
 
 
 
@@ -1235,23 +1330,23 @@
       if (bg.toLowerCase() === "#0d0f14") {
         // fondo negro
         patternColor = palette.frontColor; // verde neón
-        alpha = 0.04;
+        alpha = 0.07;
       } else if (bg.toLowerCase() === "#f6f1e8") {
         // fondo crema
         patternColor = "#7f7a72";
-        alpha = 0.04;
+        alpha = 0.07;
       } else if (bg.toLowerCase() === "#f4c400") {
         // amarillo
         patternColor = "#8c2f2f";
-        alpha = 0.04;
+        alpha = 0.07;
       } else if (bg.toLowerCase() === "#3d5afe") {
         // azul
         patternColor = "#f4c400";
-        alpha = 0.04;
+        alpha = 0.07;
       } else {
         // rojo
         patternColor = "#f4c400";
-        alpha = 0.04;
+        alpha = 0.07;
       }
 
       targetCtx.save();
