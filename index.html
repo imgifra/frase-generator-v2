@@ -206,7 +206,7 @@
 <body>
 
   <main id="stage">
-    <canvas id="previewCanvas" width="1080" height="1080"></canvas>
+    <canvas id="previewCanvas" width="1080" height="1350"></canvas>
   </main>
 
   <!-- Controles -->
@@ -277,7 +277,8 @@
     const modeSelect = document.getElementById("modeSelect");
     const downloadBtn = document.getElementById("downloadBtn");
 
-    const CANVAS_SIZE = 1080;
+    const CANVAS_WIDTH = 1080;
+    const CANVAS_HEIGHT = 1350;
     const PADDING = window.innerWidth < 600 ? 14 : 20;
     const BRAT_STRETCH_Y = 1.3; // alto de letras en modo brat
 
@@ -335,7 +336,7 @@
       const mode = modeSelect.value;
 
       ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
       if (mode !== "retro3d") {
         drawWatermark();
@@ -371,9 +372,9 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 62 🐵",
-        CANVAS_SIZE / 2,
-        CANVAS_SIZE / 2
+        "v 63 🐵",
+        CANVAS_WIDTH / 2,
+        CANVAS_HEIGHT / 2
       );
       ctx.restore();
     }
@@ -459,11 +460,11 @@
       ctx.fillStyle = getContrastColor(bg);
 
       // === Caja igual al estilo BRAT ===
-      const boxWidth  = CANVAS_SIZE * 0.85;   // más angosto → más vertical
-      const boxHeight = CANVAS_SIZE * 0.90;   // ocupa casi todo el alto
+      const boxWidth  = CANVAS_WIDTH  * 0.85;   // más angosto → más vertical
+      const boxHeight = CANVAS_HEIGHT  * 0.90;   // ocupa casi todo el alto
 
-      const boxX = (CANVAS_SIZE - boxWidth) / 2;
-      const boxY = (CANVAS_SIZE - boxHeight) / 2;
+      const boxX = (CANVAS_WIDTH  - boxWidth) / 2;
+      const boxY = (CANVAS_HEIGHT  - boxHeight) / 2;
 
       // === Tamaños de letra más grandes ===
       const maxFont = 130;
@@ -506,8 +507,8 @@
       for (const line of lines) {
         ctx.strokeStyle = ctx.fillStyle;
         ctx.lineWidth = 2.35;
-        ctx.strokeText(line, CANVAS_SIZE / 2, y);
-        ctx.fillText(line, CANVAS_SIZE / 2, y);
+        ctx.strokeText(line, CANVAS_WIDTH  / 2, y);
+        ctx.fillText(line, CANVAS_WIDTH  / 2, y);
 
         y += lineHeight;
       }
@@ -604,10 +605,10 @@
       const textColor = getContrastColor(bg);
 
       // Caja interna tipo "textOverlay"
-      const boxWidth  = CANVAS_SIZE * 0.90; // más angosto para que no pida huecos gigantes
-      const boxHeight = CANVAS_SIZE * 0.98;
-      const boxX = (CANVAS_SIZE - boxWidth) / 2;
-      const boxY = (CANVAS_SIZE - boxHeight) / 2;
+      const boxWidth  = CANVAS_WIDTH  * 0.90; // más angosto para que no pida huecos gigantes
+      const boxHeight = CANVAS_HEIGHT  * 0.98;
+      const boxX = (CANVAS_WIDTH  - boxWidth) / 2;
+      const boxY = (CANVAS_HEIGHT  - boxHeight) / 2;
 
       const maxFont = 470;
       const minFont = 20;
@@ -797,17 +798,17 @@
 
       // 1. fondo base en canvas principal
       ctx.fillStyle = normalizedBg;
-      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
       // 2. construir fondo en canvas aparte
       const bgCanvas = document.createElement("canvas");
-      bgCanvas.width = CANVAS_SIZE;
-      bgCanvas.height = CANVAS_SIZE;
+      bgCanvas.width = CANVAS_WIDTH;
+      bgCanvas.height = CANVAS_HEIGHT;
       const bgCtx = bgCanvas.getContext("2d");
 
       // fondo plano
       bgCtx.fillStyle = normalizedBg;
-      bgCtx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
       // patrón de marca
       drawRetroPattern(bgCtx, normalizedBg);
@@ -820,11 +821,11 @@
 
       drawRetroLines();
 
-      const boxWidth = CANVAS_SIZE * 0.70;
-      const boxHeight = CANVAS_SIZE * 0.65;
+      const boxWidth = CANVAS_WIDTH * 0.70;
+      const boxHeight = CANVAS_HEIGHT * 0.65;
 
-      const centerX = CANVAS_SIZE / 2;
-      const centerY = CANVAS_SIZE / 2;
+      const centerX = CANVAS_WIDTH / 2;
+      const centerY = CANVAS_HEIGHT / 2;
 
       const maxFont = 130;
       const minFont = 38;
@@ -920,7 +921,7 @@
         fontSize
       } = opts;
 
-      const depth = 5;
+      const depth = 6;
 
       ctx.save();
       ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
@@ -956,7 +957,7 @@
       ctx.save();
 
       const padding = 35;
-      const x = CANVAS_SIZE / 2;
+      const x = CANVAS_WIDTH / 2;
       const y = 35;
 
       const normalizedBg = getRetro3DBackground(bgColorInput.value);
@@ -1044,8 +1045,8 @@
       }
 
 
-      cornerTopRight(CANVAS_SIZE - margin, margin);
-      cornerBottomLeft(margin, CANVAS_SIZE - margin);
+      cornerTopRight(CANVAS_WIDTH - margin, margin);
+      cornerBottomLeft(margin, CANVAS_HEIGHT - margin);
 
       ctx.restore();
     }
@@ -1057,12 +1058,12 @@
     function drawWatermark() {
       if (!watermarkImage.complete) return;
 
-      const size = CANVAS_SIZE * 1.1;
+      const size = CANVAS_WIDTH * 1.1;
 
       // Canvas temporal para componer sombra + imagen con alpha 1.0
       const temp = document.createElement("canvas");
-      temp.width = CANVAS_SIZE;
-      temp.height = CANVAS_SIZE;
+      temp.width = CANVAS_WIDTH;
+      temp.height = CANVAS_HEIGHT;
       const tctx = temp.getContext("2d");
 
       tctx.save();
@@ -1074,7 +1075,7 @@
       tctx.shadowOffsetY = 4;
 
       // === DIBUJAR PNG CENTRADO (con sombra) ===
-      tctx.translate(CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+      tctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
       tctx.drawImage(
         watermarkImage,
         -size / 2,
@@ -1099,12 +1100,12 @@
       // 1. Canvas temporal para fabricar el STROKE OUTSIDE
       // ==================================================
       const temp = document.createElement("canvas");
-      temp.width = CANVAS_SIZE;
-      temp.height = CANVAS_SIZE;
+      temp.width = CANVAS_WIDTH;
+      temp.height = CANVAS_HEIGHT;
       const tctx = temp.getContext("2d");
 
-      const x = CANVAS_SIZE / 2 + 220;  // << mueve todo a la derecha
-      const y = CANVAS_SIZE * 0.78 - 15;
+      const x = CANVAS_WIDTH / 2 + 220;  // << mueve todo a la derecha
+      const y = CANVAS_HEIGHT * 0.78 - 15;
 
       const fontSize = 90;
       const lineSpacing = fontSize * 0.9;
@@ -1135,8 +1136,8 @@
       // 2. Canvas final para sombra + relleno (como AE)
       // ==================================================
       const finalCanvas = document.createElement("canvas");
-      finalCanvas.width = CANVAS_SIZE;
-      finalCanvas.height = CANVAS_SIZE;
+      finalCanvas.width = CANVAS_WIDTH ;
+      finalCanvas.height = CANVAS_HEIGHT ;
       const fctx = finalCanvas.getContext("2d");
 
       // -------- Sombra estilo After Effects --------
@@ -1179,8 +1180,8 @@
 
       // === POSICIÓN ===
       const padding = 45;
-      const x = CANVAS_SIZE - padding;
-      const y = CANVAS_SIZE - padding;
+      const x = CANVAS_WIDTH - padding;
+      const y = CANVAS_HEIGHT  - padding;
 
       // === BLUR REAL SUAVE ===
       ctx.filter = "blur(2px)";
@@ -1231,8 +1232,8 @@
 
       // === POSICIÓN EXACTA ===
       const padding = 45;
-      const x = CANVAS_SIZE - padding;
-      const y = CANVAS_SIZE - padding;
+      const x = CANVAS_WIDTH - padding;
+      const y = CANVAS_HEIGHT - padding;
 
       // === SOMBRA DINÁMICA (igual que BRAT) ===
       const bg = bgColorInput.value;
@@ -1274,8 +1275,8 @@
       const size = 140;
       const paddingBottom = 25;
 
-      const x = CANVAS_SIZE / 2 - size / 2;
-      const y = CANVAS_SIZE - paddingBottom - size;
+      const x = CANVAS_WIDTH / 2 - size / 2;
+      const y = CANVAS_HEIGHT - paddingBottom - size;
 
       ctx.save();
       ctx.drawImage(retroLogoImage, x, y, size, size);
@@ -1326,8 +1327,8 @@
       const stepX = 200;
       const stepY = 30;
 
-      for (let y = 20; y < CANVAS_SIZE + 60; y += stepY) {
-        for (let x = 10; x < CANVAS_SIZE + 200; x += stepX) {
+      for (let y = 20; y < CANVAS_HEIGHT + 60; y += stepY) {
+        for (let x = 10; x < CANVAS_WIDTH + 200; x += stepX) {
           targetCtx.fillText(text, x, y);
         }
       }
@@ -1346,7 +1347,7 @@
 
 
     function addGrain(targetCtx, amount = 15) {
-      const imageData = targetCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      const imageData = targetCtx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       const data = imageData.data;
 
       for (let i = 0; i < data.length; i += 4) {
