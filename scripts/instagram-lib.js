@@ -171,6 +171,72 @@ async function publishImagePost({ imageUrl, caption }) {
   };
 }
 
+async function createCarouselItemContainer({ imageUrl }) {
+  ensureEnv();
+
+  return graphPost(`${IG_USER_ID}/media`, {
+    image_url: imageUrl,
+    is_carousel_item: true,
+    access_token: IG_ACCESS_TOKEN
+  });
+}
+
+async function createCarouselContainer({ children, caption }) {
+  ensureEnv();
+
+  return graphPost(`${IG_USER_ID}/media`, {
+    media_type: "CAROUSEL",
+    children: children.join(","),
+    caption: caption || "",
+    access_token: IG_ACCESS_TOKEN
+  });
+}
+
+async function publishCarouselPost({ imageUrls, caption }) {
+  if (!Array.isArray(imageUrls) || imageUrls.length < 2 || imageUrls.length > 10) {
+    throw new Error("Un carrusel debe tener entre 2 y 10 imágenes.");
+  }
+
+  const childIds = [];
+
+  for (const imageUrl of imageUrls) {
+    const child = await createCarouselItemContainer({ imageUrl });
+
+    if (!child.id) {
+      throw new Error(`No se recibió id del item del carrusel para ${imageUrl}`);
+    }
+
+    await waitUntilContainerReady(child.id);
+    childIds.push(child.id);
+  }
+
+  const parent = await createCarouselContainer({
+    children: childIds,
+    caption
+  });
+
+  if (!parent.id) {
+    throw new Error("No se recibió id del contenedor padre del carrusel.");
+  }
+
+  await waitUntilContainerReady(parent.id);
+
+  const published = await publishContainer({
+    creationId: parent.id
+  });
+
+  if (!published.id) {
+    throw new Error("No se recibió id del post del carrusel publicado.");
+  }
+
+  return {
+    creationId: parent.id,
+    mediaId: published.id,
+    childIds
+  };
+}
+
 module.exports = {
-  publishImagePost
+  publishImagePost,
+  publishCarouselPost
 };
