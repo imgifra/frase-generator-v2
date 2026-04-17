@@ -121,7 +121,8 @@ async function main() {
   const row = targetRow.values;
 
   const mediaUrl = normalizeValue(row[headerMap["media_url"]]);
-  const caption = normalizeValue(row[headerMap["caption"]]);
+  const rawCaption = row[headerMap["caption"]];
+  const caption = normalizeValue(rawCaption) || "";
   const cloudinaryPublicId = normalizeValue(row[headerMap["cloudinary_public_id"]]);
 
   if (!mediaUrl) {
@@ -129,6 +130,7 @@ async function main() {
   }
 
   console.log(`Publicando fila ${rowNumber}: ${mediaUrl}`);
+  console.log(`Caption fila ${rowNumber}:`, caption || "[sin caption]");
 
   await updateCellsBatch(sheets, [
     {
@@ -149,11 +151,9 @@ async function main() {
       caption
     });
 
-    let deletionResult = null;
-
     if (cloudinaryPublicId) {
       try {
-        deletionResult = await deleteImage(cloudinaryPublicId);
+        const deletionResult = await deleteImage(cloudinaryPublicId);
         console.log("Resultado borrado Cloudinary:", deletionResult);
       } catch (deleteErr) {
         console.warn(`No se pudo borrar el asset de Cloudinary: ${cloudinaryPublicId}`);

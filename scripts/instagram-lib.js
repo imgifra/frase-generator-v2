@@ -85,9 +85,15 @@ async function graphGet(path, query = {}) {
 async function createImageContainer({ imageUrl, caption }) {
   ensureEnv();
 
+  const safeCaption = typeof caption === "string" ? caption.trim() : "";
+
+  console.log("Creando contenedor de imagen...");
+  console.log("imageUrl:", imageUrl);
+  console.log("caption:", safeCaption || "[sin caption]");
+
   return graphPost(`${IG_USER_ID}/media`, {
     image_url: imageUrl,
-    caption: caption || "",
+    caption: safeCaption,
     access_token: IG_ACCESS_TOKEN
   });
 }
