@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 81 🐵",
+        "v 82 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1290,67 +1290,85 @@
     function drawRetroPattern(targetCtx, bg) {
       const palette = getRetro3DPalette(bg);
 
-      // Color del patrón según fondo
       let patternColor;
       let alpha;
 
       if (bg.toLowerCase() === "#0d0f14") {
-        // fondo negro
-        patternColor = palette.frontColor; // verde neón
+        patternColor = palette.frontColor;
         alpha = 0.07;
       } else if (bg.toLowerCase() === "#f6f1e8") {
-        // fondo crema
         patternColor = "#7f7a72";
         alpha = 0.1;
       } else if (bg.toLowerCase() === "#f4c400") {
-        // amarillo
         patternColor = "#8c2f2f";
         alpha = 0.08;
       } else if (bg.toLowerCase() === "#3d5afe") {
-        // azul
         patternColor = "#f4c400";
         alpha = 0.1;
       } else {
-        // rojo
         patternColor = "#f4c400";
         alpha = 0.1;
       }
 
       targetCtx.save();
-
       targetCtx.fillStyle = hexToRgba(patternColor, alpha);
       targetCtx.font = "700 26px 'Noto Serif', serif";
       targetCtx.textAlign = "left";
       targetCtx.textBaseline = "middle";
 
       const text = "@monacastrosa";
-      const textWidth = targetCtx.measureText(text).width;
       const gap = 10;
-      const stepX = textWidth + gap;
       const stepY = 28;
-
-      const amplitude = 100;
+      const amplitude = 6;
       const cycles = 1;
 
+      // Medir el ancho de cada carácter
+      const charWidths = [];
+      for (const ch of text) {
+        charWidths.push(targetCtx.measureText(ch).width);
+      }
+      const totalTextWidth = charWidths.reduce((a, b) => a + b, 0);
+      const stepX = totalTextWidth + gap;
+
       for (let row = 0, baseY = 20; baseY < CANVAS_HEIGHT + 60; row++, baseY += stepY) {
-        // corrimiento horizontal entre filas
         const rowShift = (row % 2) * (stepX / 2);
         const startX = -stepX / 2 + rowShift;
 
-        for (let x = startX; x < CANVAS_WIDTH + stepX; x += stepX) {
-          const normalizedX = ((x % CANVAS_WIDTH) + CANVAS_WIDTH) % CANVAS_WIDTH;
+        for (let tileX = startX; tileX < CANVAS_WIDTH + stepX; tileX += stepX) {
+          let cursorX = tileX;
 
-          const waveY =
-            baseY +
-            Math.sin((2 * Math.PI * cycles * normalizedX) / CANVAS_WIDTH) * amplitude;
+          for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            const cw = charWidths[i];
 
-          targetCtx.fillText(text, x, waveY);
+            // La onda se calcula en el centro del carácter
+            const cx = cursorX + cw / 2;
+            const normalizedX = ((cx % CANVAS_WIDTH) + CANVAS_WIDTH) % CANVAS_WIDTH;
+
+            const waveY =
+              baseY +
+              Math.sin((2 * Math.PI * cycles * normalizedX) / CANVAS_WIDTH) * amplitude;
+
+            // Opcional: rotar cada letra tangente a la onda
+            const dx = 0.01;
+            const waveYNext =
+              baseY +
+              Math.sin((2 * Math.PI * cycles * (normalizedX + dx * CANVAS_WIDTH)) / CANVAS_WIDTH) * amplitude;
+            const angle = Math.atan2(waveYNext - waveY, dx * CANVAS_WIDTH);
+
+            targetCtx.save();
+            targetCtx.translate(cx, waveY);
+            targetCtx.rotate(angle);
+            targetCtx.fillText(ch, -cw / 2, 0);
+            targetCtx.restore();
+
+            cursorX += cw;
+          }
         }
       }
 
       targetCtx.restore();
     }
-
 
 
 
