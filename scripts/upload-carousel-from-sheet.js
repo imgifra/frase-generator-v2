@@ -1,5 +1,5 @@
 require("dotenv").config();
-
+const path = require("path");
 const { google } = require("googleapis");
 const { uploadImage } = require("./upload-lib");
 const { getSheetsAuth } = require("./google-auth");
@@ -125,60 +125,63 @@ async function main() {
   for (const item of groupRows) {
     const rowNumber = item.rowNumber;
     const row = item.values;
-
+    
     const fileName = normalizeValue(row[headerMap["output_file"]]);
 
     if (!fileName) {
-      throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
+    throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
     }
 
+    const localPath = path.join(__dirname, "..", "output", fileName);
+
     console.log(`Subiendo slide ${item.order}: ${fileName}`);
+    console.log(`Ruta local: ${localPath}`);
 
     await updateCellsBatch(sheets, [
-      {
+    {
         row: rowNumber,
         col: headerMap["estado"] + 1,
         value: "subiendo_carousel"
-      }
+    }
     ]);
 
     try {
-      const result = await uploadImage(fileName);
+    const result = await uploadImage(localPath, fileName);
 
-      await updateCellsBatch(sheets, [
+    await updateCellsBatch(sheets, [
         {
-          row: rowNumber,
-          col: headerMap["media_url"] + 1,
-          value: result.secure_url
+        row: rowNumber,
+        col: headerMap["media_url"] + 1,
+        value: result.secureUrl
         },
         {
-          row: rowNumber,
-          col: headerMap["cloudinary_public_id"] + 1,
-          value: result.public_id
+        row: rowNumber,
+        col: headerMap["cloudinary_public_id"] + 1,
+        value: result.publicId
         },
         {
-          row: rowNumber,
-          col: headerMap["estado"] + 1,
-          value: "listo_para_publicar_carousel"
+        row: rowNumber,
+        col: headerMap["estado"] + 1,
+        value: "listo_para_publicar_carousel"
         }
-      ]);
+    ]);
 
-      console.log(`Fila ${rowNumber} subida OK`);
+    console.log(`Fila ${rowNumber} subida OK`);
     } catch (err) {
-      await updateCellsBatch(sheets, [
+    await updateCellsBatch(sheets, [
         {
-          row: rowNumber,
-          col: headerMap["estado"] + 1,
-          value: "error_upload"
+        row: rowNumber,
+        col: headerMap["estado"] + 1,
+        value: "error_upload"
         },
         {
-          row: rowNumber,
-          col: headerMap["error"] + 1,
-          value: err.message
+        row: rowNumber,
+        col: headerMap["error"] + 1,
+        value: err.message
         }
-      ]);
+    ]);
 
-      throw err;
+    throw err;
     }
   }
 
