@@ -372,7 +372,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 74 🐵",
+        "v 76 🐵",
         CANVAS_WIDTH / 2,
         CANVAS_HEIGHT / 2
       );
@@ -1325,22 +1325,21 @@
 
       const text = "@monacastrosa";
 
-      // 🔥 medir ancho real
       const textWidth = targetCtx.measureText(text).width;
-
-      // compacto
       const gap = 10;
       const stepX = textWidth + gap;
-
-      const stepY = 28; // 🔥 importante: baja también el vertical
-
+      const stepY = 28;
       const startX = -stepX / 2;
 
-      for (let y = 20, row = 0; y < CANVAS_HEIGHT + 60; y += stepY, row++) {
-        const offset = row % 2 === 0 ? -stepX / 2 : 0;
+      const amplitude = 6;
+      const cycles = 1; // 1 onda completa en todo el ancho
 
-        for (let x = offset; x < CANVAS_WIDTH + stepX; x += stepX) {
-          targetCtx.fillText(text, x, y);
+      for (let y = 20; y < CANVAS_HEIGHT + 60; y += stepY) {
+        for (let x = startX; x < CANVAS_WIDTH + stepX; x += stepX) {
+          const normalizedX = ((x % CANVAS_WIDTH) + CANVAS_WIDTH) % CANVAS_WIDTH;
+          const waveOffset = Math.sin((2 * Math.PI * cycles * normalizedX) / CANVAS_WIDTH) * amplitude;
+
+          targetCtx.fillText(text, x, y + waveOffset);
         }
       }
 
