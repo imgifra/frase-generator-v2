@@ -371,7 +371,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        "v 61 🐵",
+        "v 62 🐵",
         CANVAS_SIZE / 2,
         CANVAS_SIZE / 2
       );
@@ -933,7 +933,7 @@
         let extrudeColor;
         if (t > 0.7) {
           extrudeColor = shadowColor;   // capa profunda
-        } else if (t > 0.4) {
+        } else if (t > 0.3) {
           extrudeColor = midColor;      // capa media
         } else {
           extrudeColor = shadowColor;   // capa cercana
@@ -1326,8 +1326,8 @@
       const stepX = 200;
       const stepY = 30;
 
-      for (let y = 30; y < CANVAS_SIZE + 60; y += stepY) {
-        for (let x = 20; x < CANVAS_SIZE + 200; x += stepX) {
+      for (let y = 20; y < CANVAS_SIZE + 60; y += stepY) {
+        for (let x = 10; x < CANVAS_SIZE + 200; x += stepX) {
           targetCtx.fillText(text, x, y);
         }
       }
