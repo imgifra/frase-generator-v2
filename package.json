@@ -6,7 +6,7 @@
 "scripts": {
     "start": "node scripts/pipeline.js",
     "render": "node scripts/render.js",
-    "render:sheet": "node scripts/render-from-sheet.js",
+    "render:sheet": "node scripts/render-single-from-sheet.js",
     "pipeline": "node scripts/pipeline.js"
 },
   "repository": {

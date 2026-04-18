@@ -1,3 +1,4 @@
+const fs = require("fs");
 require("dotenv").config();
 const path = require("path");
 const { google } = require("googleapis");
@@ -77,7 +78,6 @@ async function main() {
 
   let selectedCarouselId = "";
 
-  // 🔎 Buscar un carrusel listo para upload
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
@@ -125,11 +125,11 @@ async function main() {
   for (const item of groupRows) {
     const rowNumber = item.rowNumber;
     const row = item.values;
-    
+
     const fileName = normalizeValue(row[headerMap["output_file"]]);
 
     if (!fileName) {
-    throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
+      throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
     }
 
     const localPath = path.join(__dirname, "..", "output", fileName);
@@ -138,50 +138,60 @@ async function main() {
     console.log(`Ruta local: ${localPath}`);
 
     await updateCellsBatch(sheets, [
-    {
+      {
         row: rowNumber,
         col: headerMap["estado"] + 1,
         value: "subiendo_carousel"
-    }
+      }
     ]);
 
     try {
-    const result = await uploadImage(localPath, fileName);
+      const result = await uploadImage(localPath, fileName);
 
-    await updateCellsBatch(sheets, [
-        {
-        row: rowNumber,
-        col: headerMap["media_url"] + 1,
-        value: result.secureUrl
-        },
-        {
-        row: rowNumber,
-        col: headerMap["cloudinary_public_id"] + 1,
-        value: result.publicId
-        },
-        {
-        row: rowNumber,
-        col: headerMap["estado"] + 1,
-        value: "listo_para_publicar_carousel"
+      if (fs.existsSync(localPath)) {
+        try {
+          fs.unlinkSync(localPath);
+          console.log(`Archivo local eliminado: ${localPath}`);
+        } catch (deleteErr) {
+          console.warn(`No se pudo eliminar el archivo local: ${localPath}`);
+          console.warn(deleteErr.message || deleteErr);
         }
-    ]);
+      }
 
-    console.log(`Fila ${rowNumber} subida OK`);
+      await updateCellsBatch(sheets, [
+        {
+          row: rowNumber,
+          col: headerMap["media_url"] + 1,
+          value: result.secureUrl
+        },
+        {
+          row: rowNumber,
+          col: headerMap["cloudinary_public_id"] + 1,
+          value: result.publicId
+        },
+        {
+          row: rowNumber,
+          col: headerMap["estado"] + 1,
+          value: "lista_para_publicar_carousel"
+        }
+      ]);
+
+      console.log(`Fila ${rowNumber} subida OK`);
     } catch (err) {
-    await updateCellsBatch(sheets, [
+      await updateCellsBatch(sheets, [
         {
-        row: rowNumber,
-        col: headerMap["estado"] + 1,
-        value: "error_upload"
+          row: rowNumber,
+          col: headerMap["estado"] + 1,
+          value: "error_upload"
         },
         {
-        row: rowNumber,
-        col: headerMap["error"] + 1,
-        value: err.message
+          row: rowNumber,
+          col: headerMap["error"] + 1,
+          value: err.message
         }
-    ]);
+      ]);
 
-    throw err;
+      throw err;
     }
   }
 

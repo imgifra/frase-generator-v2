@@ -127,3 +127,18 @@ mejor frase disponible hoy
 [ ] texto + audio
 16. Multicuenta
 [ ] varias páginas con estilos distintos
+
+Claro, solo lista:
+
+1. Integrar carrusel al pipeline automático
+2. Agregar columnas de programación (`tipo_fecha`, `fecha_objetivo`, `prioridad`)
+3. Filtrar publicaciones por momento adecuado (lógica de timing)
+4. Crear script de métricas (`likes`, `comments`, `saves`, `reach`)
+5. Guardar métricas en el Sheet
+6. Ranking automático de frases según rendimiento
+7. Ajuste automático de captions basado en métricas
+8. Variación visual (layouts, tipografías, estilos)
+9. Manejo de múltiples cuentas desde el mismo backend
+10. Logs centralizados del pipeline (historial de ejecuciones)
+11. Manejo de errores más robusto (reintentos, alerts)
+12. Panel simple de control (estado general del sistema)

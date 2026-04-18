@@ -47,7 +47,7 @@ function runStep(stepName, scriptPath) {
 async function runPipeline() {
   console.log(`\n[${now()}] 🚀 PIPELINE AUTOMÁTICO INICIADO\n`);
 
-  const renderStatus = runStep("RENDER", "scripts/render-from-sheet.js");
+  const renderStatus = runStep("RENDER", "scripts/render-single-from-sheet.js.js");
 
   if (renderStatus === 10) {
     console.log(`[${now()}] ✅ No quedan más filas pendientes.`);
@@ -61,7 +61,7 @@ async function runPipeline() {
     return { ok: false, processed: false, failedStep: "render" };
   }
 
-  const uploadStatus = runStep("UPLOAD", "scripts/upload-from-sheet.js");
+  const uploadStatus = runStep("UPLOAD", "scripts/upload-single-from-sheet.js");
 
   if (uploadStatus !== 0) {
     console.error(`[${now()}] ❌ Error en upload. Código: ${uploadStatus}`);
@@ -69,7 +69,7 @@ async function runPipeline() {
     return { ok: false, processed: false, failedStep: "upload" };
   }
 
-  const publishStatus = runStep("PUBLISH", "scripts/publish-from-sheet.js");
+  const publishStatus = runStep("PUBLISH", "scripts/publish-single-from-sheet.js");
 
   if (publishStatus !== 0) {
     console.error(`[${now()}] ❌ Error en publish. Código: ${publishStatus}`);

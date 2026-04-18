@@ -240,6 +240,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Error en render-from-sheet:", err);
+  console.error("Error en render-single-from-sheet.js:", err);
   process.exit(1);
 });
