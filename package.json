@@ -3,12 +3,17 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-    "start": "node scripts/pipeline.js",
-    "render": "node scripts/render.js",
-    "render:sheet": "node scripts/render-single-from-sheet.js",
-    "pipeline": "node scripts/pipeline.js"
-},
+  "scripts": {
+    "start": "node scripts/orchestration/pipeline.js",
+    "pipeline": "node scripts/orchestration/pipeline.js",
+    "render": "node scripts/dev/render-preview.js",
+    "render:sheet": "node scripts/jobs/render-single-from-sheet.js",
+    "render:carousel": "node scripts/jobs/render-carousel-from-sheet.js",
+    "upload:sheet": "node scripts/jobs/upload-single-from-sheet.js",
+    "upload:carousel": "node scripts/jobs/upload-carousel-from-sheet.js",
+    "publish:sheet": "node scripts/jobs/publish-single-from-sheet.js",
+    "publish:carousel": "node scripts/jobs/publish-carousel-from-sheet.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/imgifra/frase-generator-v2.git"

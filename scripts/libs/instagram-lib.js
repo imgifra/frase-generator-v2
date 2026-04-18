@@ -184,10 +184,12 @@ async function createCarouselItemContainer({ imageUrl }) {
 async function createCarouselContainer({ children, caption }) {
   ensureEnv();
 
+  const safeCaption = typeof caption === "string" ? caption.trim() : "";
+
   return graphPost(`${IG_USER_ID}/media`, {
     media_type: "CAROUSEL",
     children: children.join(","),
-    caption: caption || "",
+    caption: safeCaption,
     access_token: IG_ACCESS_TOKEN
   });
 }

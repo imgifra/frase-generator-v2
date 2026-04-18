@@ -2,11 +2,19 @@ const fs = require("fs");
 require("dotenv").config();
 const path = require("path");
 const { google } = require("googleapis");
-const { uploadImage } = require("./upload-lib");
-const { getSheetsAuth } = require("./google-auth");
+const { uploadImage } = require("../libs/upload-lib");
+const { getSheetsAuth } = require("../auth/google-auth");
 
 const SHEET_ID = process.env.SHEET_ID;
-const WORKSHEET_NAME = process.env.WORKSHEET_NAME || "Hoja 1";
+const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
+
+if (!SHEET_ID) {
+  throw new Error("Falta SHEET_ID en el .env");
+}
+
+if (!WORKSHEET_NAME) {
+  throw new Error("Falta WORKSHEET_NAME en el .env");
+}
 
 function normalizeValue(value) {
   return (value || "").toString().trim();
@@ -76,6 +84,23 @@ async function main() {
   const headers = rows[0];
   const headerMap = buildHeaderMap(headers);
 
+  const requiredHeaders = [
+    "estado",
+    "post_tipo",
+    "carousel_id",
+    "carousel_order",
+    "output_file",
+    "media_url",
+    "cloudinary_public_id",
+    "error"
+  ];
+
+  for (const key of requiredHeaders) {
+    if (!(key in headerMap)) {
+      throw new Error(`Falta la columna requerida: ${key}`);
+    }
+  }
+
   let selectedCarouselId = "";
 
   for (let i = 1; i < rows.length; i++) {
@@ -115,7 +140,7 @@ async function main() {
       groupRows.push({
         rowNumber: i + 1,
         values: row,
-        order: Number(row[headerMap["carousel_order"]] || 0)
+        order: Number(normalizeValue(row[headerMap["carousel_order"]]) || "0")
       });
     }
   }
@@ -132,7 +157,7 @@ async function main() {
       throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
     }
 
-    const localPath = path.join(__dirname, "..", "output", fileName);
+    const localPath = path.join(__dirname, "..", "..", "output", fileName);
 
     console.log(`Subiendo slide ${item.order}: ${fileName}`);
     console.log(`Ruta local: ${localPath}`);
@@ -142,6 +167,11 @@ async function main() {
         row: rowNumber,
         col: headerMap["estado"] + 1,
         value: "subiendo_carousel"
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error"] + 1,
+        value: ""
       }
     ]);
 
@@ -173,6 +203,11 @@ async function main() {
           row: rowNumber,
           col: headerMap["estado"] + 1,
           value: "lista_para_publicar_carousel"
+        },
+        {
+          row: rowNumber,
+          col: headerMap["error"] + 1,
+          value: ""
         }
       ]);
 
@@ -187,7 +222,7 @@ async function main() {
         {
           row: rowNumber,
           col: headerMap["error"] + 1,
-          value: err.message
+          value: err.message || String(err)
         }
       ]);
 
@@ -199,6 +234,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Error:", err);
+  console.error("Error en upload-carousel-from-sheet:", err);
   process.exit(1);
 });

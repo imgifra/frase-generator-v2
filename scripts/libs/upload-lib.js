@@ -3,10 +3,26 @@ require("dotenv").config();
 const path = require("path");
 const { v2: cloudinary } = require("cloudinary");
 
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
+
+if (!CLOUDINARY_CLOUD_NAME) {
+  throw new Error("Falta CLOUDINARY_CLOUD_NAME en el .env");
+}
+
+if (!CLOUDINARY_API_KEY) {
+  throw new Error("Falta CLOUDINARY_API_KEY en el .env");
+}
+
+if (!CLOUDINARY_API_SECRET) {
+  throw new Error("Falta CLOUDINARY_API_SECRET en el .env");
+}
+
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET
 });
 
 function buildPublicId(fileName) {

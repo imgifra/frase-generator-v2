@@ -6,7 +6,7 @@ const { chromium } = require("playwright");
 const {
   ensureGeneratorServer,
   stopGeneratorServer
-} = require("./local-generator-server");
+} = require("../dev/local-generator-server");
 
 const GENERATOR_URL = (
   process.env.GENERATOR_URL || "http://127.0.0.1:8080"
@@ -50,7 +50,7 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
     throw new Error("No se recibió texto para renderizar.");
   }
 
-  const outputDir = path.join(__dirname, "..", "output");
+  const outputDir = path.join(__dirname, "..", "..", "output");
 
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -82,9 +82,7 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
       });
     } catch (error) {
       if (isConnectionRefused(error)) {
-        throw new Error(
-          `No se pudo conectar al generador en ${baseUrl}.`
-        );
+        throw new Error(`No se pudo conectar al generador en ${baseUrl}.`);
       }
       throw error;
     }

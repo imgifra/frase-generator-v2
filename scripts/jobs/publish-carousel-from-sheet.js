@@ -1,11 +1,19 @@
 require("dotenv").config();
 
 const { google } = require("googleapis");
-const { publishCarouselPost } = require("./instagram-lib");
-const { getSheetsAuth } = require("./google-auth");
+const { publishCarouselPost } = require("../libs/instagram-lib");
+const { getSheetsAuth } = require("../auth/google-auth");
 
-const SHEET_ID = process.env.SHEET_ID || "1LgDI-wWKXAaLAQoJCJDA4k0Grtra-I4pWnUtz3Gj__M";
-const WORKSHEET_NAME = process.env.WORKSHEET_NAME || "Hoja 1";
+const SHEET_ID = process.env.SHEET_ID;
+const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
+
+if (!SHEET_ID) {
+  throw new Error("Falta SHEET_ID en el .env");
+}
+
+if (!WORKSHEET_NAME) {
+  throw new Error("Falta WORKSHEET_NAME en el .env");
+}
 
 function normalizeValue(value) {
   return (value || "").toString().trim();
@@ -104,7 +112,11 @@ async function main() {
     const estado = normalizeValue(row[headerMap["estado"]]);
     const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
 
-    if (postTipo === "carousel" && estado === "lista_para_publicar_carousel" && carouselId) {
+    if (
+      postTipo === "carousel" &&
+      estado === "lista_para_publicar_carousel" &&
+      carouselId
+    ) {
       selectedCarouselId = carouselId;
       break;
     }
@@ -139,7 +151,9 @@ async function main() {
   groupRows.sort((a, b) => a.order - b.order);
 
   if (groupRows.length < 2 || groupRows.length > 10) {
-    throw new Error(`El carrusel ${selectedCarouselId} tiene ${groupRows.length} slides. Debe tener entre 2 y 10.`);
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene ${groupRows.length} slides. Debe tener entre 2 y 10.`
+    );
   }
 
   const imageUrls = [];

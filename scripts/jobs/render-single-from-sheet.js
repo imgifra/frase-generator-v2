@@ -1,11 +1,19 @@
 require("dotenv").config();
 
 const { google } = require("googleapis");
-const { renderPhrase } = require("./render-lib");
-const { getSheetsAuth } = require("./google-auth");
+const { renderPhrase } = require("../libs/render-lib");
+const { getSheetsAuth } = require("../auth/google-auth");
 
-const SHEET_ID = process.env.SHEET_ID || "1LgDI-wWKXAaLAQoJCJDA4k0Grtra-I4pWnUtz3Gj__M";
-const WORKSHEET_NAME = process.env.WORKSHEET_NAME || "Hoja 1";
+const SHEET_ID = process.env.SHEET_ID;
+const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
+
+if (!SHEET_ID) {
+  throw new Error("Falta SHEET_ID en el .env");
+}
+
+if (!WORKSHEET_NAME) {
+  throw new Error("Falta WORKSHEET_NAME en el .env");
+}
 
 const BG_SEQUENCE = [
   "#f4c400", // retroYellow
@@ -46,7 +54,7 @@ function colToLetter(colNumber) {
   let letter = "";
 
   while (temp > 0) {
-    let rem = (temp - 1) % 26;
+    const rem = (temp - 1) % 26;
     letter = String.fromCharCode(65 + rem) + letter;
     temp = Math.floor((temp - rem - 1) / 26);
   }
@@ -114,7 +122,6 @@ async function main() {
   }
 
   const headers = rows[0];
-  console.log("HEADERS DETECTADOS:", headers);
   const headerMap = buildHeaderMap(headers);
 
   const requiredHeaders = [
@@ -161,7 +168,6 @@ async function main() {
   const fraseCorregida = normalizeValue(row[headerMap["frase_corregida"]]);
   const mode = normalizeValue(row[headerMap["modo"]]) || "normal";
   const bg = getNextBgFromLastPublished(rows, headerMap);
-
   const textToRender = fraseCorregida || fraseOriginal;
 
   if (!textToRender) {
@@ -240,6 +246,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Error en render-single-from-sheet.js:", err);
+  console.error("Error en render-single-from-sheet:", err);
   process.exit(1);
 });

@@ -1,22 +1,13 @@
 const http = require("http");
 const path = require("path");
-const fs = require("fs");
 const serveStatic = require("serve-static");
 const finalhandler = require("finalhandler");
 
 const DEFAULT_PORT = Number(process.env.GENERATOR_PORT || 8080);
-const ROOT_DIR = path.join(__dirname, "..");
+const ROOT_DIR = path.join(__dirname, "..", "..");
 
 let serverInstance = null;
 let ownedByThisProcess = false;
-
-function fileExists(filePath) {
-  try {
-    return fs.existsSync(filePath);
-  } catch {
-    return false;
-  }
-}
 
 function isPortInUse(port, host = "127.0.0.1") {
   return new Promise((resolve) => {

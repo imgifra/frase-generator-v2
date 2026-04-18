@@ -12,7 +12,7 @@ function getSheetsAuth() {
   }
 
   return new google.auth.GoogleAuth({
-    keyFile: path.join(__dirname, "..", "service_account.json"),
+    keyFile: path.join(__dirname, "..", "..", "config", "service_account.json"),
     scopes: ["https://www.googleapis.com/auth/spreadsheets"]
   });
 }

@@ -4,7 +4,7 @@ const { spawnSync } = require("child_process");
 const path = require("path");
 
 const WAIT_MS = Number(process.env.WAIT_MS || 2 * 60 * 60 * 1000);
-const PROJECT_ROOT = path.join(__dirname, "..");
+const PROJECT_ROOT = path.join(__dirname, "..", "..");
 
 function now() {
   return new Date().toISOString();
@@ -47,7 +47,10 @@ function runStep(stepName, scriptPath) {
 async function runPipeline() {
   console.log(`\n[${now()}] 🚀 PIPELINE AUTOMÁTICO INICIADO\n`);
 
-  const renderStatus = runStep("RENDER", "scripts/render-single-from-sheet.js.js");
+  const renderStatus = runStep(
+    "RENDER",
+    "scripts/jobs/render-single-from-sheet.js"
+  );
 
   if (renderStatus === 10) {
     console.log(`[${now()}] ✅ No quedan más filas pendientes.`);
@@ -61,7 +64,10 @@ async function runPipeline() {
     return { ok: false, processed: false, failedStep: "render" };
   }
 
-  const uploadStatus = runStep("UPLOAD", "scripts/upload-single-from-sheet.js");
+  const uploadStatus = runStep(
+    "UPLOAD",
+    "scripts/jobs/upload-single-from-sheet.js"
+  );
 
   if (uploadStatus !== 0) {
     console.error(`[${now()}] ❌ Error en upload. Código: ${uploadStatus}`);
@@ -69,7 +75,10 @@ async function runPipeline() {
     return { ok: false, processed: false, failedStep: "upload" };
   }
 
-  const publishStatus = runStep("PUBLISH", "scripts/publish-single-from-sheet.js");
+  const publishStatus = runStep(
+    "PUBLISH",
+    "scripts/jobs/publish-single-from-sheet.js"
+  );
 
   if (publishStatus !== 0) {
     console.error(`[${now()}] ❌ Error en publish. Código: ${publishStatus}`);

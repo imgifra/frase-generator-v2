@@ -1,4 +1,4 @@
-const { renderPhrase } = require("./render-lib");
+const { renderPhrase } = require("../libs/render-lib");
 
 async function main() {
   const text = process.argv[2] || "Hola mundo";

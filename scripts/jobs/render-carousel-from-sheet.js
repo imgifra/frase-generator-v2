@@ -1,11 +1,19 @@
 require("dotenv").config();
 
 const { google } = require("googleapis");
-const { renderPhrase } = require("./render-lib");
-const { getSheetsAuth } = require("./google-auth");
+const { renderPhrase } = require("../libs/render-lib");
+const { getSheetsAuth } = require("../auth/google-auth");
 
-const SHEET_ID = process.env.SHEET_ID || "1LgDI-wWKXAaLAQoJCJDA4k0Grtra-I4pWnUtz3Gj__M";
-const WORKSHEET_NAME = process.env.WORKSHEET_NAME || "Hoja 1";
+const SHEET_ID = process.env.SHEET_ID;
+const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
+
+if (!SHEET_ID) {
+  throw new Error("Falta SHEET_ID en el .env");
+}
+
+if (!WORKSHEET_NAME) {
+  throw new Error("Falta WORKSHEET_NAME en el .env");
+}
 
 const BG_SEQUENCE = [
   "#f4c400", // retroYellow
@@ -189,7 +197,6 @@ async function main() {
 
   const lastPublishedBg = getLastPublishedBg(rows, headerMap);
   const carouselBg = getNextColor(lastPublishedBg);
-  let currentBg = getNextColor(lastPublishedBg);
 
   for (const item of groupRows) {
     const rowNumber = item.rowNumber;
@@ -205,7 +212,6 @@ async function main() {
     }
 
     console.log(`Slide ${item.order} | fila ${rowNumber} | color ${carouselBg}`);
-
     console.log(`Texto: ${textToRender}`);
 
     await updateCellsBatch(sheets, [
@@ -274,7 +280,6 @@ async function main() {
 
       throw error;
     }
-
   }
 
   console.log(`Carrusel ${selectedCarouselId} renderizado completo.`);
