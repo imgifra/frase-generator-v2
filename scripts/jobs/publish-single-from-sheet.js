@@ -74,9 +74,14 @@ async function updateCellsBatch(sheets, updates) {
 function getPendingSingleRow(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const estado = normalizeValue(row[headerMap["estado"]]);
 
-    if (estado === "lista_para_publicar") {
+    const estado = normalizeValue(row[headerMap["estado"]]);
+    const tipo = normalizeValue(row[headerMap["post_tipo"]]);
+
+    if (
+      estado === "lista_para_publicar" &&
+      tipo === "single"
+    ) {
       return {
         rowNumber: i + 1,
         values: row

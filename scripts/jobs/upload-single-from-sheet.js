@@ -92,6 +92,7 @@ async function main() {
 
   const requiredHeaders = [
     "estado",
+    "post_tipo",
     "output_file",
     "media_url",
     "cloudinary_public_id",
@@ -110,8 +111,12 @@ async function main() {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const estado = normalizeValue(row[headerMap["estado"]]);
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
 
-    if (estado === "renderizado") {
+    if (
+      estado === "renderizado" &&
+      postTipo === "single"
+    ) {
       targetRow = {
         rowNumber: i + 1,
         values: row

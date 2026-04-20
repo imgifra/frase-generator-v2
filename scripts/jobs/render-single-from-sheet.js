@@ -154,6 +154,7 @@ async function main() {
     "modo",
     "bg",
     "estado",
+    "post_tipo",
     "output_file",
     "fecha_generado",
     "fecha_publicado",
@@ -171,8 +172,12 @@ async function main() {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const estado = normalizeValue(row[headerMap["estado"]]);
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
 
-    if (estado === "lista_para_render") {
+    if (
+      estado === "lista_para_render" &&
+      postTipo === "single"
+    ) {
       selectedRow = {
         rowNumber: i + 1,
         values: row
