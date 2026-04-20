@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const { google } = require("googleapis");
 const { publishCarouselPost } = require("../libs/instagram-lib");
+const { deleteImage } = require("../libs/upload-lib");
 const { getSheetsAuth } = require("../auth/google-auth");
 
 const SHEET_ID = process.env.SHEET_ID;
@@ -69,41 +70,7 @@ async function updateCellsBatch(sheets, updates) {
   });
 }
 
-async function main() {
-  const sheets = await getSheetsClient();
-
-  const readRes = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `${WORKSHEET_NAME}!A:Z`
-  });
-
-  const rows = readRes.data.values || [];
-  if (rows.length < 2) {
-    console.log("No hay datos en la hoja.");
-    return;
-  }
-
-  const headers = rows[0];
-  const headerMap = buildHeaderMap(headers);
-
-  const requiredHeaders = [
-    "post_tipo",
-    "carousel_id",
-    "carousel_order",
-    "carousel_caption",
-    "estado",
-    "media_url",
-    "post_id",
-    "fecha_publicado",
-    "error"
-  ];
-
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
-
+function getPendingCarouselRows(rows, headerMap) {
   let selectedCarouselId = "";
 
   for (let i = 1; i < rows.length; i++) {
@@ -123,8 +90,7 @@ async function main() {
   }
 
   if (!selectedCarouselId) {
-    console.log('No hay carruseles con estado "lista_para_publicar_carousel".');
-    process.exit(10);
+    return { selectedCarouselId: "", groupRows: [] };
   }
 
   const groupRows = [];
@@ -150,19 +116,46 @@ async function main() {
 
   groupRows.sort((a, b) => a.order - b.order);
 
+  return { selectedCarouselId, groupRows };
+}
+
+function validateCarouselRows(groupRows, selectedCarouselId) {
   if (groupRows.length < 2 || groupRows.length > 10) {
     throw new Error(
       `El carrusel ${selectedCarouselId} tiene ${groupRows.length} slides. Debe tener entre 2 y 10.`
     );
   }
 
+  const orders = groupRows.map((item) => item.order);
+
+  if (orders.some((order) => !Number.isInteger(order) || order < 1)) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene carousel_order inválidos. Deben ser enteros mayores o iguales a 1.`
+    );
+  }
+
+  const uniqueOrders = new Set(orders);
+
+  if (uniqueOrders.size !== orders.length) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene carousel_order duplicados.`
+    );
+  }
+}
+
+function buildCarouselPayload(groupRows, headerMap) {
   const imageUrls = [];
+  const publicIds = [];
   let carouselCaption = "";
 
   for (const item of groupRows) {
     const row = item.values;
+
     const mediaUrl = normalizeValue(row[headerMap["media_url"]]);
     const rowCaption = normalizeValue(row[headerMap["carousel_caption"]]);
+    const cloudinaryPublicId = normalizeValue(
+      row[headerMap["cloudinary_public_id"]]
+    );
 
     if (!mediaUrl) {
       throw new Error(`La fila ${item.rowNumber} no tiene media_url.`);
@@ -173,9 +166,96 @@ async function main() {
     }
 
     imageUrls.push(mediaUrl);
+    publicIds.push({
+      rowNumber: item.rowNumber,
+      publicId: cloudinaryPublicId
+    });
   }
 
-  console.log(`Publicando carrusel ${selectedCarouselId} con ${imageUrls.length} slides`);
+  return {
+    imageUrls,
+    carouselCaption,
+    publicIds
+  };
+}
+
+async function deleteCarouselAssets(publicIds) {
+  for (const item of publicIds) {
+    if (!item.publicId) {
+      continue;
+    }
+
+    try {
+      await deleteImage(item.publicId);
+      console.log(
+        `Asset de Cloudinary eliminado para fila ${item.rowNumber}: ${item.publicId}`
+      );
+    } catch (deleteError) {
+      console.warn(
+        `No se pudo eliminar el asset de Cloudinary de la fila ${item.rowNumber}: ${item.publicId}`
+      );
+      console.warn(deleteError.message || deleteError);
+    }
+  }
+}
+
+async function main() {
+  const sheets = await getSheetsClient();
+
+  const readRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: `${WORKSHEET_NAME}!A:Z`
+  });
+
+  const rows = readRes.data.values || [];
+
+  if (rows.length < 2) {
+    console.log("No hay datos en la hoja.");
+    return;
+  }
+
+  const headers = rows[0];
+  const headerMap = buildHeaderMap(headers);
+
+  const requiredHeaders = [
+    "post_tipo",
+    "carousel_id",
+    "carousel_order",
+    "carousel_caption",
+    "estado",
+    "media_url",
+    "cloudinary_public_id",
+    "post_id",
+    "fecha_publicado",
+    "error"
+  ];
+
+  for (const key of requiredHeaders) {
+    if (!(key in headerMap)) {
+      throw new Error(`Falta la columna requerida: ${key}`);
+    }
+  }
+
+  const { selectedCarouselId, groupRows } = getPendingCarouselRows(
+    rows,
+    headerMap
+  );
+
+  if (!selectedCarouselId) {
+    console.log('No hay carruseles con estado "lista_para_publicar_carousel".');
+    process.exit(10);
+  }
+
+  validateCarouselRows(groupRows, selectedCarouselId);
+
+  const { imageUrls, carouselCaption, publicIds } = buildCarouselPayload(
+    groupRows,
+    headerMap
+  );
+
+  console.log(
+    `Publicando carrusel ${selectedCarouselId} con ${imageUrls.length} slides`
+  );
   console.log(`Caption del carrusel: ${carouselCaption || "[sin caption]"}`);
 
   await updateCellsBatch(
@@ -229,6 +309,8 @@ async function main() {
     console.log(`Carrusel ${selectedCarouselId} publicado correctamente.`);
     console.log(`Post ID: ${result.mediaId}`);
     console.log(`Creation ID: ${result.creationId}`);
+
+    await deleteCarouselAssets(publicIds);
   } catch (error) {
     await updateCellsBatch(
       sheets,

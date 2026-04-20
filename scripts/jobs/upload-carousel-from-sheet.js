@@ -7,6 +7,7 @@ const { getSheetsAuth } = require("../auth/google-auth");
 
 const SHEET_ID = process.env.SHEET_ID;
 const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
+const OUTPUT_DIR = path.resolve(__dirname, "..", "..", "output");
 
 if (!SHEET_ID) {
   throw new Error("Falta SHEET_ID en el .env");
@@ -157,7 +158,11 @@ async function main() {
       throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
     }
 
-    const localPath = path.join(__dirname, "..", "..", "output", fileName);
+    const localPath = path.join(OUTPUT_DIR, fileName);
+
+    if (!fs.existsSync(localPath)) {
+      throw new Error(`No existe el archivo local para la fila ${rowNumber}: ${localPath}`);
+    }
 
     console.log(`Subiendo slide ${item.order}: ${fileName}`);
     console.log(`Ruta local: ${localPath}`);
@@ -178,14 +183,12 @@ async function main() {
     try {
       const result = await uploadImage(localPath, fileName);
 
-      if (fs.existsSync(localPath)) {
-        try {
-          fs.unlinkSync(localPath);
-          console.log(`Archivo local eliminado: ${localPath}`);
-        } catch (deleteErr) {
-          console.warn(`No se pudo eliminar el archivo local: ${localPath}`);
-          console.warn(deleteErr.message || deleteErr);
-        }
+      try {
+        fs.unlinkSync(localPath);
+        console.log(`Archivo local eliminado: ${localPath}`);
+      } catch (deleteErr) {
+        console.warn(`No se pudo eliminar el archivo local: ${localPath}`);
+        console.warn(deleteErr.message || deleteErr);
       }
 
       await updateCellsBatch(sheets, [

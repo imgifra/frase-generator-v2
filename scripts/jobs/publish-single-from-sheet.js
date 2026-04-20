@@ -70,6 +70,22 @@ async function updateCellsBatch(sheets, updates) {
   });
 }
 
+function getPendingSingleRow(rows, headerMap) {
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const estado = normalizeValue(row[headerMap["estado"]]);
+
+    if (estado === "lista_para_publicar") {
+      return {
+        rowNumber: i + 1,
+        values: row
+      };
+    }
+  }
+
+  return null;
+}
+
 async function main() {
   const sheets = await getSheetsClient();
 
@@ -104,46 +120,45 @@ async function main() {
     }
   }
 
-  let targetRow = null;
+  const selectedRow = getPendingSingleRow(rows, headerMap);
 
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const estado = normalizeValue(row[headerMap["estado"]]);
-
-    if (estado === "lista_para_publicar") {
-      targetRow = {
-        rowNumber: i + 1,
-        values: row
-      };
-      break;
-    }
-  }
-
-  if (!targetRow) {
+  if (!selectedRow) {
     console.log('No hay filas con estado "lista_para_publicar".');
     process.exit(10);
   }
 
-  const rowNumber = targetRow.rowNumber;
-  const row = targetRow.values;
+  const rowNumber = selectedRow.rowNumber;
+  const row = selectedRow.values;
 
-  const mediaUrl = normalizeValue(row[headerMap["media_url"]]);
-  const rawCaption = row[headerMap["caption"]];
-  const caption = normalizeValue(rawCaption) || "";
-  const cloudinaryPublicId = normalizeValue(row[headerMap["cloudinary_public_id"]]);
+  const imageUrl = normalizeValue(row[headerMap["media_url"]]);
+  const caption = normalizeValue(row[headerMap["caption"]]);
+  const cloudinaryPublicId = normalizeValue(
+    row[headerMap["cloudinary_public_id"]]
+  );
 
-  if (!mediaUrl) {
+  if (!imageUrl) {
     throw new Error(`La fila ${rowNumber} no tiene media_url.`);
   }
 
-  console.log(`Publicando fila ${rowNumber}: ${mediaUrl}`);
-  console.log(`Caption fila ${rowNumber}:`, caption || "[sin caption]");
+  console.log(`Publicando fila ${rowNumber}`);
+  console.log(`Image URL: ${imageUrl}`);
+  console.log(`Caption: ${caption || "[sin caption]"}`);
 
   await updateCellsBatch(sheets, [
     {
       row: rowNumber,
       col: headerMap["estado"] + 1,
       value: "publicando_instagram"
+    },
+    {
+      row: rowNumber,
+      col: headerMap["post_id"] + 1,
+      value: ""
+    },
+    {
+      row: rowNumber,
+      col: headerMap["fecha_publicado"] + 1,
+      value: ""
     },
     {
       row: rowNumber,
@@ -154,19 +169,9 @@ async function main() {
 
   try {
     const result = await publishImagePost({
-      imageUrl: mediaUrl,
+      imageUrl,
       caption
     });
-
-    if (cloudinaryPublicId) {
-      try {
-        const deletionResult = await deleteImage(cloudinaryPublicId);
-        console.log("Resultado borrado Cloudinary:", deletionResult);
-      } catch (deleteErr) {
-        console.warn(`No se pudo borrar el asset de Cloudinary: ${cloudinaryPublicId}`);
-        console.warn(deleteErr.message || deleteErr);
-      }
-    }
 
     await updateCellsBatch(sheets, [
       {
@@ -194,6 +199,20 @@ async function main() {
     console.log(`Fila ${rowNumber} publicada correctamente.`);
     console.log(`Post ID: ${result.mediaId}`);
     console.log(`Creation ID: ${result.creationId}`);
+
+    if (cloudinaryPublicId) {
+      try {
+        await deleteImage(cloudinaryPublicId);
+        console.log(
+          `Asset de Cloudinary eliminado: ${cloudinaryPublicId}`
+        );
+      } catch (deleteError) {
+        console.warn(
+          `No se pudo eliminar el asset de Cloudinary: ${cloudinaryPublicId}`
+        );
+        console.warn(deleteError.message || deleteError);
+      }
+    }
   } catch (error) {
     await updateCellsBatch(sheets, [
       {

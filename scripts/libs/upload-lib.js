@@ -25,12 +25,41 @@ cloudinary.config({
   api_secret: CLOUDINARY_API_SECRET
 });
 
+function sanitizeName(value) {
+  return (value || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-+/g, "-");
+}
+
 function buildPublicId(fileName) {
+  if (!fileName) {
+    throw new Error("buildPublicId requiere fileName.");
+  }
+
   const baseName = path.parse(fileName).name;
-  return `mono_generator/${baseName}`;
+  const safeBaseName = sanitizeName(baseName);
+
+  if (!safeBaseName) {
+    throw new Error(`Nombre de archivo inválido para Cloudinary: ${fileName}`);
+  }
+
+  return `mono_generator/${safeBaseName}`;
 }
 
 async function uploadImage(localPath, fileName) {
+  if (!localPath) {
+    throw new Error("uploadImage requiere localPath.");
+  }
+
+  if (!fileName) {
+    throw new Error("uploadImage requiere fileName.");
+  }
+
   const publicId = buildPublicId(fileName);
 
   const result = await cloudinary.uploader.upload(localPath, {
@@ -64,6 +93,7 @@ async function deleteImage(publicId) {
 }
 
 module.exports = {
+  buildPublicId,
   uploadImage,
   deleteImage
 };

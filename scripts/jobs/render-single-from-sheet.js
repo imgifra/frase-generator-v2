@@ -77,33 +77,30 @@ async function updateCellsBatch(sheets, updates) {
   });
 }
 
-function getNextBgFromLastPublished(rows, headerMap) {
-  let lastPublishedBg = "";
-
+function getLastPublishedBg(rows, headerMap) {
   for (let i = rows.length - 1; i >= 1; i--) {
     const row = rows[i];
     const estado = normalizeValue(row[headerMap["estado"]]);
     const bg = normalizeValue(row[headerMap["bg"]]).toLowerCase();
 
     if (estado === "publicado" && bg) {
-      lastPublishedBg = bg;
-      break;
+      return bg;
     }
   }
 
-  if (!lastPublishedBg) {
-    return BG_SEQUENCE[0];
-  }
+  return "";
+}
 
-  const currentIndex = BG_SEQUENCE.findIndex(
-    (color) => color.toLowerCase() === lastPublishedBg
+function getNextColor(color) {
+  if (!color) return BG_SEQUENCE[0];
+
+  const index = BG_SEQUENCE.findIndex(
+    (item) => item.toLowerCase() === color.toLowerCase()
   );
 
-  if (currentIndex === -1) {
-    return BG_SEQUENCE[0];
-  }
+  if (index === -1) return BG_SEQUENCE[0];
 
-  return BG_SEQUENCE[(currentIndex + 1) % BG_SEQUENCE.length];
+  return BG_SEQUENCE[(index + 1) % BG_SEQUENCE.length];
 }
 
 async function main() {
@@ -141,14 +138,14 @@ async function main() {
     }
   }
 
-  let targetRow = null;
+  let selectedRow = null;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const estado = normalizeValue(row[headerMap["estado"]]);
 
     if (estado === "lista_para_render") {
-      targetRow = {
+      selectedRow = {
         rowNumber: i + 1,
         values: row
       };
@@ -156,26 +153,30 @@ async function main() {
     }
   }
 
-  if (!targetRow) {
+  if (!selectedRow) {
     console.log('No hay filas con estado "lista_para_render".');
     process.exit(10);
   }
 
-  const rowNumber = targetRow.rowNumber;
-  const row = targetRow.values;
+  const rowNumber = selectedRow.rowNumber;
+  const row = selectedRow.values;
 
   const fraseOriginal = normalizeValue(row[headerMap["frase_original"]]);
   const fraseCorregida = normalizeValue(row[headerMap["frase_corregida"]]);
-  const mode = normalizeValue(row[headerMap["modo"]]) || "normal";
-  const bg = getNextBgFromLastPublished(rows, headerMap);
+  const mode = normalizeValue(row[headerMap["modo"]]) || "retro3d";
   const textToRender = fraseCorregida || fraseOriginal;
 
   if (!textToRender) {
     throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);
   }
 
-  console.log(`Procesando fila ${rowNumber}: ${textToRender}`);
-  console.log(`Color asignado a fila ${rowNumber}: ${bg}`);
+  const lastPublishedBg = getLastPublishedBg(rows, headerMap);
+  const bg = getNextColor(lastPublishedBg);
+
+  console.log(`Renderizando fila ${rowNumber}`);
+  console.log(`Texto: ${textToRender}`);
+  console.log(`Modo: ${mode}`);
+  console.log(`Color: ${bg}`);
 
   await updateCellsBatch(sheets, [
     {

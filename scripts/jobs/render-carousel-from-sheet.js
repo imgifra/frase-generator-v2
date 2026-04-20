@@ -103,6 +103,79 @@ function getNextColor(color) {
   return BG_SEQUENCE[(index + 1) % BG_SEQUENCE.length];
 }
 
+function getPendingCarouselRows(rows, headerMap) {
+  let selectedCarouselId = "";
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const estado = normalizeValue(row[headerMap["estado"]]);
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
+    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+
+    if (
+      postTipo === "carousel" &&
+      estado === "lista_para_render_carousel" &&
+      carouselId
+    ) {
+      selectedCarouselId = carouselId;
+      break;
+    }
+  }
+
+  if (!selectedCarouselId) {
+    return { selectedCarouselId: "", groupRows: [] };
+  }
+
+  const groupRows = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const estado = normalizeValue(row[headerMap["estado"]]);
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
+    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+
+    if (
+      postTipo === "carousel" &&
+      estado === "lista_para_render_carousel" &&
+      carouselId === selectedCarouselId
+    ) {
+      groupRows.push({
+        rowNumber: i + 1,
+        values: row,
+        order: Number(normalizeValue(row[headerMap["carousel_order"]]) || "0")
+      });
+    }
+  }
+
+  groupRows.sort((a, b) => a.order - b.order);
+
+  return { selectedCarouselId, groupRows };
+}
+
+function validateCarouselRows(groupRows, selectedCarouselId) {
+  if (groupRows.length < 2 || groupRows.length > 10) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene ${groupRows.length} slides. Debe tener entre 2 y 10.`
+    );
+  }
+
+  const orders = groupRows.map((item) => item.order);
+
+  if (orders.some((order) => !Number.isInteger(order) || order < 1)) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene carousel_order inválidos. Deben ser enteros mayores o iguales a 1.`
+    );
+  }
+
+  const uniqueOrders = new Set(orders);
+
+  if (uniqueOrders.size !== orders.length) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene carousel_order duplicados.`
+    );
+  }
+}
+
 async function main() {
   const sheets = await getSheetsClient();
 
@@ -141,57 +214,14 @@ async function main() {
     }
   }
 
-  let selectedCarouselId = "";
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const estado = normalizeValue(row[headerMap["estado"]]);
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
-
-    if (
-      postTipo === "carousel" &&
-      estado === "lista_para_render_carousel" &&
-      carouselId
-    ) {
-      selectedCarouselId = carouselId;
-      break;
-    }
-  }
+  const { selectedCarouselId, groupRows } = getPendingCarouselRows(rows, headerMap);
 
   if (!selectedCarouselId) {
     console.log('No hay carruseles con estado "lista_para_render_carousel".');
     process.exit(10);
   }
 
-  const groupRows = [];
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const estado = normalizeValue(row[headerMap["estado"]]);
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
-
-    if (
-      postTipo === "carousel" &&
-      estado === "lista_para_render_carousel" &&
-      carouselId === selectedCarouselId
-    ) {
-      groupRows.push({
-        rowNumber: i + 1,
-        values: row,
-        order: Number(normalizeValue(row[headerMap["carousel_order"]]) || "0")
-      });
-    }
-  }
-
-  groupRows.sort((a, b) => a.order - b.order);
-
-  if (groupRows.length < 2 || groupRows.length > 10) {
-    throw new Error(
-      `El carrusel ${selectedCarouselId} tiene ${groupRows.length} slides. Debe tener entre 2 y 10.`
-    );
-  }
+  validateCarouselRows(groupRows, selectedCarouselId);
 
   console.log(`Renderizando carrusel ${selectedCarouselId} con ${groupRows.length} slides`);
 
@@ -224,6 +254,11 @@ async function main() {
         row: rowNumber,
         col: headerMap["bg"] + 1,
         value: carouselBg
+      },
+      {
+        row: rowNumber,
+        col: headerMap["output_file"] + 1,
+        value: ""
       },
       {
         row: rowNumber,
