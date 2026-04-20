@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const { google } = require("googleapis");
 const { publishImagePost } = require("../libs/instagram-lib");
+const { publishFacebookPhoto } = require("../libs/facebook-lib");
 const { deleteImage } = require("../libs/upload-lib");
 const { getSheetsAuth } = require("../auth/google-auth");
 
@@ -148,7 +149,7 @@ async function main() {
     {
       row: rowNumber,
       col: headerMap["estado"] + 1,
-      value: "publicando_instagram"
+      value: "publicando_instagram_y_facebook"
     },
     {
       row: rowNumber,
@@ -168,16 +169,33 @@ async function main() {
   ]);
 
   try {
-    const result = await publishImagePost({
-      imageUrl,
-      caption
+    const [instagramResult, facebookResult] = await Promise.all([
+      publishImagePost({
+        imageUrl,
+        caption
+      }),
+      publishFacebookPhoto({
+        imageUrl,
+        caption
+      })
+    ]);
+
+    const combinedPostId = JSON.stringify({
+      instagram: {
+        mediaId: instagramResult.mediaId || "",
+        creationId: instagramResult.creationId || ""
+      },
+      facebook: {
+        postId: facebookResult.postId || "",
+        photoId: facebookResult.photoId || ""
+      }
     });
 
     await updateCellsBatch(sheets, [
       {
         row: rowNumber,
         col: headerMap["post_id"] + 1,
-        value: result.mediaId
+        value: combinedPostId
       },
       {
         row: rowNumber,
@@ -197,15 +215,15 @@ async function main() {
     ]);
 
     console.log(`Fila ${rowNumber} publicada correctamente.`);
-    console.log(`Post ID: ${result.mediaId}`);
-    console.log(`Creation ID: ${result.creationId}`);
+    console.log(`Instagram mediaId: ${instagramResult.mediaId}`);
+    console.log(`Instagram creationId: ${instagramResult.creationId}`);
+    console.log(`Facebook postId: ${facebookResult.postId}`);
+    console.log(`Facebook photoId: ${facebookResult.photoId}`);
 
     if (cloudinaryPublicId) {
       try {
         await deleteImage(cloudinaryPublicId);
-        console.log(
-          `Asset de Cloudinary eliminado: ${cloudinaryPublicId}`
-        );
+        console.log(`Asset de Cloudinary eliminado: ${cloudinaryPublicId}`);
       } catch (deleteError) {
         console.warn(
           `No se pudo eliminar el asset de Cloudinary: ${cloudinaryPublicId}`
