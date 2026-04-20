@@ -78,17 +78,44 @@ async function updateCellsBatch(sheets, updates) {
 }
 
 function getLastPublishedBg(rows, headerMap) {
-  for (let i = rows.length - 1; i >= 1; i--) {
-    const row = rows[i];
-    const estado = normalizeValue(row[headerMap["estado"]]);
-    const bg = normalizeValue(row[headerMap["bg"]]).toLowerCase();
+  const estadoCol = headerMap["estado"];
+  const bgCol = headerMap["bg"];
+  const fechaPublicadoCol = headerMap["fecha_publicado"];
 
-    if (estado === "publicado" && bg) {
-      return bg;
+  if (
+    estadoCol === undefined ||
+    bgCol === undefined ||
+    fechaPublicadoCol === undefined
+  ) {
+    return "";
+  }
+
+  let latestBg = "";
+  let latestTime = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const estado = normalizeValue(row[estadoCol]);
+    const bg = normalizeValue(row[bgCol]);
+    const fechaPublicado = normalizeValue(row[fechaPublicadoCol]);
+
+    if (estado !== "publicado" || !bg || !fechaPublicado) {
+      continue;
+    }
+
+    const timestamp = Date.parse(fechaPublicado);
+
+    if (Number.isNaN(timestamp)) {
+      continue;
+    }
+
+    if (timestamp > latestTime) {
+      latestTime = timestamp;
+      latestBg = bg.toLowerCase();
     }
   }
 
-  return "";
+  return latestBg;
 }
 
 function getNextColor(color) {
@@ -129,6 +156,7 @@ async function main() {
     "estado",
     "output_file",
     "fecha_generado",
+    "fecha_publicado",
     "error"
   ];
 
