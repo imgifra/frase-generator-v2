@@ -114,7 +114,7 @@ function getPendingCarouselRows(rows, headerMap) {
 
     if (
       postTipo === "carousel" &&
-      estado === "lista_para_render_carousel" &&
+      estado === "lista_para_render" &&
       carouselId
     ) {
       selectedCarouselId = carouselId;
@@ -136,7 +136,7 @@ function getPendingCarouselRows(rows, headerMap) {
 
     if (
       postTipo === "carousel" &&
-      estado === "lista_para_render_carousel" &&
+      estado === "lista_para_render" &&
       carouselId === selectedCarouselId
     ) {
       groupRows.push({
@@ -217,7 +217,7 @@ async function main() {
   const { selectedCarouselId, groupRows } = getPendingCarouselRows(rows, headerMap);
 
   if (!selectedCarouselId) {
-    console.log('No hay carruseles con estado "lista_para_render_carousel".');
+    console.log('No hay carruseles con estado "lista_para_render".');
     process.exit(10);
   }
 
