@@ -1,5 +1,3 @@
-const axios = require("axios");
-
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
 
@@ -16,36 +14,35 @@ async function publishFacebookPhoto({ imageUrl, caption }) {
     throw new Error("imageUrl es requerido para publicar en Facebook.");
   }
 
-  try {
-    const response = await axios.post(
-      `https://graph.facebook.com/v25.0/${FB_PAGE_ID}/photos`,
-      null,
-      {
-        params: {
-          url: imageUrl,
-          caption: caption || "",
-          access_token: FB_PAGE_ACCESS_TOKEN
-        },
-        timeout: 30000
-      }
-    );
+  const params = new URLSearchParams({
+    url: imageUrl,
+    caption: caption || "",
+    access_token: FB_PAGE_ACCESS_TOKEN
+  });
 
-    return {
-      postId: response.data.post_id || "",
-      photoId: response.data.id || ""
-    };
-  } catch (error) {
-    const apiError =
-      error.response?.data?.error?.message ||
-      error.response?.data ||
-      error.message;
+  const response = await fetch(
+    `https://graph.facebook.com/v25.0/${FB_PAGE_ID}/photos`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    }
+  );
 
-    throw new Error(
-      `Error publicando en Facebook: ${
-        typeof apiError === "string" ? apiError : JSON.stringify(apiError)
-      }`
-    );
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message =
+      data?.error?.message || JSON.stringify(data) || "Error desconocido";
+    throw new Error(`Error publicando en Facebook: ${message}`);
   }
+
+  return {
+    postId: data.post_id || "",
+    photoId: data.id || ""
+  };
 }
 
 module.exports = {
