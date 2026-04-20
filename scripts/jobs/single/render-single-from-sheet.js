@@ -1,19 +1,14 @@
 require("dotenv").config();
 
-const { google } = require("googleapis");
-const { renderPhrase } = require("../libs/render-lib");
-const { getSheetsAuth } = require("../auth/google-auth");
-
-const SHEET_ID = process.env.SHEET_ID;
-const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
-
-if (!SHEET_ID) {
-  throw new Error("Falta SHEET_ID en el .env");
-}
-
-if (!WORKSHEET_NAME) {
-  throw new Error("Falta WORKSHEET_NAME en el .env");
-}
+const { renderPhrase } = require("../../libs/render-lib");
+const {
+  getSheetsClient,
+  buildHeaderMap,
+  readRows,
+  updateCellsBatch
+} = require("../../core/sheets");
+const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { ESTADOS, POST_TIPOS } = require("../../config/constants");
 
 const BG_SEQUENCE = [
   "#f4c400", // retroYellow
@@ -23,69 +18,17 @@ const BG_SEQUENCE = [
   "#0d0f14"  // retroBlack
 ];
 
-function normalizeValue(value) {
-  return (value || "").toString().trim();
-}
-
-function nowIsoLocal() {
-  return new Date().toISOString();
-}
-
-async function getSheetsClient() {
-  const auth = getSheetsAuth();
-  const authClient = await auth.getClient();
-
-  return google.sheets({
-    version: "v4",
-    auth: authClient
-  });
-}
-
-function buildHeaderMap(headers) {
-  const map = {};
-  headers.forEach((header, index) => {
-    map[normalizeValue(header)] = index;
-  });
-  return map;
-}
-
-function colToLetter(colNumber) {
-  let temp = colNumber;
-  let letter = "";
-
-  while (temp > 0) {
-    const rem = (temp - 1) % 26;
-    letter = String.fromCharCode(65 + rem) + letter;
-    temp = Math.floor((temp - rem - 1) / 26);
-  }
-
-  return letter;
-}
-
-async function updateCellsBatch(sheets, updates) {
-  const data = updates.map((item) => ({
-    range: `${WORKSHEET_NAME}!${colToLetter(item.col)}${item.row}`,
-    values: [[item.value]]
-  }));
-
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    requestBody: {
-      valueInputOption: "USER_ENTERED",
-      data
-    }
-  });
-}
-
 function getLastPublishedBg(rows, headerMap) {
   const estadoCol = headerMap["estado"];
   const bgCol = headerMap["bg"];
   const fechaPublicadoCol = headerMap["fecha_publicado"];
+  const postTipoCol = headerMap["post_tipo"];
 
   if (
     estadoCol === undefined ||
     bgCol === undefined ||
-    fechaPublicadoCol === undefined
+    fechaPublicadoCol === undefined ||
+    postTipoCol === undefined
   ) {
     return "";
   }
@@ -98,8 +41,14 @@ function getLastPublishedBg(rows, headerMap) {
     const estado = normalizeValue(row[estadoCol]);
     const bg = normalizeValue(row[bgCol]);
     const fechaPublicado = normalizeValue(row[fechaPublicadoCol]);
+    const postTipo = normalizeValue(row[postTipoCol]);
 
-    if (estado !== "publicado" || !bg || !fechaPublicado) {
+    if (
+      estado !== ESTADOS.PUBLICADO ||
+      postTipo !== POST_TIPOS.SINGLE ||
+      !bg ||
+      !fechaPublicado
+    ) {
       continue;
     }
 
@@ -132,13 +81,7 @@ function getNextColor(color) {
 
 async function main() {
   const sheets = await getSheetsClient();
-
-  const readRes = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `${WORKSHEET_NAME}!A:Z`
-  });
-
-  const rows = readRes.data.values || [];
+  const rows = await readRows(sheets);
 
   if (rows.length < 2) {
     console.log("No hay datos en la hoja.");
@@ -175,8 +118,8 @@ async function main() {
     const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
 
     if (
-      estado === "lista_para_render" &&
-      postTipo === "single"
+      estado === ESTADOS.LISTA_PARA_RENDER &&
+      postTipo === POST_TIPOS.SINGLE
     ) {
       selectedRow = {
         rowNumber: i + 1,
@@ -187,7 +130,7 @@ async function main() {
   }
 
   if (!selectedRow) {
-    console.log('No hay filas con estado "lista_para_render".');
+    console.log(`No hay singles con estado "${ESTADOS.LISTA_PARA_RENDER}".`);
     process.exit(10);
   }
 
@@ -215,7 +158,7 @@ async function main() {
     {
       row: rowNumber,
       col: headerMap["estado"] + 1,
-      value: "procesando_render"
+      value: ESTADOS.PROCESANDO_RENDER
     },
     {
       row: rowNumber,
@@ -250,7 +193,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado"] + 1,
-        value: "renderizado"
+        value: ESTADOS.RENDERIZADO
       },
       {
         row: rowNumber,
@@ -266,7 +209,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado"] + 1,
-        value: "error_render"
+        value: ESTADOS.ERROR_RENDER
       },
       {
         row: rowNumber,

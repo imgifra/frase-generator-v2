@@ -1,75 +1,16 @@
 require("dotenv").config();
 
-const { google } = require("googleapis");
-const { publishImagePost } = require("../libs/instagram-lib");
-const { publishFacebookPhoto } = require("../libs/facebook-lib");
-const { deleteImage } = require("../libs/upload-lib");
-const { getSheetsAuth } = require("../auth/google-auth");
-
-const SHEET_ID = process.env.SHEET_ID;
-const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
-
-if (!SHEET_ID) {
-  throw new Error("Falta SHEET_ID en el .env");
-}
-
-if (!WORKSHEET_NAME) {
-  throw new Error("Falta WORKSHEET_NAME en el .env");
-}
-
-function normalizeValue(value) {
-  return (value || "").toString().trim();
-}
-
-function nowIsoLocal() {
-  return new Date().toISOString();
-}
-
-async function getSheetsClient() {
-  const auth = getSheetsAuth();
-  const authClient = await auth.getClient();
-
-  return google.sheets({
-    version: "v4",
-    auth: authClient
-  });
-}
-
-function buildHeaderMap(headers) {
-  const map = {};
-  headers.forEach((header, index) => {
-    map[normalizeValue(header)] = index;
-  });
-  return map;
-}
-
-function colToLetter(colNumber) {
-  let temp = colNumber;
-  let letter = "";
-
-  while (temp > 0) {
-    const rem = (temp - 1) % 26;
-    letter = String.fromCharCode(65 + rem) + letter;
-    temp = Math.floor((temp - rem - 1) / 26);
-  }
-
-  return letter;
-}
-
-async function updateCellsBatch(sheets, updates) {
-  const data = updates.map((item) => ({
-    range: `${WORKSHEET_NAME}!${colToLetter(item.col)}${item.row}`,
-    values: [[item.value]]
-  }));
-
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    requestBody: {
-      valueInputOption: "USER_ENTERED",
-      data
-    }
-  });
-}
+const { publishImagePost } = require("../../libs/instagram-lib");
+const { publishFacebookImagePost } = require("../../libs/facebook-lib");
+const { deleteImage } = require("../../libs/upload-lib");
+const {
+  getSheetsClient,
+  buildHeaderMap,
+  readRows,
+  updateCellsBatch
+} = require("../../core/sheets");
+const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { ESTADOS, POST_TIPOS } = require("../../config/constants");
 
 function getPendingSingleRow(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
@@ -79,8 +20,8 @@ function getPendingSingleRow(rows, headerMap) {
     const tipo = normalizeValue(row[headerMap["post_tipo"]]);
 
     if (
-      estado === "lista_para_publicar" &&
-      tipo === "single"
+      estado === ESTADOS.LISTA_PARA_PUBLICAR &&
+      tipo === POST_TIPOS.SINGLE
     ) {
       return {
         rowNumber: i + 1,
@@ -94,13 +35,7 @@ function getPendingSingleRow(rows, headerMap) {
 
 async function main() {
   const sheets = await getSheetsClient();
-
-  const readRes = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `${WORKSHEET_NAME}!A:Z`
-  });
-
-  const rows = readRes.data.values || [];
+  const rows = await readRows(sheets);
 
   if (rows.length < 2) {
     console.log("No hay datos en la hoja.");
@@ -112,6 +47,7 @@ async function main() {
 
   const requiredHeaders = [
     "estado",
+    "post_tipo",
     "media_url",
     "caption",
     "cloudinary_public_id",
@@ -129,7 +65,7 @@ async function main() {
   const selectedRow = getPendingSingleRow(rows, headerMap);
 
   if (!selectedRow) {
-    console.log('No hay filas con estado "lista_para_publicar".');
+    console.log(`No hay singles con estado "${ESTADOS.LISTA_PARA_PUBLICAR}".`);
     process.exit(10);
   }
 
@@ -154,7 +90,7 @@ async function main() {
     {
       row: rowNumber,
       col: headerMap["estado"] + 1,
-      value: "publicando_instagram_y_facebook"
+      value: ESTADOS.PUBLICANDO_IG_FB
     },
     {
       row: rowNumber,
@@ -179,7 +115,7 @@ async function main() {
         imageUrl,
         caption
       }),
-      publishFacebookPhoto({
+      publishFacebookImagePost({
         imageUrl,
         caption
       })
@@ -210,7 +146,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado"] + 1,
-        value: "publicado"
+        value: ESTADOS.PUBLICADO
       },
       {
         row: rowNumber,
@@ -241,7 +177,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado"] + 1,
-        value: "error_publish"
+        value: ESTADOS.ERROR_PUBLISH
       },
       {
         row: rowNumber,

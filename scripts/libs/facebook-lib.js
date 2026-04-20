@@ -1,50 +1,154 @@
+require("dotenv").config();
+
+const GRAPH_API_VERSION = process.env.GRAPH_API_VERSION || "v25.0";
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
 
-if (!FB_PAGE_ID) {
-  throw new Error("Falta FB_PAGE_ID en el .env");
-}
-
-if (!FB_PAGE_ACCESS_TOKEN) {
-  throw new Error("Falta FB_PAGE_ACCESS_TOKEN en el .env");
-}
-
-async function publishFacebookPhoto({ imageUrl, caption }) {
-  if (!imageUrl) {
-    throw new Error("imageUrl es requerido para publicar en Facebook.");
+function ensureEnv() {
+  if (!FB_PAGE_ID) {
+    throw new Error("Falta FB_PAGE_ID en .env");
   }
 
-  const params = new URLSearchParams({
+  if (!FB_PAGE_ACCESS_TOKEN) {
+    throw new Error("Falta FB_PAGE_ACCESS_TOKEN en .env");
+  }
+}
+
+function buildGraphUrl(path) {
+  return `https://graph.facebook.com/${GRAPH_API_VERSION}/${path}`;
+}
+
+async function graphPost(path, body) {
+  const url = buildGraphUrl(path);
+
+  const form = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => form.append(key, String(item)));
+      continue;
+    }
+
+    form.append(key, String(value));
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: form.toString()
+  });
+
+  const data = await res.json();
+
+  if (!res.ok || data.error) {
+    const message =
+      data?.error?.message ||
+      `Graph API error ${res.status}`;
+
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+async function publishFacebookImagePost({ imageUrl, caption }) {
+  ensureEnv();
+
+  if (!imageUrl) {
+    throw new Error("imageUrl es requerido.");
+  }
+
+  const safeCaption = typeof caption === "string" ? caption.trim() : "";
+
+  console.log("Publicando imagen en Facebook...");
+  console.log("imageUrl:", imageUrl);
+  console.log("caption:", safeCaption || "[sin caption]");
+
+  const published = await graphPost(`${FB_PAGE_ID}/photos`, {
     url: imageUrl,
-    caption: caption || "",
+    caption: safeCaption,
     access_token: FB_PAGE_ACCESS_TOKEN
   });
 
-  const response = await fetch(
-    `https://graph.facebook.com/v25.0/${FB_PAGE_ID}/photos`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString()
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message =
-      data?.error?.message || JSON.stringify(data) || "Error desconocido";
-    throw new Error(`Error publicando en Facebook: ${message}`);
+  if (!published.id) {
+    throw new Error("No se recibió id de la foto publicada en Facebook.");
   }
 
   return {
-    postId: data.post_id || "",
-    photoId: data.id || ""
+    photoId: published.id,
+    postId: published.post_id || ""
+  };
+}
+
+async function uploadUnpublishedFacebookPhoto({ imageUrl }) {
+  ensureEnv();
+
+  if (!imageUrl) {
+    throw new Error("imageUrl es requerido para un slide de Facebook.");
+  }
+
+  const uploaded = await graphPost(`${FB_PAGE_ID}/photos`, {
+    url: imageUrl,
+    published: false,
+    access_token: FB_PAGE_ACCESS_TOKEN
+  });
+
+  if (!uploaded.id) {
+    throw new Error(
+      `No se recibió id de foto no publicada para ${imageUrl}`
+    );
+  }
+
+  return uploaded.id; // media_fbid
+}
+
+async function publishFacebookCarouselPost({ imageUrls, caption }) {
+  ensureEnv();
+
+  if (!Array.isArray(imageUrls) || imageUrls.length < 2 || imageUrls.length > 10) {
+    throw new Error("Un carrusel de Facebook debe tener entre 2 y 10 imágenes.");
+  }
+
+  const safeCaption = typeof caption === "string" ? caption.trim() : "";
+
+  console.log(`Publicando carrusel en Facebook con ${imageUrls.length} imágenes...`);
+  console.log("caption:", safeCaption || "[sin caption]");
+
+  const mediaFbids = [];
+
+  for (const imageUrl of imageUrls) {
+    const mediaFbid = await uploadUnpublishedFacebookPhoto({ imageUrl });
+    mediaFbids.push(mediaFbid);
+  }
+
+  const body = {
+    message: safeCaption,
+    access_token: FB_PAGE_ACCESS_TOKEN
+  };
+
+  mediaFbids.forEach((mediaFbid, index) => {
+    body[`attached_media[${index}]`] = JSON.stringify({ media_fbid: mediaFbid });
+  });
+
+  const published = await graphPost(`${FB_PAGE_ID}/feed`, body);
+
+  if (!published.id) {
+    throw new Error("No se recibió id del post del carrusel en Facebook.");
+  }
+
+  return {
+    postId: published.id,
+    mediaFbids
   };
 }
 
 module.exports = {
-  publishFacebookPhoto
+  publishFacebookImagePost,
+  publishFacebookCarouselPost
 };

@@ -2,85 +2,21 @@ const fs = require("fs");
 require("dotenv").config();
 
 const path = require("path");
-const { google } = require("googleapis");
-const { uploadImage } = require("../libs/upload-lib");
-const { getSheetsAuth } = require("../auth/google-auth");
+const { uploadImage } = require("../../libs/upload-lib");
+const {
+  getSheetsClient,
+  buildHeaderMap,
+  readRows,
+  updateCellsBatch
+} = require("../../core/sheets");
+const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { ESTADOS, POST_TIPOS } = require("../../config/constants");
 
-const SHEET_ID = process.env.SHEET_ID;
-const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
-const OUTPUT_DIR = path.join(__dirname, "..", "..", "output");
-
-if (!SHEET_ID) {
-  throw new Error("Falta SHEET_ID en el .env");
-}
-
-if (!WORKSHEET_NAME) {
-  throw new Error("Falta WORKSHEET_NAME en el .env");
-}
-
-function normalizeValue(value) {
-  return (value || "").toString().trim();
-}
-
-function nowIsoLocal() {
-  return new Date().toISOString();
-}
-
-async function getSheetsClient() {
-  const auth = getSheetsAuth();
-  const authClient = await auth.getClient();
-
-  return google.sheets({
-    version: "v4",
-    auth: authClient
-  });
-}
-
-function buildHeaderMap(headers) {
-  const map = {};
-  headers.forEach((header, index) => {
-    map[normalizeValue(header)] = index;
-  });
-  return map;
-}
-
-function colToLetter(colNumber) {
-  let temp = colNumber;
-  let letter = "";
-
-  while (temp > 0) {
-    const rem = (temp - 1) % 26;
-    letter = String.fromCharCode(65 + rem) + letter;
-    temp = Math.floor((temp - rem - 1) / 26);
-  }
-
-  return letter;
-}
-
-async function updateCellsBatch(sheets, updates) {
-  const data = updates.map((item) => ({
-    range: `${WORKSHEET_NAME}!${colToLetter(item.col)}${item.row}`,
-    values: [[item.value]]
-  }));
-
-  await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    requestBody: {
-      valueInputOption: "USER_ENTERED",
-      data
-    }
-  });
-}
+const OUTPUT_DIR = path.resolve(__dirname, "..", "..", "..", "output");
 
 async function main() {
   const sheets = await getSheetsClient();
-
-  const readRes = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `${WORKSHEET_NAME}!A:Z`
-  });
-
-  const rows = readRes.data.values || [];
+  const rows = await readRows(sheets);
 
   if (rows.length < 2) {
     console.log("No hay datos en la hoja.");
@@ -114,8 +50,8 @@ async function main() {
     const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
 
     if (
-      estado === "renderizado" &&
-      postTipo === "single"
+      estado === ESTADOS.RENDERIZADO &&
+      postTipo === POST_TIPOS.SINGLE
     ) {
       targetRow = {
         rowNumber: i + 1,
@@ -126,7 +62,7 @@ async function main() {
   }
 
   if (!targetRow) {
-    console.log('No hay filas con estado "renderizado".');
+    console.log(`No hay singles con estado "${ESTADOS.RENDERIZADO}".`);
     process.exit(10);
   }
 
@@ -151,7 +87,7 @@ async function main() {
     {
       row: rowNumber,
       col: headerMap["estado"] + 1,
-      value: "subiendo_media"
+      value: ESTADOS.SUBIENDO_MEDIA
     },
     {
       row: rowNumber,
@@ -192,7 +128,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado"] + 1,
-        value: "lista_para_publicar"
+        value: ESTADOS.LISTA_PARA_PUBLICAR
       },
       {
         row: rowNumber,
@@ -208,7 +144,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado"] + 1,
-        value: "error_upload"
+        value: ESTADOS.ERROR_UPLOAD
       },
       {
         row: rowNumber,
