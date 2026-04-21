@@ -8,7 +8,7 @@ const {
   updateCellsBatch
 } = require("../../core/sheets");
 const { normalizeValue, nowIsoLocal } = require("../../utils/common");
-const { ESTADOS, POST_TIPOS } = require("../../config/constants");
+const { logger } = require("../../utils/logger");
 
 const BG_SEQUENCE = [
   "#f4c400", // retroYellow
@@ -19,14 +19,14 @@ const BG_SEQUENCE = [
 ];
 
 function getLastPublishedBg(rows, headerMap) {
-  const estadoCol = headerMap["estado"];
-  const bgCol = headerMap["bg"];
+  const estadoGeneralCol = headerMap["estado_general"];
+  const backgroundColorCol = headerMap["background_color"];
   const fechaPublicadoCol = headerMap["fecha_publicado"];
   const postTipoCol = headerMap["post_tipo"];
 
   if (
-    estadoCol === undefined ||
-    bgCol === undefined ||
+    estadoGeneralCol === undefined ||
+    backgroundColorCol === undefined ||
     fechaPublicadoCol === undefined ||
     postTipoCol === undefined
   ) {
@@ -38,14 +38,14 @@ function getLastPublishedBg(rows, headerMap) {
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const estado = normalizeValue(row[estadoCol]);
-    const bg = normalizeValue(row[bgCol]);
+    const estadoGeneral = normalizeValue(row[estadoGeneralCol]).toLowerCase();
+    const bg = normalizeValue(row[backgroundColorCol]);
     const fechaPublicado = normalizeValue(row[fechaPublicadoCol]);
-    const postTipo = normalizeValue(row[postTipoCol]);
+    const postTipo = normalizeValue(row[postTipoCol]).toLowerCase();
 
     if (
-      estado !== ESTADOS.PUBLICADO ||
-      postTipo !== POST_TIPOS.SINGLE ||
+      estadoGeneral !== "published" ||
+      postTipo !== "single" ||
       !bg ||
       !fechaPublicado
     ) {
@@ -79,12 +79,48 @@ function getNextColor(color) {
   return BG_SEQUENCE[(index + 1) % BG_SEQUENCE.length];
 }
 
+function findNextSingleRow(rows, headerMap) {
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
+    const estadoGeneral = normalizeValue(
+      row[headerMap["estado_general"]]
+    ).toLowerCase();
+    const estadoRender = normalizeValue(
+      row[headerMap["estado_render"]]
+    ).toLowerCase();
+    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
+
+    const isEligible =
+      postTipo === "single" &&
+      (estadoGeneral === "pending" || estadoGeneral === "error") &&
+      (estadoRender === "pending" || estadoRender === "error") &&
+      lockStatus === "free";
+
+    if (isEligible) {
+      return {
+        rowNumber: i + 1,
+        values: row
+      };
+    }
+  }
+
+  return null;
+}
+
 async function main() {
+  const cycleId = process.env.PIPELINE_CYCLE_ID || "";
+  const log = logger.child({
+    job: "render-single",
+    cycleId
+  });
+
   const sheets = await getSheetsClient();
   const rows = await readRows(sheets);
 
   if (rows.length < 2) {
-    console.log("No hay datos en la hoja.");
+    log.info("No hay datos en la hoja");
     return;
   }
 
@@ -95,13 +131,21 @@ async function main() {
     "frase_original",
     "frase_corregida",
     "modo",
-    "bg",
-    "estado",
-    "post_tipo",
+    "background_color",
+    "estado_general",
+    "estado_render",
+    "estado_upload",
+    "estado_publish",
+    "lock_status",
+    "intentos",
+    "last_cycle_id",
+    "error_step",
+    "error_message",
     "output_file",
     "fecha_generado",
     "fecha_publicado",
-    "error"
+    "post_tipo",
+    "updated_at"
   ];
 
   for (const key of requiredHeaders) {
@@ -110,37 +154,28 @@ async function main() {
     }
   }
 
-  let selectedRow = null;
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const estado = normalizeValue(row[headerMap["estado"]]);
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
-
-    if (
-      estado === ESTADOS.LISTA_PARA_RENDER &&
-      postTipo === POST_TIPOS.SINGLE
-    ) {
-      selectedRow = {
-        rowNumber: i + 1,
-        values: row
-      };
-      break;
-    }
-  }
+  const selectedRow = findNextSingleRow(rows, headerMap);
 
   if (!selectedRow) {
-    console.log(`No hay singles con estado "${ESTADOS.LISTA_PARA_RENDER}".`);
+    log.info("No hay singles pendientes para render");
     process.exit(10);
   }
 
   const rowNumber = selectedRow.rowNumber;
   const row = selectedRow.values;
 
+  const rowId = normalizeValue(row[headerMap["row_id"]]);
   const fraseOriginal = normalizeValue(row[headerMap["frase_original"]]);
   const fraseCorregida = normalizeValue(row[headerMap["frase_corregida"]]);
   const mode = normalizeValue(row[headerMap["modo"]]) || "retro3d";
   const textToRender = fraseCorregida || fraseOriginal;
+  const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+
+  const rowLogger = log.child({
+    rowNumber,
+    rowId,
+    mode
+  });
 
   if (!textToRender) {
     throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);
@@ -148,26 +183,47 @@ async function main() {
 
   const lastPublishedBg = getLastPublishedBg(rows, headerMap);
   const bg = getNextColor(lastPublishedBg);
+  const now = nowIsoLocal();
 
-  console.log(`Renderizando fila ${rowNumber}`);
-  console.log(`Texto: ${textToRender}`);
-  console.log(`Modo: ${mode}`);
-  console.log(`Color: ${bg}`);
+  rowLogger.info("Fila seleccionada para render", {
+    textLength: textToRender.length,
+    nextBg: bg
+  });
 
   await updateCellsBatch(sheets, [
     {
       row: rowNumber,
-      col: headerMap["estado"] + 1,
-      value: ESTADOS.PROCESANDO_RENDER
+      col: headerMap["estado_general"] + 1,
+      value: "processing"
     },
     {
       row: rowNumber,
-      col: headerMap["bg"] + 1,
-      value: bg
+      col: headerMap["estado_render"] + 1,
+      value: "processing"
     },
     {
       row: rowNumber,
-      col: headerMap["error"] + 1,
+      col: headerMap["lock_status"] + 1,
+      value: "locked"
+    },
+    {
+      row: rowNumber,
+      col: headerMap["last_cycle_id"] + 1,
+      value: cycleId
+    },
+    {
+      row: rowNumber,
+      col: headerMap["updated_at"] + 1,
+      value: now
+    },
+    {
+      row: rowNumber,
+      col: headerMap["error_step"] + 1,
+      value: ""
+    },
+    {
+      row: rowNumber,
+      col: headerMap["error_message"] + 1,
       value: ""
     }
   ]);
@@ -182,6 +238,11 @@ async function main() {
     await updateCellsBatch(sheets, [
       {
         row: rowNumber,
+        col: headerMap["background_color"] + 1,
+        value: bg
+      },
+      {
+        row: rowNumber,
         col: headerMap["output_file"] + 1,
         value: result.fileName
       },
@@ -192,37 +253,74 @@ async function main() {
       },
       {
         row: rowNumber,
-        col: headerMap["estado"] + 1,
-        value: ESTADOS.RENDERIZADO
+        col: headerMap["estado_render"] + 1,
+        value: "done"
       },
       {
         row: rowNumber,
-        col: headerMap["error"] + 1,
+        col: headerMap["updated_at"] + 1,
+        value: nowIsoLocal()
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_step"] + 1,
+        value: ""
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_message"] + 1,
         value: ""
       }
     ]);
 
-    console.log(`Fila ${rowNumber} renderizada correctamente.`);
-    console.log(`Archivo: ${result.fileName}`);
+    rowLogger.info("Fila renderizada correctamente", {
+      outputFile: result.fileName
+    });
   } catch (error) {
     await updateCellsBatch(sheets, [
       {
         row: rowNumber,
-        col: headerMap["estado"] + 1,
-        value: ESTADOS.ERROR_RENDER
+        col: headerMap["estado_general"] + 1,
+        value: "error"
       },
       {
         row: rowNumber,
-        col: headerMap["error"] + 1,
+        col: headerMap["estado_render"] + 1,
+        value: "error"
+      },
+      {
+        row: rowNumber,
+        col: headerMap["lock_status"] + 1,
+        value: "free"
+      },
+      {
+        row: rowNumber,
+        col: headerMap["intentos"] + 1,
+        value: currentAttempts + 1
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_step"] + 1,
+        value: "render"
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_message"] + 1,
         value: error.message || String(error)
+      },
+      {
+        row: rowNumber,
+        col: headerMap["updated_at"] + 1,
+        value: nowIsoLocal()
       }
     ]);
 
+    rowLogger.error("Error renderizando fila", {}, error);
     throw error;
   }
 }
 
 main().catch((err) => {
-  console.error("Error en render-single-from-sheet:", err);
+  logger.error("Error en render-single-from-sheet", {}, err);
   process.exit(1);
 });

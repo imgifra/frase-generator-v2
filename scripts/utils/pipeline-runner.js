@@ -1,4 +1,5 @@
-const { now, runStep } = require("./pipeline-utils");
+const { runStep } = require("./pipeline-utils");
+const { logger } = require("./logger");
 
 function runPipelineSteps({
   label,
@@ -10,21 +11,47 @@ function runPipelineSteps({
   publishScript,
   noPendingMessage,
   successMessage,
-  failedStepPrefix
+  failedStepPrefix,
+  context = {}
 }) {
-  console.log(`\n[${now()}] 🚀 PIPELINE ${label} INICIADO\n`);
+  const pipelineLogger = logger.child({
+    pipeline: label,
+    ...context
+  });
 
-  const renderStatus = runStep(renderStepName, renderScript);
+  const startMs = Date.now();
+
+  pipelineLogger.info("Pipeline iniciado");
+
+  const renderStatus = runStep(renderStepName, renderScript, {
+    pipeline: label,
+    ...context
+  });
 
   if (renderStatus === 10) {
-    console.log(`[${now()}] ℹ️ ${noPendingMessage}`);
-    console.log(`\n[${now()}] 🏁 PIPELINE ${label} TERMINADO\n`);
+    pipelineLogger.info(noPendingMessage, {
+      result: "no_pending",
+      durationMs: Date.now() - startMs
+    });
+
+    pipelineLogger.info("Pipeline terminado", {
+      processed: false
+    });
+
     return { ok: true, processed: false, skipped: true };
   }
 
   if (renderStatus !== 0) {
-    console.error(`[${now()}] ❌ Error en render. Código: ${renderStatus}`);
-    console.log(`\n[${now()}] 🏁 PIPELINE ${label} TERMINADO\n`);
+    pipelineLogger.error("Error en render", {
+      status: renderStatus,
+      failedStep: `${failedStepPrefix}-render`,
+      durationMs: Date.now() - startMs
+    });
+
+    pipelineLogger.info("Pipeline terminado", {
+      processed: false
+    });
+
     return {
       ok: false,
       processed: false,
@@ -32,11 +59,22 @@ function runPipelineSteps({
     };
   }
 
-  const uploadStatus = runStep(uploadStepName, uploadScript);
+  const uploadStatus = runStep(uploadStepName, uploadScript, {
+    pipeline: label,
+    ...context
+  });
 
   if (uploadStatus !== 0) {
-    console.error(`[${now()}] ❌ Error en upload. Código: ${uploadStatus}`);
-    console.log(`\n[${now()}] 🏁 PIPELINE ${label} TERMINADO\n`);
+    pipelineLogger.error("Error en upload", {
+      status: uploadStatus,
+      failedStep: `${failedStepPrefix}-upload`,
+      durationMs: Date.now() - startMs
+    });
+
+    pipelineLogger.info("Pipeline terminado", {
+      processed: false
+    });
+
     return {
       ok: false,
       processed: false,
@@ -44,11 +82,22 @@ function runPipelineSteps({
     };
   }
 
-  const publishStatus = runStep(publishStepName, publishScript);
+  const publishStatus = runStep(publishStepName, publishScript, {
+    pipeline: label,
+    ...context
+  });
 
   if (publishStatus !== 0) {
-    console.error(`[${now()}] ❌ Error en publish. Código: ${publishStatus}`);
-    console.log(`\n[${now()}] 🏁 PIPELINE ${label} TERMINADO\n`);
+    pipelineLogger.error("Error en publish", {
+      status: publishStatus,
+      failedStep: `${failedStepPrefix}-publish`,
+      durationMs: Date.now() - startMs
+    });
+
+    pipelineLogger.info("Pipeline terminado", {
+      processed: false
+    });
+
     return {
       ok: false,
       processed: false,
@@ -56,8 +105,14 @@ function runPipelineSteps({
     };
   }
 
-  console.log(`[${now()}] ✅ ${successMessage}`);
-  console.log(`\n[${now()}] 🏁 PIPELINE ${label} TERMINADO\n`);
+  pipelineLogger.info(successMessage, {
+    processed: true,
+    durationMs: Date.now() - startMs
+  });
+
+  pipelineLogger.info("Pipeline terminado", {
+    processed: true
+  });
 
   return { ok: true, processed: true };
 }

@@ -9,76 +9,67 @@ const {
   readRows,
   updateCellsBatch
 } = require("../../core/sheets");
-const { normalizeValue } = require("../../utils/common");
-const { ESTADOS, POST_TIPOS } = require("../../config/constants");
+const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { logger } = require("../../utils/logger");
 
 const OUTPUT_DIR = path.resolve(__dirname, "..", "..", "..", "output");
 
-async function main() {
-  const sheets = await getSheetsClient();
-  const rows = await readRows(sheets);
-
-  if (rows.length < 2) {
-    console.log("No hay datos.");
-    return;
-  }
-
-  const headers = rows[0];
-  const headerMap = buildHeaderMap(headers);
-
-  const requiredHeaders = [
-    "estado",
-    "post_tipo",
-    "carousel_id",
-    "carousel_order",
-    "output_file",
-    "media_url",
-    "cloudinary_public_id",
-    "error"
-  ];
-
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
-
+function getPendingCarouselRows(rows, headerMap) {
   let selectedCarouselId = "";
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const estado = normalizeValue(row[headerMap["estado"]]);
-    const tipo = normalizeValue(row[headerMap["post_tipo"]]);
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
+    const estadoRender = normalizeValue(
+      row[headerMap["estado_render"]]
+    ).toLowerCase();
+    const estadoUpload = normalizeValue(
+      row[headerMap["estado_upload"]]
+    ).toLowerCase();
+    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
     const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
 
-    if (
-      tipo === POST_TIPOS.CAROUSEL &&
-      estado === ESTADOS.RENDERIZADO_CAROUSEL &&
-      carouselId
-    ) {
+    const isEligible =
+      postTipo === "carousel" &&
+      estadoRender === "done" &&
+      (estadoUpload === "pending" || estadoUpload === "error") &&
+      lockStatus === "locked" &&
+      carouselId;
+
+    if (isEligible) {
       selectedCarouselId = carouselId;
       break;
     }
   }
 
   if (!selectedCarouselId) {
-    console.log("No hay carruseles para subir.");
-    process.exit(10);
+    return { selectedCarouselId: "", groupRows: [] };
   }
-
-  console.log(`Subiendo carrusel: ${selectedCarouselId}`);
 
   const groupRows = [];
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    if (
-      normalizeValue(row[headerMap["post_tipo"]]) === POST_TIPOS.CAROUSEL &&
-      normalizeValue(row[headerMap["estado"]]) === ESTADOS.RENDERIZADO_CAROUSEL &&
-      normalizeValue(row[headerMap["carousel_id"]]) === selectedCarouselId
-    ) {
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
+    const estadoRender = normalizeValue(
+      row[headerMap["estado_render"]]
+    ).toLowerCase();
+    const estadoUpload = normalizeValue(
+      row[headerMap["estado_upload"]]
+    ).toLowerCase();
+    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
+    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+
+    const belongsToSelected =
+      postTipo === "carousel" &&
+      carouselId === selectedCarouselId &&
+      estadoRender === "done" &&
+      (estadoUpload === "pending" || estadoUpload === "error") &&
+      lockStatus === "locked";
+
+    if (belongsToSelected) {
       groupRows.push({
         rowNumber: i + 1,
         values: row,
@@ -89,49 +80,220 @@ async function main() {
 
   groupRows.sort((a, b) => a.order - b.order);
 
+  return { selectedCarouselId, groupRows };
+}
+
+function validateCarouselRows(groupRows, selectedCarouselId) {
+  if (groupRows.length < 2 || groupRows.length > 10) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene ${groupRows.length} slides. Debe tener entre 2 y 10.`
+    );
+  }
+
+  const orders = groupRows.map((item) => item.order);
+
+  if (orders.some((order) => !Number.isInteger(order) || order < 1)) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene carousel_order inválidos.`
+    );
+  }
+
+  const uniqueOrders = new Set(orders);
+
+  if (uniqueOrders.size !== orders.length) {
+    throw new Error(
+      `El carrusel ${selectedCarouselId} tiene carousel_order duplicados.`
+    );
+  }
+}
+
+async function markGroupAsError(sheets, headerMap, groupRows, errorMessage, attemptsDelta = 1) {
+  const now = nowIsoLocal();
+  const updates = [];
+
   for (const item of groupRows) {
-    const rowNumber = item.rowNumber;
     const row = item.values;
+    const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
 
-    const fileName = normalizeValue(row[headerMap["output_file"]]);
-
-    if (!fileName) {
-      throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
-    }
-
-    const localPath = path.join(OUTPUT_DIR, fileName);
-
-    if (!fs.existsSync(localPath)) {
-      throw new Error(
-        `No existe el archivo local para la fila ${rowNumber}: ${localPath}`
-      );
-    }
-
-    console.log(`Subiendo slide ${item.order}: ${fileName}`);
-    console.log(`Ruta local: ${localPath}`);
-
-    await updateCellsBatch(sheets, [
+    updates.push(
       {
-        row: rowNumber,
-        col: headerMap["estado"] + 1,
-        value: ESTADOS.SUBIENDO_CAROUSEL
+        row: item.rowNumber,
+        col: headerMap["estado_general"] + 1,
+        value: "error"
       },
       {
-        row: rowNumber,
-        col: headerMap["error"] + 1,
+        row: item.rowNumber,
+        col: headerMap["estado_upload"] + 1,
+        value: "error"
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["lock_status"] + 1,
+        value: "free"
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["intentos"] + 1,
+        value: currentAttempts + attemptsDelta
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["error_step"] + 1,
+        value: "upload"
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["error_message"] + 1,
+        value: errorMessage
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["updated_at"] + 1,
+        value: now
+      }
+    );
+  }
+
+  await updateCellsBatch(sheets, updates);
+}
+
+async function main() {
+  const cycleId = process.env.PIPELINE_CYCLE_ID || "";
+  const log = logger.child({
+    job: "upload-carousel",
+    cycleId
+  });
+
+  const sheets = await getSheetsClient();
+  const rows = await readRows(sheets);
+
+  if (rows.length < 2) {
+    log.info("No hay datos");
+    return;
+  }
+
+  const headers = rows[0];
+  const headerMap = buildHeaderMap(headers);
+
+  const requiredHeaders = [
+    "row_id",
+    "updated_at",
+    "post_tipo",
+    "carousel_id",
+    "carousel_order",
+    "estado_general",
+    "estado_render",
+    "estado_upload",
+    "lock_status",
+    "intentos",
+    "last_cycle_id",
+    "error_step",
+    "error_message",
+    "output_file",
+    "media_url",
+    "cloudinary_public_id",
+    "fecha_upload"
+  ];
+
+  for (const key of requiredHeaders) {
+    if (!(key in headerMap)) {
+      throw new Error(`Falta la columna requerida: ${key}`);
+    }
+  }
+
+  const { selectedCarouselId, groupRows } = getPendingCarouselRows(rows, headerMap);
+
+  if (!selectedCarouselId) {
+    log.info("No hay carruseles pendientes para upload");
+    process.exit(10);
+  }
+
+  validateCarouselRows(groupRows, selectedCarouselId);
+
+  const groupLogger = log.child({
+    carouselId: selectedCarouselId,
+    slides: groupRows.length
+  });
+
+  groupLogger.info("Carrusel seleccionado para upload");
+
+  const prepUpdates = [];
+  for (const item of groupRows) {
+    prepUpdates.push(
+      {
+        row: item.rowNumber,
+        col: headerMap["estado_upload"] + 1,
+        value: "processing"
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["last_cycle_id"] + 1,
+        value: cycleId
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["updated_at"] + 1,
+        value: nowIsoLocal()
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["error_step"] + 1,
+        value: ""
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["error_message"] + 1,
         value: ""
       }
-    ]);
+    );
+  }
 
-    try {
+  await updateCellsBatch(sheets, prepUpdates);
+
+  try {
+    for (const item of groupRows) {
+      const rowNumber = item.rowNumber;
+      const row = item.values;
+
+      const rowId = normalizeValue(row[headerMap["row_id"]]);
+      const fileName = normalizeValue(row[headerMap["output_file"]]);
+
+      const rowLogger = groupLogger.child({
+        rowNumber,
+        rowId,
+        order: item.order
+      });
+
+      if (!fileName) {
+        throw new Error(`Fila ${rowNumber} no tiene archivo renderizado.`);
+      }
+
+      const localPath = path.join(OUTPUT_DIR, fileName);
+
+      if (!fs.existsSync(localPath)) {
+        throw new Error(
+          `No existe el archivo local para la fila ${rowNumber}: ${localPath}`
+        );
+      }
+
+      rowLogger.info("Subiendo slide", {
+        outputFile: fileName,
+        localPath
+      });
+
       const result = await uploadImage(localPath, fileName);
 
-      try {
-        fs.unlinkSync(localPath);
-        console.log(`Archivo local eliminado: ${localPath}`);
-      } catch (deleteErr) {
-        console.warn(`No se pudo eliminar el archivo local: ${localPath}`);
-        console.warn(deleteErr.message || deleteErr);
+      if (fs.existsSync(localPath)) {
+        try {
+          fs.unlinkSync(localPath);
+          rowLogger.info("Archivo local eliminado", {
+            localPath
+          });
+        } catch (deleteErr) {
+          rowLogger.warn("No se pudo eliminar el archivo local", {
+            localPath
+          }, deleteErr);
+        }
       }
 
       await updateCellsBatch(sheets, [
@@ -147,39 +309,52 @@ async function main() {
         },
         {
           row: rowNumber,
-          col: headerMap["estado"] + 1,
-          value: ESTADOS.LISTA_PARA_PUBLICAR_CAROUSEL
+          col: headerMap["fecha_upload"] + 1,
+          value: nowIsoLocal()
         },
         {
           row: rowNumber,
-          col: headerMap["error"] + 1,
+          col: headerMap["estado_upload"] + 1,
+          value: "done"
+        },
+        {
+          row: rowNumber,
+          col: headerMap["updated_at"] + 1,
+          value: nowIsoLocal()
+        },
+        {
+          row: rowNumber,
+          col: headerMap["error_step"] + 1,
+          value: ""
+        },
+        {
+          row: rowNumber,
+          col: headerMap["error_message"] + 1,
           value: ""
         }
       ]);
 
-      console.log(`Fila ${rowNumber} subida OK`);
-    } catch (err) {
-      await updateCellsBatch(sheets, [
-        {
-          row: rowNumber,
-          col: headerMap["estado"] + 1,
-          value: ESTADOS.ERROR_UPLOAD
-        },
-        {
-          row: rowNumber,
-          col: headerMap["error"] + 1,
-          value: err.message || String(err)
-        }
-      ]);
-
-      throw err;
+      rowLogger.info("Slide subido correctamente", {
+        mediaUrl: result.secureUrl,
+        publicId: result.publicId
+      });
     }
-  }
 
-  console.log("Carrusel subido completo.");
+    groupLogger.info("Carrusel subido completo");
+  } catch (err) {
+    await markGroupAsError(
+      sheets,
+      headerMap,
+      groupRows,
+      err.message || String(err)
+    );
+
+    groupLogger.error("Error subiendo carrusel", {}, err);
+    throw err;
+  }
 }
 
 main().catch((err) => {
-  console.error("Error en upload-carousel-from-sheet:", err);
+  logger.error("Error en upload-carousel-from-sheet", {}, err);
   process.exit(1);
 });

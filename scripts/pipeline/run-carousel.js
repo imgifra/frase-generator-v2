@@ -1,6 +1,6 @@
 const { runPipelineSteps } = require("../utils/pipeline-runner");
 
-function runCarouselPipeline() {
+function runCarouselPipeline(context = {}) {
   return runPipelineSteps({
     label: "CAROUSEL",
     renderStepName: "RENDER CAROUSEL",
@@ -11,7 +11,8 @@ function runCarouselPipeline() {
     publishScript: "scripts/jobs/carousel/publish-carousel-from-sheet.js",
     noPendingMessage: "No quedan carruseles pendientes.",
     successMessage: "Se procesó 1 carrusel completo en este ciclo.",
-    failedStepPrefix: "carousel"
+    failedStepPrefix: "carousel",
+    context
   });
 }
 

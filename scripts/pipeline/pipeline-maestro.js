@@ -1,6 +1,7 @@
 require("dotenv").config();
 
-const { now, sleep, validateWaitMs } = require("../utils/pipeline-utils");
+const { sleep, validateWaitMs } = require("../utils/pipeline-utils");
+const { logger } = require("../utils/logger");
 const { runSinglePipeline } = require("./run-single");
 const { runCarouselPipeline } = require("./run-carousel");
 
@@ -56,73 +57,100 @@ function getRunWindow() {
 let lastProcessedSlot = "";
 
 async function runMasterPipeline() {
+  const cycleId = `${Date.now()}`;
+  const startMs = Date.now();
   const windowInfo = getRunWindow();
   const dateKey = getLocalDateKey();
   const slotKey = windowInfo.type
     ? `${dateKey}-${windowInfo.hour}-${windowInfo.type}`
     : "";
 
-  console.log(`\n[${now()}] 🚀 PIPELINE MAESTRO INICIADO`);
-  console.log(`[${now()}] 🕒 Hora local (${TIMEZONE}): ${windowInfo.hour}:00`);
+  const cycleLogger = logger.child({
+    cycleId,
+    timezone: TIMEZONE,
+    localHour: windowInfo.hour,
+    slotKey
+  });
+
+  cycleLogger.info("Pipeline maestro iniciado", {
+    windowType: windowInfo.type || "disabled"
+  });
 
   if (!windowInfo.type) {
-    console.log(`[${now()}] ℹ️ Esta hora no está habilitada para publicar.`);
-    console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
+    cycleLogger.info("Hora no habilitada para publicación", {
+      processed: false,
+      durationMs: Date.now() - startMs
+    });
+
     return { ok: true, processed: false, skipped: true };
   }
 
   if (slotKey === lastProcessedSlot) {
-    console.log(
-      `[${now()}] ℹ️ Ya se procesó esta ventana horaria (${slotKey}).`
-    );
-    console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
+    cycleLogger.info("Ventana horaria ya procesada", {
+      processed: false,
+      durationMs: Date.now() - startMs
+    });
+
     return { ok: true, processed: false, skipped: true };
   }
 
   if (windowInfo.type === "carousel_preferred") {
-    console.log(
-      `[${now()}] 🎯 Ventana activa: CARRUSEL preferido, con fallback a SINGLE`
-    );
+    cycleLogger.info("Ventana activa: carrusel preferido con fallback a single");
 
-    const carouselResult = runCarouselPipeline();
+    const carouselResult = runCarouselPipeline({
+      cycleId,
+      slotKey,
+      branch: "carousel"
+    });
 
     if (!carouselResult.ok) {
-      console.error(
-        `[${now()}] ❌ Falló el pipeline de carrusel en: ${carouselResult.failedStep}`
-      );
-      console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
+      cycleLogger.error("Falló la rama de carrusel", {
+        failedBranch: "carousel",
+        failedStep: carouselResult.failedStep,
+        durationMs: Date.now() - startMs
+      });
+
       return { ok: false, processed: false, failedBranch: "carousel" };
     }
 
     if (carouselResult.processed) {
       lastProcessedSlot = slotKey;
-      console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
+
+      cycleLogger.info("Ciclo completado con carrusel", {
+        resultType: "carousel",
+        processed: true,
+        durationMs: Date.now() - startMs
+      });
+
       return { ok: true, processed: true, type: "carousel" };
     }
 
-    console.log(
-      `[${now()}] ℹ️ No había carrusel pendiente. Intentando SINGLE como respaldo.`
-    );
+    cycleLogger.info("No había carrusel pendiente; intentando single de respaldo");
 
-    const singleResult = runSinglePipeline();
+    const singleResult = runSinglePipeline({
+      cycleId,
+      slotKey,
+      branch: "single_fallback"
+    });
 
     if (!singleResult.ok) {
-      console.error(
-        `[${now()}] ❌ Falló el pipeline single en: ${singleResult.failedStep}`
-      );
-      console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
+      cycleLogger.error("Falló la rama single de respaldo", {
+        failedBranch: "single",
+        failedStep: singleResult.failedStep,
+        durationMs: Date.now() - startMs
+      });
+
       return { ok: false, processed: false, failedBranch: "single" };
     }
 
     lastProcessedSlot = slotKey;
 
-    if (!singleResult.processed) {
-      console.log(
-        `[${now()}] ℹ️ Tampoco había singles pendientes para esta ventana.`
-      );
-    }
+    cycleLogger.info("Ciclo completado tras fallback", {
+      resultType: "single_fallback",
+      processed: singleResult.processed,
+      durationMs: Date.now() - startMs
+    });
 
-    console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
     return {
       ok: true,
       processed: singleResult.processed,
@@ -131,66 +159,70 @@ async function runMasterPipeline() {
   }
 
   if (windowInfo.type === "single") {
-    console.log(`[${now()}] 🎯 Ventana activa: solo SINGLE`);
+    cycleLogger.info("Ventana activa: solo single");
 
-    const singleResult = runSinglePipeline();
+    const singleResult = runSinglePipeline({
+      cycleId,
+      slotKey,
+      branch: "single"
+    });
 
     if (!singleResult.ok) {
-      console.error(
-        `[${now()}] ❌ Falló el pipeline single en: ${singleResult.failedStep}`
-      );
-      console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
+      cycleLogger.error("Falló la rama single", {
+        failedBranch: "single",
+        failedStep: singleResult.failedStep,
+        durationMs: Date.now() - startMs
+      });
+
       return { ok: false, processed: false, failedBranch: "single" };
     }
 
     lastProcessedSlot = slotKey;
 
-    if (!singleResult.processed) {
-      console.log(
-        `[${now()}] ℹ️ La ventana era single, pero no había pendientes.`
-      );
-    }
+    cycleLogger.info("Ciclo completado con single", {
+      resultType: "single",
+      processed: singleResult.processed,
+      durationMs: Date.now() - startMs
+    });
 
-    console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
     return { ok: true, processed: singleResult.processed, type: "single" };
   }
 
-  console.log(`\n[${now()}] 🏁 PIPELINE MAESTRO TERMINADO\n`);
+  cycleLogger.warn("Se alcanzó una rama no esperada", {
+    processed: false,
+    durationMs: Date.now() - startMs
+  });
+
   return { ok: true, processed: false };
 }
 
 async function main() {
-  console.log(
-    `[${now()}] ⏱️ Pipeline maestro activo. Intervalo configurado: ${WAIT_MS} ms (${Math.round(WAIT_MS / 1000)} s)`
-  );
-  console.log(`[${now()}] 🌎 Zona horaria activa: ${TIMEZONE}`);
+  const mainLogger = logger.child({
+    timezone: TIMEZONE,
+    waitMs: WAIT_MS
+  });
+
+  mainLogger.info("Pipeline maestro activo", {
+    waitSeconds: Math.round(WAIT_MS / 1000)
+  });
 
   while (true) {
     try {
       await runMasterPipeline();
     } catch (error) {
-      console.error(
-        `[${now()}] ❌ Error no controlado en el pipeline maestro:`,
-        error
-      );
+      mainLogger.error("Error no controlado en el pipeline maestro", {}, error);
     }
 
-    console.log(
-      `\n[${now()}] ⏳ Esperando ${Math.round(WAIT_MS / 1000)} segundos (~${(
-        WAIT_MS /
-        1000 /
-        60
-      ).toFixed(2)} min) para el próximo ciclo...\n`
-    );
+    mainLogger.info("Esperando próximo ciclo", {
+      waitSeconds: Math.round(WAIT_MS / 1000),
+      waitMinutes: Number((WAIT_MS / 1000 / 60).toFixed(2))
+    });
 
     await sleep(WAIT_MS);
   }
 }
 
 main().catch((error) => {
-  console.error(
-    `[${now()}] ❌ Error fatal al iniciar pipeline maestro:`,
-    error
-  );
+  logger.error("Error fatal al iniciar pipeline maestro", {}, error);
   process.exit(1);
 });

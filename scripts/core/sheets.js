@@ -34,7 +34,7 @@ function buildHeaderMap(headers) {
 async function readRows(sheets) {
   const readRes = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: `${WORKSHEET_NAME}!A:Z`
+    range: `${WORKSHEET_NAME}!A:AZ`
   });
 
   return readRes.data.values || [];

@@ -10,16 +10,52 @@ const {
   updateCellsBatch
 } = require("../../core/sheets");
 const { normalizeValue, nowIsoLocal } = require("../../utils/common");
-const { ESTADOS, POST_TIPOS } = require("../../config/constants");
+const { logger } = require("../../utils/logger");
 
 const OUTPUT_DIR = path.resolve(__dirname, "..", "..", "..", "output");
 
+function findNextUploadRow(rows, headerMap) {
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+
+    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
+    const estadoRender = normalizeValue(
+      row[headerMap["estado_render"]]
+    ).toLowerCase();
+    const estadoUpload = normalizeValue(
+      row[headerMap["estado_upload"]]
+    ).toLowerCase();
+    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
+
+    const isEligible =
+      postTipo === "single" &&
+      estadoRender === "done" &&
+      (estadoUpload === "pending" || estadoUpload === "error") &&
+      lockStatus === "locked";
+
+    if (isEligible) {
+      return {
+        rowNumber: i + 1,
+        values: row
+      };
+    }
+  }
+
+  return null;
+}
+
 async function main() {
+  const cycleId = process.env.PIPELINE_CYCLE_ID || "";
+  const log = logger.child({
+    job: "upload-single",
+    cycleId
+  });
+
   const sheets = await getSheetsClient();
   const rows = await readRows(sheets);
 
   if (rows.length < 2) {
-    console.log("No hay datos en la hoja.");
+    log.info("No hay datos en la hoja");
     return;
   }
 
@@ -27,13 +63,21 @@ async function main() {
   const headerMap = buildHeaderMap(headers);
 
   const requiredHeaders = [
-    "estado",
+    "row_id",
+    "updated_at",
     "post_tipo",
+    "estado_general",
+    "estado_render",
+    "estado_upload",
+    "lock_status",
+    "intentos",
+    "last_cycle_id",
+    "error_step",
+    "error_message",
     "output_file",
     "media_url",
     "cloudinary_public_id",
-    "fecha_upload",
-    "error"
+    "fecha_upload"
   ];
 
   for (const key of requiredHeaders) {
@@ -42,34 +86,25 @@ async function main() {
     }
   }
 
-  let targetRow = null;
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const estado = normalizeValue(row[headerMap["estado"]]);
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]);
-
-    if (
-      estado === ESTADOS.RENDERIZADO &&
-      postTipo === POST_TIPOS.SINGLE
-    ) {
-      targetRow = {
-        rowNumber: i + 1,
-        values: row
-      };
-      break;
-    }
-  }
+  const targetRow = findNextUploadRow(rows, headerMap);
 
   if (!targetRow) {
-    console.log(`No hay singles con estado "${ESTADOS.RENDERIZADO}".`);
+    log.info("No hay singles pendientes para upload");
     process.exit(10);
   }
 
   const rowNumber = targetRow.rowNumber;
   const row = targetRow.values;
 
+  const rowId = normalizeValue(row[headerMap["row_id"]]);
   const outputFile = normalizeValue(row[headerMap["output_file"]]);
+  const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+
+  const rowLogger = log.child({
+    rowNumber,
+    rowId,
+    outputFile
+  });
 
   if (!outputFile) {
     throw new Error(`La fila ${rowNumber} no tiene output_file.`);
@@ -81,17 +116,34 @@ async function main() {
     throw new Error(`No existe el archivo local: ${localPath}`);
   }
 
-  console.log(`Subiendo fila ${rowNumber}: ${outputFile}`);
+  rowLogger.info("Fila seleccionada para upload", {
+    localPath
+  });
 
   await updateCellsBatch(sheets, [
     {
       row: rowNumber,
-      col: headerMap["estado"] + 1,
-      value: ESTADOS.SUBIENDO_MEDIA
+      col: headerMap["estado_upload"] + 1,
+      value: "processing"
     },
     {
       row: rowNumber,
-      col: headerMap["error"] + 1,
+      col: headerMap["last_cycle_id"] + 1,
+      value: cycleId
+    },
+    {
+      row: rowNumber,
+      col: headerMap["updated_at"] + 1,
+      value: nowIsoLocal()
+    },
+    {
+      row: rowNumber,
+      col: headerMap["error_step"] + 1,
+      value: ""
+    },
+    {
+      row: rowNumber,
+      col: headerMap["error_message"] + 1,
       value: ""
     }
   ]);
@@ -102,10 +154,13 @@ async function main() {
     if (fs.existsSync(localPath)) {
       try {
         fs.unlinkSync(localPath);
-        console.log(`Archivo local eliminado: ${localPath}`);
+        rowLogger.info("Archivo local eliminado", {
+          localPath
+        });
       } catch (deleteErr) {
-        console.warn(`No se pudo eliminar el archivo local: ${localPath}`);
-        console.warn(deleteErr.message || deleteErr);
+        rowLogger.warn("No se pudo eliminar el archivo local", {
+          localPath
+        }, deleteErr);
       }
     }
 
@@ -127,37 +182,75 @@ async function main() {
       },
       {
         row: rowNumber,
-        col: headerMap["estado"] + 1,
-        value: ESTADOS.LISTA_PARA_PUBLICAR
+        col: headerMap["estado_upload"] + 1,
+        value: "done"
       },
       {
         row: rowNumber,
-        col: headerMap["error"] + 1,
+        col: headerMap["updated_at"] + 1,
+        value: nowIsoLocal()
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_step"] + 1,
+        value: ""
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_message"] + 1,
         value: ""
       }
     ]);
 
-    console.log(`Fila ${rowNumber} subida correctamente.`);
-    console.log(`URL: ${uploadResult.secureUrl}`);
+    rowLogger.info("Fila subida correctamente", {
+      mediaUrl: uploadResult.secureUrl,
+      publicId: uploadResult.publicId
+    });
   } catch (error) {
     await updateCellsBatch(sheets, [
       {
         row: rowNumber,
-        col: headerMap["estado"] + 1,
-        value: ESTADOS.ERROR_UPLOAD
+        col: headerMap["estado_general"] + 1,
+        value: "error"
       },
       {
         row: rowNumber,
-        col: headerMap["error"] + 1,
+        col: headerMap["estado_upload"] + 1,
+        value: "error"
+      },
+      {
+        row: rowNumber,
+        col: headerMap["lock_status"] + 1,
+        value: "free"
+      },
+      {
+        row: rowNumber,
+        col: headerMap["intentos"] + 1,
+        value: currentAttempts + 1
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_step"] + 1,
+        value: "upload"
+      },
+      {
+        row: rowNumber,
+        col: headerMap["error_message"] + 1,
         value: error.message || String(error)
+      },
+      {
+        row: rowNumber,
+        col: headerMap["updated_at"] + 1,
+        value: nowIsoLocal()
       }
     ]);
 
+    rowLogger.error("Error subiendo fila", {}, error);
     throw error;
   }
 }
 
 main().catch((err) => {
-  console.error("Error en upload-single-from-sheet:", err);
+  logger.error("Error en upload-single-from-sheet", {}, err);
   process.exit(1);
 });

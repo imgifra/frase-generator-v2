@@ -1,6 +1,6 @@
 const { runPipelineSteps } = require("../utils/pipeline-runner");
 
-function runSinglePipeline() {
+function runSinglePipeline(context = {}) {
   return runPipelineSteps({
     label: "SINGLE",
     renderStepName: "RENDER SINGLE",
@@ -11,7 +11,8 @@ function runSinglePipeline() {
     publishScript: "scripts/jobs/single/publish-single-from-sheet.js",
     noPendingMessage: "No quedan posts single pendientes.",
     successMessage: "Se procesó 1 post single en este ciclo.",
-    failedStepPrefix: "single"
+    failedStepPrefix: "single",
+    context
   });
 }
 
