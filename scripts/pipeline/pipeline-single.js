@@ -1,45 +1,35 @@
 require("dotenv").config();
 
-const { sleep, validateWaitMs } = require("../utils/pipeline-utils");
 const { logger } = require("../utils/logger");
 const { runSinglePipeline } = require("./run-single");
 
-const WAIT_MS = Number(process.env.WAIT_MS || 2 * 60 * 60 * 1000);
-
-validateWaitMs(WAIT_MS);
-
 async function main() {
-  const mainLogger = logger.child({
-    pipeline: "SINGLE_RUNNER",
-    waitMs: WAIT_MS
+  const cycleId = `${Date.now()}`;
+  const log = logger.child({
+    pipeline: "SINGLE_MANUAL_RUN",
+    cycleId
   });
 
-  mainLogger.info("Pipeline single activo", {
-    waitSeconds: Math.round(WAIT_MS / 1000)
+  log.info("Iniciando corrida manual de single");
+
+  const result = await runSinglePipeline({
+    cycleId,
+    branch: "single_manual"
   });
 
-  while (true) {
-    const cycleId = `${Date.now()}`;
+  log.info("Corrida manual finalizada", {
+    ok: result.ok,
+    processed: result.processed,
+    failedStep: result.failedStep || "",
+    skipped: result.skipped || false
+  });
 
-    try {
-      runSinglePipeline({
-        cycleId,
-        branch: "single_runner"
-      });
-    } catch (error) {
-      mainLogger.error("Error no controlado en pipeline single", { cycleId }, error);
-    }
-
-    mainLogger.info("Esperando próximo ciclo", {
-      cycleId,
-      waitSeconds: Math.round(WAIT_MS / 1000)
-    });
-
-    await sleep(WAIT_MS);
+  if (!result.ok) {
+    process.exit(1);
   }
 }
 
 main().catch((error) => {
-  logger.error("Error fatal al iniciar pipeline single", {}, error);
+  logger.error("Error fatal en corrida manual single", {}, error);
   process.exit(1);
 });
