@@ -1,7 +1,7 @@
 const { runStep } = require("./pipeline-utils");
 const { logger } = require("./logger");
 
-function runPipelineSteps({
+async function runPipelineSteps({
   label,
   renderStepName,
   renderScript,
@@ -23,12 +23,12 @@ function runPipelineSteps({
 
   pipelineLogger.info("Pipeline iniciado");
 
-  const renderStatus = runStep(renderStepName, renderScript, {
+  const renderResult = runStep(renderStepName, renderScript, {
     pipeline: label,
     ...context
   });
 
-  if (renderStatus === 10) {
+  if (renderResult.noPending) {
     pipelineLogger.info(noPendingMessage, {
       result: "no_pending",
       durationMs: Date.now() - startMs
@@ -38,12 +38,17 @@ function runPipelineSteps({
       processed: false
     });
 
-    return { ok: true, processed: false, skipped: true };
+    return {
+      ok: true,
+      processed: false,
+      skipped: true,
+      noPending: true
+    };
   }
 
-  if (renderStatus !== 0) {
+  if (!renderResult.ok) {
     pipelineLogger.error("Error en render", {
-      status: renderStatus,
+      status: renderResult.status,
       failedStep: `${failedStepPrefix}-render`,
       durationMs: Date.now() - startMs
     });
@@ -59,14 +64,14 @@ function runPipelineSteps({
     };
   }
 
-  const uploadStatus = runStep(uploadStepName, uploadScript, {
+  const uploadResult = runStep(uploadStepName, uploadScript, {
     pipeline: label,
     ...context
   });
 
-  if (uploadStatus !== 0) {
+  if (!uploadResult.ok) {
     pipelineLogger.error("Error en upload", {
-      status: uploadStatus,
+      status: uploadResult.status,
       failedStep: `${failedStepPrefix}-upload`,
       durationMs: Date.now() - startMs
     });
@@ -82,14 +87,14 @@ function runPipelineSteps({
     };
   }
 
-  const publishStatus = runStep(publishStepName, publishScript, {
+  const publishResult = runStep(publishStepName, publishScript, {
     pipeline: label,
     ...context
   });
 
-  if (publishStatus !== 0) {
+  if (!publishResult.ok) {
     pipelineLogger.error("Error en publish", {
-      status: publishStatus,
+      status: publishResult.status,
       failedStep: `${failedStepPrefix}-publish`,
       durationMs: Date.now() - startMs
     });

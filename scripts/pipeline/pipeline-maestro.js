@@ -97,7 +97,7 @@ async function runMasterPipeline() {
   if (windowInfo.type === "carousel_preferred") {
     cycleLogger.info("Ventana activa: carrusel preferido con fallback a single");
 
-    const carouselResult = runCarouselPipeline({
+    const carouselResult = await runCarouselPipeline({
       cycleId,
       slotKey,
       branch: "carousel"
@@ -127,7 +127,7 @@ async function runMasterPipeline() {
 
     cycleLogger.info("No había carrusel pendiente; intentando single de respaldo");
 
-    const singleResult = runSinglePipeline({
+    const singleResult = await runSinglePipeline({
       cycleId,
       slotKey,
       branch: "single_fallback"
@@ -143,7 +143,9 @@ async function runMasterPipeline() {
       return { ok: false, processed: false, failedBranch: "single" };
     }
 
-    lastProcessedSlot = slotKey;
+    if (singleResult.processed) {
+      lastProcessedSlot = slotKey;
+    }
 
     cycleLogger.info("Ciclo completado tras fallback", {
       resultType: "single_fallback",
@@ -161,7 +163,7 @@ async function runMasterPipeline() {
   if (windowInfo.type === "single") {
     cycleLogger.info("Ventana activa: solo single");
 
-    const singleResult = runSinglePipeline({
+    const singleResult = await runSinglePipeline({
       cycleId,
       slotKey,
       branch: "single"
@@ -177,7 +179,9 @@ async function runMasterPipeline() {
       return { ok: false, processed: false, failedBranch: "single" };
     }
 
-    lastProcessedSlot = slotKey;
+    if (singleResult.processed) {
+      lastProcessedSlot = slotKey;
+    }
 
     cycleLogger.info("Ciclo completado con single", {
       resultType: "single",

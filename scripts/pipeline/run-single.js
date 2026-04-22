@@ -16,4 +16,6 @@ function runSinglePipeline(context = {}) {
   });
 }
 
-module.exports = { runSinglePipeline };
+module.exports = {
+  runSinglePipeline
+};

@@ -6,34 +6,47 @@ const { deleteImage } = require("../../libs/upload-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
+  requireHeaders,
+  getCellValue,
   readRows,
   updateCellsBatch
 } = require("../../core/sheets");
-const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
+const {
+  STATUS,
+  GENERAL_STATUS,
+  POST_TIPOS,
+  LOCK_STATUS
+} = require("../../core/status");
 
+/**
+ * Este job SOLO debe escoger filas listas para publicar.
+ *
+ * No depende de estado_general.
+ * La elegibilidad real es:
+ * - render done
+ * - upload done
+ * - publish pending/error
+ *
+ * Permitimos free o locked para no dejar filas huérfanas.
+ */
 function getPendingSingleRow(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const estadoUpload = normalizeValue(
-      row[headerMap["estado_upload"]]
-    ).toLowerCase();
-    const estadoPublish = normalizeValue(
-      row[headerMap["estado_publish"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const estadoUpload = getCellValue(row, headerMap, "estado_upload").toLowerCase();
+    const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
+    const lockStatus = getCellValue(row, headerMap, "lock_status").toLowerCase();
 
     const isEligible =
-      postTipo === "single" &&
-      estadoRender === "done" &&
-      estadoUpload === "done" &&
-      (estadoPublish === "pending" || estadoPublish === "error") &&
-      lockStatus === "locked";
+      postTipo === POST_TIPOS.SINGLE &&
+      estadoRender === STATUS.DONE &&
+      estadoUpload === STATUS.DONE &&
+      (estadoPublish === STATUS.PENDING || estadoPublish === STATUS.ERROR) &&
+      (lockStatus === LOCK_STATUS.FREE || lockStatus === LOCK_STATUS.LOCKED);
 
     if (isEligible) {
       return {
@@ -44,6 +57,19 @@ function getPendingSingleRow(rows, headerMap) {
   }
 
   return null;
+}
+
+function buildCombinedPostId(instagramResult, facebookResult) {
+  return JSON.stringify({
+    instagram: {
+      mediaId: instagramResult?.mediaId || "",
+      creationId: instagramResult?.creationId || ""
+    },
+    facebook: {
+      postId: facebookResult?.postId || "",
+      photoId: facebookResult?.photoId || ""
+    }
+  });
 }
 
 async function main() {
@@ -88,11 +114,7 @@ async function main() {
     "facebook_post_id"
   ];
 
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
+  requireHeaders(headerMap, requiredHeaders);
 
   const selectedRow = getPendingSingleRow(rows, headerMap);
 
@@ -104,13 +126,32 @@ async function main() {
   const rowNumber = selectedRow.rowNumber;
   const row = selectedRow.values;
 
-  const rowId = normalizeValue(row[headerMap["row_id"]]);
-  const imageUrl = normalizeValue(row[headerMap["media_url"]]);
-  const caption = normalizeValue(row[headerMap["caption"]]);
-  const cloudinaryPublicId = normalizeValue(
-    row[headerMap["cloudinary_public_id"]]
+  const rowId = getCellValue(row, headerMap, "row_id");
+  const imageUrl = getCellValue(row, headerMap, "media_url");
+  const caption = getCellValue(row, headerMap, "caption");
+  const cloudinaryPublicId = getCellValue(row, headerMap, "cloudinary_public_id");
+  const currentAttempts = Number(getCellValue(row, headerMap, "intentos") || 0);
+
+  const existingInstagramCreationId = getCellValue(
+    row,
+    headerMap,
+    "instagram_creation_id"
   );
-  const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+  const existingInstagramMediaId = getCellValue(
+    row,
+    headerMap,
+    "instagram_media_id"
+  );
+  const existingFacebookPhotoId = getCellValue(
+    row,
+    headerMap,
+    "facebook_photo_id"
+  );
+  const existingFacebookPostId = getCellValue(
+    row,
+    headerMap,
+    "facebook_post_id"
+  );
 
   const rowLogger = log.child({
     rowNumber,
@@ -123,14 +164,26 @@ async function main() {
 
   rowLogger.info("Fila seleccionada para publish", {
     hasCaption: Boolean(caption),
-    imageUrl
+    imageUrl,
+    hasExistingInstagram: Boolean(existingInstagramMediaId),
+    hasExistingFacebook: Boolean(existingFacebookPostId)
   });
 
   await updateCellsBatch(sheets, [
     {
       row: rowNumber,
+      col: headerMap["estado_general"] + 1,
+      value: GENERAL_STATUS.PROCESSING
+    },
+    {
+      row: rowNumber,
       col: headerMap["estado_publish"] + 1,
-      value: "processing"
+      value: STATUS.PROCESSING
+    },
+    {
+      row: rowNumber,
+      col: headerMap["lock_status"] + 1,
+      value: LOCK_STATUS.LOCKED
     },
     {
       row: rowNumber,
@@ -151,63 +204,87 @@ async function main() {
       row: rowNumber,
       col: headerMap["error_message"] + 1,
       value: ""
-    },
-    {
-      row: rowNumber,
-      col: headerMap["post_id"] + 1,
-      value: ""
-    },
-    {
-      row: rowNumber,
-      col: headerMap["fecha_publicado"] + 1,
-      value: ""
     }
   ]);
 
-  try {
-    const [instagramResult, facebookResult] = await Promise.all([
-      publishImagePost({
-        imageUrl,
-        caption
-      }),
-      publishFacebookImagePost({
-        imageUrl,
-        caption
-      })
-    ]);
+  let instagramResult = {
+    creationId: existingInstagramCreationId,
+    mediaId: existingInstagramMediaId
+  };
 
-    const combinedPostId = JSON.stringify({
-      instagram: {
-        mediaId: instagramResult.mediaId || "",
-        creationId: instagramResult.creationId || ""
-      },
-      facebook: {
-        postId: facebookResult.postId || "",
-        photoId: facebookResult.photoId || ""
-      }
-    });
+  let facebookResult = {
+    photoId: existingFacebookPhotoId,
+    postId: existingFacebookPostId
+  };
+
+  try {
+    // Idempotencia básica:
+    // si ya existe resultado de Instagram, no se vuelve a publicar allí.
+    if (!instagramResult.mediaId) {
+      instagramResult = await publishImagePost({
+        imageUrl,
+        caption
+      });
+
+      await updateCellsBatch(sheets, [
+        {
+          row: rowNumber,
+          col: headerMap["instagram_creation_id"] + 1,
+          value: instagramResult.creationId || ""
+        },
+        {
+          row: rowNumber,
+          col: headerMap["instagram_media_id"] + 1,
+          value: instagramResult.mediaId || ""
+        },
+        {
+          row: rowNumber,
+          col: headerMap["post_id"] + 1,
+          value: buildCombinedPostId(instagramResult, facebookResult)
+        },
+        {
+          row: rowNumber,
+          col: headerMap["updated_at"] + 1,
+          value: nowIsoLocal()
+        }
+      ]);
+    }
+
+    // Idempotencia básica:
+    // si ya existe resultado de Facebook, no se vuelve a publicar allí.
+    if (!facebookResult.postId) {
+      facebookResult = await publishFacebookImagePost({
+        imageUrl,
+        caption
+      });
+
+      await updateCellsBatch(sheets, [
+        {
+          row: rowNumber,
+          col: headerMap["facebook_photo_id"] + 1,
+          value: facebookResult.photoId || ""
+        },
+        {
+          row: rowNumber,
+          col: headerMap["facebook_post_id"] + 1,
+          value: facebookResult.postId || ""
+        },
+        {
+          row: rowNumber,
+          col: headerMap["post_id"] + 1,
+          value: buildCombinedPostId(instagramResult, facebookResult)
+        },
+        {
+          row: rowNumber,
+          col: headerMap["updated_at"] + 1,
+          value: nowIsoLocal()
+        }
+      ]);
+    }
+
+    const combinedPostId = buildCombinedPostId(instagramResult, facebookResult);
 
     await updateCellsBatch(sheets, [
-      {
-        row: rowNumber,
-        col: headerMap["instagram_creation_id"] + 1,
-        value: instagramResult.creationId || ""
-      },
-      {
-        row: rowNumber,
-        col: headerMap["instagram_media_id"] + 1,
-        value: instagramResult.mediaId || ""
-      },
-      {
-        row: rowNumber,
-        col: headerMap["facebook_photo_id"] + 1,
-        value: facebookResult.photoId || ""
-      },
-      {
-        row: rowNumber,
-        col: headerMap["facebook_post_id"] + 1,
-        value: facebookResult.postId || ""
-      },
       {
         row: rowNumber,
         col: headerMap["post_id"] + 1,
@@ -221,17 +298,17 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado_publish"] + 1,
-        value: "done"
+        value: STATUS.DONE
       },
       {
         row: rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "published"
+        value: GENERAL_STATUS.PUBLISHED
       },
       {
         row: rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: LOCK_STATUS.FREE
       },
       {
         row: rowNumber,
@@ -274,21 +351,51 @@ async function main() {
       }
     }
   } catch (error) {
+    const partialCombinedPostId = buildCombinedPostId(
+      instagramResult,
+      facebookResult
+    );
+
     await updateCellsBatch(sheets, [
       {
         row: rowNumber,
+        col: headerMap["instagram_creation_id"] + 1,
+        value: instagramResult.creationId || ""
+      },
+      {
+        row: rowNumber,
+        col: headerMap["instagram_media_id"] + 1,
+        value: instagramResult.mediaId || ""
+      },
+      {
+        row: rowNumber,
+        col: headerMap["facebook_photo_id"] + 1,
+        value: facebookResult.photoId || ""
+      },
+      {
+        row: rowNumber,
+        col: headerMap["facebook_post_id"] + 1,
+        value: facebookResult.postId || ""
+      },
+      {
+        row: rowNumber,
+        col: headerMap["post_id"] + 1,
+        value: partialCombinedPostId
+      },
+      {
+        row: rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "error"
+        value: GENERAL_STATUS.ERROR
       },
       {
         row: rowNumber,
         col: headerMap["estado_publish"] + 1,
-        value: "error"
+        value: STATUS.ERROR
       },
       {
         row: rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: LOCK_STATUS.FREE
       },
       {
         row: rowNumber,

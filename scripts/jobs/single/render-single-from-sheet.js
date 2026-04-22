@@ -4,11 +4,19 @@ const { renderPhrase } = require("../../libs/render-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
+  requireHeaders,
+  getCellValue,
   readRows,
   updateCellsBatch
 } = require("../../core/sheets");
-const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
+const {
+  STATUS,
+  GENERAL_STATUS,
+  POST_TIPOS,
+  LOCK_STATUS
+} = require("../../core/status");
 
 const BG_SEQUENCE = [
   "#f4c400", // retroYellow
@@ -18,34 +26,24 @@ const BG_SEQUENCE = [
   "#0d0f14"  // retroBlack
 ];
 
+/**
+ * Devuelve el último background_color de un post single que sí quedó publicado.
+ */
 function getLastPublishedBg(rows, headerMap) {
-  const estadoGeneralCol = headerMap["estado_general"];
-  const backgroundColorCol = headerMap["background_color"];
-  const fechaPublicadoCol = headerMap["fecha_publicado"];
-  const postTipoCol = headerMap["post_tipo"];
-
-  if (
-    estadoGeneralCol === undefined ||
-    backgroundColorCol === undefined ||
-    fechaPublicadoCol === undefined ||
-    postTipoCol === undefined
-  ) {
-    return "";
-  }
-
   let latestBg = "";
   let latestTime = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const estadoGeneral = normalizeValue(row[estadoGeneralCol]).toLowerCase();
-    const bg = normalizeValue(row[backgroundColorCol]);
-    const fechaPublicado = normalizeValue(row[fechaPublicadoCol]);
-    const postTipo = normalizeValue(row[postTipoCol]).toLowerCase();
+
+    const estadoGeneral = getCellValue(row, headerMap, "estado_general").toLowerCase();
+    const bg = getCellValue(row, headerMap, "background_color");
+    const fechaPublicado = getCellValue(row, headerMap, "fecha_publicado");
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
 
     if (
-      estadoGeneral !== "published" ||
-      postTipo !== "single" ||
+      estadoGeneral !== GENERAL_STATUS.PUBLISHED ||
+      postTipo !== POST_TIPOS.SINGLE ||
       !bg ||
       !fechaPublicado
     ) {
@@ -79,24 +77,25 @@ function getNextColor(color) {
   return BG_SEQUENCE[(index + 1) % BG_SEQUENCE.length];
 }
 
-function findNextSingleRow(rows, headerMap) {
+/**
+ * Este job SOLO debe escoger filas que necesiten render.
+ *
+ * No depende de estado_general.
+ * Si una fila ya tiene render done, no se vuelve a renderizar
+ * aunque haya fallado upload o publish.
+ */
+function findNextSingleRowForRender(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoGeneral = normalizeValue(
-      row[headerMap["estado_general"]]
-    ).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const lockStatus = getCellValue(row, headerMap, "lock_status").toLowerCase();
 
     const isEligible =
-      postTipo === "single" &&
-      (estadoGeneral === "pending" || estadoGeneral === "error") &&
-      (estadoRender === "pending" || estadoRender === "error") &&
-      lockStatus === "free";
+      postTipo === POST_TIPOS.SINGLE &&
+      (estadoRender === STATUS.PENDING || estadoRender === STATUS.ERROR) &&
+      lockStatus === LOCK_STATUS.FREE;
 
     if (isEligible) {
       return {
@@ -107,6 +106,17 @@ function findNextSingleRow(rows, headerMap) {
   }
 
   return null;
+}
+
+function getBgForRow(row, rows, headerMap) {
+  const existingBg = getCellValue(row, headerMap, "background_color");
+
+  if (existingBg) {
+    return existingBg;
+  }
+
+  const lastPublishedBg = getLastPublishedBg(rows, headerMap);
+  return getNextColor(lastPublishedBg);
 }
 
 async function main() {
@@ -128,6 +138,7 @@ async function main() {
   const headerMap = buildHeaderMap(headers);
 
   const requiredHeaders = [
+    "row_id",
     "frase_original",
     "frase_corregida",
     "modo",
@@ -148,13 +159,9 @@ async function main() {
     "updated_at"
   ];
 
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
+  requireHeaders(headerMap, requiredHeaders);
 
-  const selectedRow = findNextSingleRow(rows, headerMap);
+  const selectedRow = findNextSingleRowForRender(rows, headerMap);
 
   if (!selectedRow) {
     log.info("No hay singles pendientes para render");
@@ -164,12 +171,12 @@ async function main() {
   const rowNumber = selectedRow.rowNumber;
   const row = selectedRow.values;
 
-  const rowId = normalizeValue(row[headerMap["row_id"]]);
-  const fraseOriginal = normalizeValue(row[headerMap["frase_original"]]);
-  const fraseCorregida = normalizeValue(row[headerMap["frase_corregida"]]);
-  const mode = normalizeValue(row[headerMap["modo"]]) || "retro3d";
+  const rowId = getCellValue(row, headerMap, "row_id");
+  const fraseOriginal = getCellValue(row, headerMap, "frase_original");
+  const fraseCorregida = getCellValue(row, headerMap, "frase_corregida");
+  const mode = getCellValue(row, headerMap, "modo") || "retro3d";
   const textToRender = fraseCorregida || fraseOriginal;
-  const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+  const currentAttempts = Number(getCellValue(row, headerMap, "intentos") || 0);
 
   const rowLogger = log.child({
     rowNumber,
@@ -181,30 +188,29 @@ async function main() {
     throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);
   }
 
-  const lastPublishedBg = getLastPublishedBg(rows, headerMap);
-  const bg = getNextColor(lastPublishedBg);
+  const bg = getBgForRow(row, rows, headerMap);
   const now = nowIsoLocal();
 
   rowLogger.info("Fila seleccionada para render", {
     textLength: textToRender.length,
-    nextBg: bg
+    selectedBg: bg
   });
 
   await updateCellsBatch(sheets, [
     {
       row: rowNumber,
       col: headerMap["estado_general"] + 1,
-      value: "processing"
+      value: GENERAL_STATUS.PROCESSING
     },
     {
       row: rowNumber,
       col: headerMap["estado_render"] + 1,
-      value: "processing"
+      value: STATUS.PROCESSING
     },
     {
       row: rowNumber,
       col: headerMap["lock_status"] + 1,
-      value: "locked"
+      value: LOCK_STATUS.LOCKED
     },
     {
       row: rowNumber,
@@ -254,7 +260,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado_render"] + 1,
-        value: "done"
+        value: STATUS.DONE
       },
       {
         row: rowNumber,
@@ -274,24 +280,25 @@ async function main() {
     ]);
 
     rowLogger.info("Fila renderizada correctamente", {
-      outputFile: result.fileName
+      outputFile: result.fileName,
+      bg
     });
   } catch (error) {
     await updateCellsBatch(sheets, [
       {
         row: rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "error"
+        value: GENERAL_STATUS.ERROR
       },
       {
         row: rowNumber,
         col: headerMap["estado_render"] + 1,
-        value: "error"
+        value: STATUS.ERROR
       },
       {
         row: rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: LOCK_STATUS.FREE
       },
       {
         row: rowNumber,

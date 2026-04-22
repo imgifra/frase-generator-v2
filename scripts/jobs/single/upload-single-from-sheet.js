@@ -6,32 +6,47 @@ const { uploadImage } = require("../../libs/upload-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
+  requireHeaders,
+  getCellValue,
   readRows,
   updateCellsBatch
 } = require("../../core/sheets");
-const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
+const {
+  STATUS,
+  GENERAL_STATUS,
+  POST_TIPOS,
+  LOCK_STATUS
+} = require("../../core/status");
 
 const OUTPUT_DIR = path.resolve(__dirname, "..", "..", "..", "output");
 
+/**
+ * Este job SOLO debe escoger filas que necesiten upload.
+ *
+ * No depende de estado_general.
+ * La elegibilidad real es:
+ * - render ya terminado
+ * - upload pendiente o en error
+ *
+ * Permitimos free o locked para rescatar filas huérfanas
+ * por reinicios o inconsistencias del lock.
+ */
 function findNextUploadRow(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const estadoUpload = normalizeValue(
-      row[headerMap["estado_upload"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const estadoUpload = getCellValue(row, headerMap, "estado_upload").toLowerCase();
+    const lockStatus = getCellValue(row, headerMap, "lock_status").toLowerCase();
 
     const isEligible =
-      postTipo === "single" &&
-      estadoRender === "done" &&
-      (estadoUpload === "pending" || estadoUpload === "error") &&
-      lockStatus === "locked";
+      postTipo === POST_TIPOS.SINGLE &&
+      estadoRender === STATUS.DONE &&
+      (estadoUpload === STATUS.PENDING || estadoUpload === STATUS.ERROR) &&
+      (lockStatus === LOCK_STATUS.FREE || lockStatus === LOCK_STATUS.LOCKED);
 
     if (isEligible) {
       return {
@@ -80,11 +95,7 @@ async function main() {
     "fecha_upload"
   ];
 
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
+  requireHeaders(headerMap, requiredHeaders);
 
   const targetRow = findNextUploadRow(rows, headerMap);
 
@@ -96,9 +107,9 @@ async function main() {
   const rowNumber = targetRow.rowNumber;
   const row = targetRow.values;
 
-  const rowId = normalizeValue(row[headerMap["row_id"]]);
-  const outputFile = normalizeValue(row[headerMap["output_file"]]);
-  const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+  const rowId = getCellValue(row, headerMap, "row_id");
+  const outputFile = getCellValue(row, headerMap, "output_file");
+  const currentAttempts = Number(getCellValue(row, headerMap, "intentos") || 0);
 
   const rowLogger = log.child({
     rowNumber,
@@ -123,8 +134,18 @@ async function main() {
   await updateCellsBatch(sheets, [
     {
       row: rowNumber,
+      col: headerMap["estado_general"] + 1,
+      value: GENERAL_STATUS.PROCESSING
+    },
+    {
+      row: rowNumber,
       col: headerMap["estado_upload"] + 1,
-      value: "processing"
+      value: STATUS.PROCESSING
+    },
+    {
+      row: rowNumber,
+      col: headerMap["lock_status"] + 1,
+      value: LOCK_STATUS.LOCKED
     },
     {
       row: rowNumber,
@@ -158,9 +179,11 @@ async function main() {
           localPath
         });
       } catch (deleteErr) {
-        rowLogger.warn("No se pudo eliminar el archivo local", {
-          localPath
-        }, deleteErr);
+        rowLogger.warn(
+          "No se pudo eliminar el archivo local",
+          { localPath },
+          deleteErr
+        );
       }
     }
 
@@ -183,7 +206,7 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado_upload"] + 1,
-        value: "done"
+        value: STATUS.DONE
       },
       {
         row: rowNumber,
@@ -211,17 +234,17 @@ async function main() {
       {
         row: rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "error"
+        value: GENERAL_STATUS.ERROR
       },
       {
         row: rowNumber,
         col: headerMap["estado_upload"] + 1,
-        value: "error"
+        value: STATUS.ERROR
       },
       {
         row: rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: LOCK_STATUS.FREE
       },
       {
         row: rowNumber,
