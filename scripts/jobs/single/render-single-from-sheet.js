@@ -43,7 +43,7 @@ function getLastPublishedBg(rows, headerMap) {
 
     if (
       estadoGeneral !== GENERAL_STATUS.PUBLISHED ||
-      postTipo !== POST_TIPOS.SINGLE ||
+      !["single", "carousel"].includes(postTipo) ||
       !bg ||
       !fechaPublicado
     ) {

@@ -34,7 +34,7 @@ function getPendingCarouselRows(rows, headerMap) {
       postTipo === "carousel" &&
       estadoRender === "done" &&
       (estadoUpload === "pending" || estadoUpload === "error") &&
-      lockStatus === "locked" &&
+      (lockStatus === "free" || lockStatus === "locked") &&
       carouselId;
 
     if (isEligible) {
@@ -64,10 +64,7 @@ function getPendingCarouselRows(rows, headerMap) {
 
     const belongsToSelected =
       postTipo === "carousel" &&
-      carouselId === selectedCarouselId &&
-      estadoRender === "done" &&
-      (estadoUpload === "pending" || estadoUpload === "error") &&
-      lockStatus === "locked";
+      carouselId === selectedCarouselId;
 
     if (belongsToSelected) {
       groupRows.push({
@@ -218,12 +215,21 @@ async function main() {
   groupLogger.info("Carrusel seleccionado para upload");
 
   const prepUpdates = [];
+
   for (const item of groupRows) {
+    const row = item.values;
+    const estadoUpload = normalizeValue(row[headerMap["estado_upload"]]).toLowerCase();
+
     prepUpdates.push(
       {
         row: item.rowNumber,
-        col: headerMap["estado_upload"] + 1,
+        col: headerMap["estado_general"] + 1,
         value: "processing"
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["lock_status"] + 1,
+        value: "locked"
       },
       {
         row: item.rowNumber,
@@ -246,6 +252,14 @@ async function main() {
         value: ""
       }
     );
+
+    if (estadoUpload === "pending" || estadoUpload === "error") {
+      prepUpdates.push({
+        row: item.rowNumber,
+        col: headerMap["estado_upload"] + 1,
+        value: "processing"
+      });
+    }
   }
 
   await updateCellsBatch(sheets, prepUpdates);
@@ -257,6 +271,14 @@ async function main() {
 
       const rowId = normalizeValue(row[headerMap["row_id"]]);
       const fileName = normalizeValue(row[headerMap["output_file"]]);
+
+      const estadoUpload = normalizeValue(row[headerMap["estado_upload"]]).toLowerCase();
+
+      if (estadoUpload !== "pending" && estadoUpload !== "error") {
+        continue;
+      }      
+
+
 
       const rowLogger = groupLogger.child({
         rowNumber,

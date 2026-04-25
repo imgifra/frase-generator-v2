@@ -34,22 +34,26 @@ function getLocalDateKey() {
 function getRunWindow() {
   const hour = getLocalHour();
 
-  if (hour === 18) {
+  const isPublishingHour = hour >= 6 && hour <= 22;
+  const isEvenHour = hour % 2 === 0;
+  const isCarouselHour = hour === 10 || hour === 18;
+
+  if (!isPublishingHour || !isEvenHour) {
+    return {
+      type: null,
+      hour
+    };
+  }
+
+  if (isCarouselHour) {
     return {
       type: "carousel_preferred",
       hour
     };
   }
 
-  if (hour % 2 === 0) {
-    return {
-      type: "single",
-      hour
-    };
-  }
-
   return {
-    type: null,
+    type: "single",
     hour
   };
 }
@@ -61,6 +65,7 @@ async function runMasterPipeline() {
   const startMs = Date.now();
   const windowInfo = getRunWindow();
   const dateKey = getLocalDateKey();
+
   const slotKey = windowInfo.type
     ? `${dateKey}-${windowInfo.hour}-${windowInfo.type}`
     : "";

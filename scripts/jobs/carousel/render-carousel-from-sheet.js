@@ -45,7 +45,7 @@ function getLastPublishedBg(rows, headerMap) {
 
     if (
       estadoGeneral !== "published" ||
-      postTipo !== "carousel" ||
+      !["single", "carousel"].includes(postTipo) ||
       !bg ||
       !fechaPublicado
     ) {
@@ -97,7 +97,6 @@ function getPendingCarouselRows(rows, headerMap) {
 
     const isEligible =
       postTipo === "carousel" &&
-      (estadoGeneral === "pending" || estadoGeneral === "error") &&
       (estadoRender === "pending" || estadoRender === "error") &&
       lockStatus === "free" &&
       carouselId;
@@ -129,10 +128,7 @@ function getPendingCarouselRows(rows, headerMap) {
 
     const belongsToSelected =
       postTipo === "carousel" &&
-      carouselId === selectedCarouselId &&
-      (estadoGeneral === "pending" || estadoGeneral === "error") &&
-      (estadoRender === "pending" || estadoRender === "error") &&
-      lockStatus === "free";
+      carouselId === selectedCarouselId;
 
     if (belongsToSelected) {
       groupRows.push({
@@ -178,45 +174,48 @@ async function markGroupAsError(sheets, headerMap, groupRows, errorMessage, atte
 
   for (const item of groupRows) {
     const row = item.values;
-    const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+    const estadoRender = normalizeValue(row[headerMap["estado_render"]]).toLowerCase();
 
-    updates.push(
+    lockUpdates.push(
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "error"
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["estado_render"] + 1,
-        value: "error"
+        value: "processing"
       },
       {
         row: item.rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: "locked"
       },
       {
         row: item.rowNumber,
-        col: headerMap["intentos"] + 1,
-        value: currentAttempts + attemptsDelta
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_step"] + 1,
-        value: "render"
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_message"] + 1,
-        value: errorMessage
+        col: headerMap["last_cycle_id"] + 1,
+        value: cycleId
       },
       {
         row: item.rowNumber,
         col: headerMap["updated_at"] + 1,
-        value: now
+        value: lockTime
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["error_step"] + 1,
+        value: ""
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["error_message"] + 1,
+        value: ""
       }
     );
+
+    if (estadoRender === "pending" || estadoRender === "error") {
+      lockUpdates.push({
+        row: item.rowNumber,
+        col: headerMap["estado_render"] + 1,
+        value: "processing"
+      });
+    }
   }
 
   await updateCellsBatch(sheets, updates);
@@ -329,11 +328,6 @@ async function main() {
         col: headerMap["error_message"] + 1,
         value: ""
       },
-      {
-        row: item.rowNumber,
-        col: headerMap["output_file"] + 1,
-        value: ""
-      }
     );
   }
 
@@ -349,6 +343,12 @@ async function main() {
       const fraseCorregida = normalizeValue(row[headerMap["frase_corregida"]]);
       const mode = normalizeValue(row[headerMap["modo"]]) || "retro3d";
       const textToRender = fraseCorregida || fraseOriginal;
+      const estadoRender = normalizeValue(row[headerMap["estado_render"]]).toLowerCase();
+
+      if (estadoRender !== "pending" && estadoRender !== "error") {
+        continue;
+      }
+
 
       if (!textToRender) {
         throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);

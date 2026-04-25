@@ -36,7 +36,7 @@ function getPendingCarouselRows(rows, headerMap) {
       estadoRender === "done" &&
       estadoUpload === "done" &&
       (estadoPublish === "pending" || estadoPublish === "error") &&
-      lockStatus === "locked" &&
+      (lockStatus === "free" || lockStatus === "locked") &&
       carouselId;
 
     if (isEligible) {
@@ -69,11 +69,7 @@ function getPendingCarouselRows(rows, headerMap) {
 
     const belongsToSelected =
       postTipo === "carousel" &&
-      carouselId === selectedCarouselId &&
-      estadoRender === "done" &&
-      estadoUpload === "done" &&
-      (estadoPublish === "pending" || estadoPublish === "error") &&
-      lockStatus === "locked";
+      carouselId === selectedCarouselId;
 
     if (belongsToSelected) {
       groupRows.push({
@@ -334,30 +330,39 @@ async function main() {
         col: headerMap["error_message"] + 1,
         value: ""
       },
-      {
-        row: item.rowNumber,
-        col: headerMap["post_id"] + 1,
-        value: ""
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["fecha_publicado"] + 1,
-        value: ""
-      }
     ])
   );
 
+  const firstRow = groupRows[0].values;
+
+  let instagramResult = {
+    creationId: normalizeValue(firstRow[headerMap["instagram_creation_id"]]),
+    mediaId: normalizeValue(firstRow[headerMap["instagram_media_id"]]),
+    childIds: []
+  };
+
+  let facebookResult = {
+    postId: normalizeValue(firstRow[headerMap["facebook_post_id"]]),
+    mediaFbids: []
+  };
+
+
+
+
   try {
-    const [instagramResult, facebookResult] = await Promise.all([
-      publishCarouselPost({
+    if (!instagramResult.mediaId) {
+      instagramResult = await publishCarouselPost({
         imageUrls,
         caption: carouselCaption
-      }),
-      publishFacebookCarouselPost({
+      });
+    }
+
+    if (!facebookResult.postId) {
+      facebookResult = await publishFacebookCarouselPost({
         imageUrls,
         caption: carouselCaption
-      })
-    ]);
+      });
+    }
 
     const combinedPostId = JSON.stringify({
       instagram: {
