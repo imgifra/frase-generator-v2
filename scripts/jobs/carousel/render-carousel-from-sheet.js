@@ -212,7 +212,7 @@ async function markGroupAsError(sheets, headerMap, groupRows, errorMessage, atte
     );
 
     if (estadoRender === "pending" || estadoRender === "error") {
-      lockUpdates.push({
+      updates.push({
         row: item.rowNumber,
         col: headerMap["estado_render"] + 1,
         value: "processing"
