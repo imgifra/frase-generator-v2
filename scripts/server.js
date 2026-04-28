@@ -12,14 +12,6 @@ const API_TOKEN = process.env.API_TOKEN;
 const PORT = process.env.PORT || 3000;
 const PROJECT_ROOT = path.join(__dirname, "..");
 
-const renderApp = express();
-
-renderApp.use(express.static(PROJECT_ROOT));
-
-renderApp.listen(5173, "127.0.0.1", () => {
-  logger.info("Servidor render local activo", { port: 5173 });
-});
-
 function authMiddleware(req, res, next) {
   const token = req.headers["x-token"];
   if (!API_TOKEN || token !== API_TOKEN) {
@@ -66,11 +58,13 @@ app.post("/run-now", authMiddleware, (req, res) => {
 app.get("/publicar", (req, res) => {
   res.sendFile(path.join(PROJECT_ROOT, "publicar.html"));
 });
+
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
+
 app.listen(PORT, () => {
-  logger.info(`Servidor HTTP activo`, { port: PORT });
+  logger.info("Servidor HTTP activo", { port: PORT });
 });
 
 // Arranca pipeline maestro en paralelo

@@ -6,11 +6,19 @@ const { deleteImage } = require("../../libs/upload-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
+  requireHeaders,
+  getCellValue,
   readRows,
   updateCellsBatch
 } = require("../../core/sheets");
-const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
+const {
+  STATUS,
+  GENERAL_STATUS,
+  POST_TIPOS,
+  LOCK_STATUS
+} = require("../../core/status");
 
 function getPendingCarouselRows(rows, headerMap) {
   let selectedCarouselId = "";
@@ -18,25 +26,19 @@ function getPendingCarouselRows(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const estadoUpload = normalizeValue(
-      row[headerMap["estado_upload"]]
-    ).toLowerCase();
-    const estadoPublish = normalizeValue(
-      row[headerMap["estado_publish"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const estadoUpload = getCellValue(row, headerMap, "estado_upload").toLowerCase();
+    const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
+    const lockStatus = getCellValue(row, headerMap, "lock_status").toLowerCase();
+    const carouselId = getCellValue(row, headerMap, "carousel_id");
 
     const isEligible =
-      postTipo === "carousel" &&
-      estadoRender === "done" &&
-      estadoUpload === "done" &&
-      (estadoPublish === "pending" || estadoPublish === "error") &&
-      (lockStatus === "free" || lockStatus === "locked") &&
+      postTipo === POST_TIPOS.CAROUSEL &&
+      estadoRender === STATUS.DONE &&
+      estadoUpload === STATUS.DONE &&
+      (estadoPublish === STATUS.PENDING || estadoPublish === STATUS.ERROR) &&
+      (lockStatus === LOCK_STATUS.FREE || lockStatus === LOCK_STATUS.LOCKED) &&
       carouselId;
 
     if (isEligible) {
@@ -56,28 +58,18 @@ function getPendingCarouselRows(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const estadoUpload = normalizeValue(
-      row[headerMap["estado_upload"]]
-    ).toLowerCase();
-    const estadoPublish = normalizeValue(
-      row[headerMap["estado_publish"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const carouselId = getCellValue(row, headerMap, "carousel_id");
 
     const belongsToSelected =
-      postTipo === "carousel" &&
+      postTipo === POST_TIPOS.CAROUSEL &&
       carouselId === selectedCarouselId;
 
     if (belongsToSelected) {
       groupRows.push({
         rowNumber: i + 1,
         values: row,
-        order: Number(normalizeValue(row[headerMap["carousel_order"]]) || "0")
+        order: Number(getCellValue(row, headerMap, "carousel_order") || "0")
       });
     }
   }
@@ -119,12 +111,10 @@ function buildCarouselPayload(groupRows, headerMap) {
   for (const item of groupRows) {
     const row = item.values;
 
-    const mediaUrl = normalizeValue(row[headerMap["media_url"]]);
-    const rowCaption = normalizeValue(row[headerMap["carousel_caption"]]);
-    const fallbackCaption = normalizeValue(row[headerMap["caption"]]);
-    const cloudinaryPublicId = normalizeValue(
-      row[headerMap["cloudinary_public_id"]]
-    );
+    const mediaUrl = getCellValue(row, headerMap, "media_url");
+    const rowCaption = getCellValue(row, headerMap, "carousel_caption");
+    const fallbackCaption = getCellValue(row, headerMap, "caption");
+    const cloudinaryPublicId = getCellValue(row, headerMap, "cloudinary_public_id");
 
     if (!mediaUrl) {
       throw new Error(`La fila ${item.rowNumber} no tiene media_url.`);
@@ -145,11 +135,7 @@ function buildCarouselPayload(groupRows, headerMap) {
     });
   }
 
-  return {
-    imageUrls,
-    carouselCaption,
-    publicIds
-  };
+  return { imageUrls, carouselCaption, publicIds };
 }
 
 async function deleteCarouselAssets(publicIds, groupLogger) {
@@ -182,24 +168,23 @@ async function markGroupAsError(sheets, headerMap, groupRows, errorMessage, atte
   const updates = [];
 
   for (const item of groupRows) {
-    const row = item.values;
-    const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+    const currentAttempts = Number(getCellValue(item.values, headerMap, "intentos") || "0");
 
     updates.push(
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "error"
+        value: GENERAL_STATUS.ERROR
       },
       {
         row: item.rowNumber,
         col: headerMap["estado_publish"] + 1,
-        value: "error"
+        value: STATUS.ERROR
       },
       {
         row: item.rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: LOCK_STATUS.FREE
       },
       {
         row: item.rowNumber,
@@ -271,16 +256,9 @@ async function main() {
     "facebook_post_id"
   ];
 
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
+  requireHeaders(headerMap, requiredHeaders);
 
-  const { selectedCarouselId, groupRows } = getPendingCarouselRows(
-    rows,
-    headerMap
-  );
+  const { selectedCarouselId, groupRows } = getPendingCarouselRows(rows, headerMap);
 
   if (!selectedCarouselId) {
     log.info("No hay carruseles pendientes para publish");
@@ -309,7 +287,7 @@ async function main() {
       {
         row: item.rowNumber,
         col: headerMap["estado_publish"] + 1,
-        value: "processing"
+        value: STATUS.PROCESSING
       },
       {
         row: item.rowNumber,
@@ -330,25 +308,37 @@ async function main() {
         row: item.rowNumber,
         col: headerMap["error_message"] + 1,
         value: ""
-      },
+      }
     ])
   );
 
-  const firstRow = groupRows[0].values;
+  // Idempotencia: leemos los IDs existentes de todas las filas del grupo,
+  // no solo de la primera, para no perder resultados parciales previos.
+  const existingInstagramMediaId = groupRows.reduce((found, item) => {
+    if (found) return found;
+    return getCellValue(item.values, headerMap, "instagram_media_id");
+  }, "");
+
+  const existingInstagramCreationId = groupRows.reduce((found, item) => {
+    if (found) return found;
+    return getCellValue(item.values, headerMap, "instagram_creation_id");
+  }, "");
+
+  const existingFacebookPostId = groupRows.reduce((found, item) => {
+    if (found) return found;
+    return getCellValue(item.values, headerMap, "facebook_post_id");
+  }, "");
 
   let instagramResult = {
-    creationId: normalizeValue(firstRow[headerMap["instagram_creation_id"]]),
-    mediaId: normalizeValue(firstRow[headerMap["instagram_media_id"]]),
+    creationId: existingInstagramCreationId,
+    mediaId: existingInstagramMediaId,
     childIds: []
   };
 
   let facebookResult = {
-    postId: normalizeValue(firstRow[headerMap["facebook_post_id"]]),
+    postId: existingFacebookPostId,
     mediaFbids: []
   };
-
-
-
 
   try {
     if (!instagramResult.mediaId) {
@@ -363,7 +353,7 @@ async function main() {
         imageUrls,
         caption: carouselCaption
       });
-    };
+    }
 
     const now = nowIsoLocal();
 
@@ -400,17 +390,17 @@ async function main() {
         {
           row: item.rowNumber,
           col: headerMap["estado_publish"] + 1,
-          value: "done"
+          value: STATUS.DONE
         },
         {
           row: item.rowNumber,
           col: headerMap["estado_general"] + 1,
-          value: "published"
+          value: GENERAL_STATUS.PUBLISHED
         },
         {
           row: item.rowNumber,
           col: headerMap["lock_status"] + 1,
-          value: "free"
+          value: LOCK_STATUS.FREE
         },
         {
           row: item.rowNumber,

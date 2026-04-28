@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const fs = require("fs");
+const path = require("path");
 const { sleep, validateWaitMs } = require("../utils/pipeline-utils");
 const { logger } = require("../utils/logger");
 const { runSinglePipeline } = require("./run-single");
@@ -7,8 +9,31 @@ const { runCarouselPipeline } = require("./run-carousel");
 
 const WAIT_MS = Number(process.env.WAIT_MS || 15 * 60 * 1000);
 const TIMEZONE = process.env.TIMEZONE || "America/Bogota";
+const SLOT_FILE = path.join(__dirname, "..", "..", "data", "last-processed-slot.json");
 
 validateWaitMs(WAIT_MS);
+
+function readLastProcessedSlot() {
+  try {
+    const raw = fs.readFileSync(SLOT_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    return parsed.slot || "";
+  } catch {
+    return "";
+  }
+}
+
+function writeLastProcessedSlot(slot) {
+  try {
+    const dir = path.dirname(SLOT_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(SLOT_FILE, JSON.stringify({ slot }), "utf8");
+  } catch (err) {
+    logger.warn("No se pudo guardar el slot procesado", { slot }, err);
+  }
+}
 
 function getLocalHour() {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -39,26 +64,15 @@ function getRunWindow() {
   const isCarouselHour = hour === 10 || hour === 18;
 
   if (!isPublishingHour || !isEvenHour) {
-    return {
-      type: null,
-      hour
-    };
+    return { type: null, hour };
   }
 
   if (isCarouselHour) {
-    return {
-      type: "carousel_preferred",
-      hour
-    };
+    return { type: "carousel_preferred", hour };
   }
 
-  return {
-    type: "single",
-    hour
-  };
+  return { type: "single", hour };
 }
-
-let lastProcessedSlot = "";
 
 async function runMasterPipeline() {
   const cycleId = `${Date.now()}`;
@@ -90,6 +104,8 @@ async function runMasterPipeline() {
     return { ok: true, processed: false, skipped: true };
   }
 
+  const lastProcessedSlot = readLastProcessedSlot();
+
   if (slotKey === lastProcessedSlot) {
     cycleLogger.info("Ventana horaria ya procesada", {
       processed: false,
@@ -119,7 +135,7 @@ async function runMasterPipeline() {
     }
 
     if (carouselResult.processed) {
-      lastProcessedSlot = slotKey;
+      writeLastProcessedSlot(slotKey);
 
       cycleLogger.info("Ciclo completado con carrusel", {
         resultType: "carousel",
@@ -149,7 +165,7 @@ async function runMasterPipeline() {
     }
 
     if (singleResult.processed) {
-      lastProcessedSlot = slotKey;
+      writeLastProcessedSlot(slotKey);
     }
 
     cycleLogger.info("Ciclo completado tras fallback", {
@@ -185,7 +201,7 @@ async function runMasterPipeline() {
     }
 
     if (singleResult.processed) {
-      lastProcessedSlot = slotKey;
+      writeLastProcessedSlot(slotKey);
     }
 
     cycleLogger.info("Ciclo completado con single", {
@@ -212,7 +228,8 @@ async function main() {
   });
 
   mainLogger.info("Pipeline maestro activo", {
-    waitSeconds: Math.round(WAIT_MS / 1000)
+    waitSeconds: Math.round(WAIT_MS / 1000),
+    slotFile: SLOT_FILE
   });
 
   while (true) {

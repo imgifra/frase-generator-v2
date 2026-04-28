@@ -4,11 +4,19 @@ const { renderPhrase } = require("../../libs/render-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
+  requireHeaders,
+  getCellValue,
   readRows,
   updateCellsBatch
 } = require("../../core/sheets");
 const { normalizeValue, nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
+const {
+  STATUS,
+  GENERAL_STATUS,
+  POST_TIPOS,
+  LOCK_STATUS
+} = require("../../core/status");
 
 const BG_SEQUENCE = [
   "#f4c400", // retroYellow
@@ -19,32 +27,18 @@ const BG_SEQUENCE = [
 ];
 
 function getLastPublishedBg(rows, headerMap) {
-  const estadoGeneralCol = headerMap["estado_general"];
-  const backgroundColorCol = headerMap["background_color"];
-  const fechaPublicadoCol = headerMap["fecha_publicado"];
-  const postTipoCol = headerMap["post_tipo"];
-
-  if (
-    estadoGeneralCol === undefined ||
-    backgroundColorCol === undefined ||
-    fechaPublicadoCol === undefined ||
-    postTipoCol === undefined
-  ) {
-    return "";
-  }
-
   let latestBg = "";
   let latestTime = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const estadoGeneral = normalizeValue(row[estadoGeneralCol]).toLowerCase();
-    const bg = normalizeValue(row[backgroundColorCol]);
-    const fechaPublicado = normalizeValue(row[fechaPublicadoCol]);
-    const postTipo = normalizeValue(row[postTipoCol]).toLowerCase();
+    const estadoGeneral = getCellValue(row, headerMap, "estado_general").toLowerCase();
+    const bg = getCellValue(row, headerMap, "background_color");
+    const fechaPublicado = getCellValue(row, headerMap, "fecha_publicado");
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
 
     if (
-      estadoGeneral !== "published" ||
+      estadoGeneral !== GENERAL_STATUS.PUBLISHED ||
       !["single", "carousel"].includes(postTipo) ||
       !bg ||
       !fechaPublicado
@@ -85,20 +79,15 @@ function getPendingCarouselRows(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoGeneral = normalizeValue(
-      row[headerMap["estado_general"]]
-    ).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const lockStatus = getCellValue(row, headerMap, "lock_status").toLowerCase();
+    const carouselId = getCellValue(row, headerMap, "carousel_id");
 
     const isEligible =
-      postTipo === "carousel" &&
-      (estadoRender === "pending" || estadoRender === "error") &&
-      lockStatus === "free" &&
+      postTipo === POST_TIPOS.CAROUSEL &&
+      (estadoRender === STATUS.PENDING || estadoRender === STATUS.ERROR) &&
+      lockStatus === LOCK_STATUS.FREE &&
       carouselId;
 
     if (isEligible) {
@@ -118,25 +107,18 @@ function getPendingCarouselRows(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoGeneral = normalizeValue(
-      row[headerMap["estado_general"]]
-    ).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const carouselId = getCellValue(row, headerMap, "carousel_id");
 
     const belongsToSelected =
-      postTipo === "carousel" &&
+      postTipo === POST_TIPOS.CAROUSEL &&
       carouselId === selectedCarouselId;
 
     if (belongsToSelected) {
       groupRows.push({
         rowNumber: i + 1,
         values: row,
-        order: Number(normalizeValue(row[headerMap["carousel_order"]]) || "0")
+        order: Number(getCellValue(row, headerMap, "carousel_order") || "0")
       });
     }
   }
@@ -175,32 +157,28 @@ async function markGroupAsError(sheets, headerMap, groupRows, cycleId, errorMess
   const updates = [];
 
   for (const item of groupRows) {
-    const row = item.values;
-
-    const intentosActuales = Number(
-      normalizeValue(row[headerMap["intentos"]]) || "0"
-    );
+    const currentAttempts = Number(getCellValue(item.values, headerMap, "intentos") || "0");
 
     updates.push(
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "error"
+        value: GENERAL_STATUS.ERROR
       },
       {
         row: item.rowNumber,
         col: headerMap["estado_render"] + 1,
-        value: "error"
+        value: STATUS.ERROR
       },
       {
         row: item.rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: LOCK_STATUS.FREE
       },
       {
         row: item.rowNumber,
         col: headerMap["intentos"] + 1,
-        value: String(intentosActuales + attemptsDelta)
+        value: String(currentAttempts + attemptsDelta)
       },
       {
         row: item.rowNumber,
@@ -270,11 +248,7 @@ async function main() {
     "carousel_order"
   ];
 
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
+  requireHeaders(headerMap, requiredHeaders);
 
   const { selectedCarouselId, groupRows } = getPendingCarouselRows(rows, headerMap);
 
@@ -303,17 +277,17 @@ async function main() {
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "processing"
+        value: GENERAL_STATUS.PROCESSING
       },
       {
         row: item.rowNumber,
         col: headerMap["estado_render"] + 1,
-        value: "processing"
+        value: STATUS.PROCESSING
       },
       {
         row: item.rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "locked"
+        value: LOCK_STATUS.LOCKED
       },
       {
         row: item.rowNumber,
@@ -334,7 +308,7 @@ async function main() {
         row: item.rowNumber,
         col: headerMap["error_message"] + 1,
         value: ""
-      },
+      }
     );
   }
 
@@ -345,17 +319,23 @@ async function main() {
       const rowNumber = item.rowNumber;
       const row = item.values;
 
-      const rowId = normalizeValue(row[headerMap["row_id"]]);
-      const fraseOriginal = normalizeValue(row[headerMap["frase_original"]]);
-      const fraseCorregida = normalizeValue(row[headerMap["frase_corregida"]]);
-      const mode = normalizeValue(row[headerMap["modo"]]) || "retro3d";
+      const rowId = getCellValue(row, headerMap, "row_id");
+      const fraseOriginal = getCellValue(row, headerMap, "frase_original");
+      const fraseCorregida = getCellValue(row, headerMap, "frase_corregida");
+      const mode = getCellValue(row, headerMap, "modo") || "retro3d";
       const textToRender = fraseCorregida || fraseOriginal;
-      const estadoRender = normalizeValue(row[headerMap["estado_render"]]).toLowerCase();
 
-      if (estadoRender !== "pending" && estadoRender !== "error") {
+      // Usamos el estado original en memoria (antes del lock) para saber
+      // si este slide necesitaba render o ya estaba done (rescate de huérfanas).
+      const estadoRenderOriginal = getCellValue(row, headerMap, "estado_render").toLowerCase();
+
+      if (estadoRenderOriginal !== STATUS.PENDING && estadoRenderOriginal !== STATUS.ERROR) {
+        groupLogger.info("Slide ya renderizado, saltando", {
+          rowNumber,
+          estadoRender: estadoRenderOriginal
+        });
         continue;
       }
-
 
       if (!textToRender) {
         throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);
@@ -398,7 +378,7 @@ async function main() {
         {
           row: rowNumber,
           col: headerMap["estado_render"] + 1,
-          value: "done"
+          value: STATUS.DONE
         },
         {
           row: rowNumber,

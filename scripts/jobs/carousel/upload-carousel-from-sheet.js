@@ -6,11 +6,19 @@ const { uploadImage } = require("../../libs/upload-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
+  requireHeaders,
+  getCellValue,
   readRows,
   updateCellsBatch
 } = require("../../core/sheets");
-const { normalizeValue, nowIsoLocal } = require("../../utils/common");
+const { nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
+const {
+  STATUS,
+  GENERAL_STATUS,
+  POST_TIPOS,
+  LOCK_STATUS
+} = require("../../core/status");
 
 const OUTPUT_DIR = path.resolve(__dirname, "..", "..", "..", "output");
 
@@ -20,21 +28,17 @@ function getPendingCarouselRows(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const estadoUpload = normalizeValue(
-      row[headerMap["estado_upload"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const estadoUpload = getCellValue(row, headerMap, "estado_upload").toLowerCase();
+    const lockStatus = getCellValue(row, headerMap, "lock_status").toLowerCase();
+    const carouselId = getCellValue(row, headerMap, "carousel_id");
 
     const isEligible =
-      postTipo === "carousel" &&
-      estadoRender === "done" &&
-      (estadoUpload === "pending" || estadoUpload === "error") &&
-      (lockStatus === "free" || lockStatus === "locked") &&
+      postTipo === POST_TIPOS.CAROUSEL &&
+      estadoRender === STATUS.DONE &&
+      (estadoUpload === STATUS.PENDING || estadoUpload === STATUS.ERROR) &&
+      (lockStatus === LOCK_STATUS.FREE || lockStatus === LOCK_STATUS.LOCKED) &&
       carouselId;
 
     if (isEligible) {
@@ -54,25 +58,18 @@ function getPendingCarouselRows(rows, headerMap) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = normalizeValue(row[headerMap["post_tipo"]]).toLowerCase();
-    const estadoRender = normalizeValue(
-      row[headerMap["estado_render"]]
-    ).toLowerCase();
-    const estadoUpload = normalizeValue(
-      row[headerMap["estado_upload"]]
-    ).toLowerCase();
-    const lockStatus = normalizeValue(row[headerMap["lock_status"]]).toLowerCase();
-    const carouselId = normalizeValue(row[headerMap["carousel_id"]]);
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const carouselId = getCellValue(row, headerMap, "carousel_id");
 
     const belongsToSelected =
-      postTipo === "carousel" &&
+      postTipo === POST_TIPOS.CAROUSEL &&
       carouselId === selectedCarouselId;
 
     if (belongsToSelected) {
       groupRows.push({
         rowNumber: i + 1,
         values: row,
-        order: Number(normalizeValue(row[headerMap["carousel_order"]]) || "0")
+        order: Number(getCellValue(row, headerMap, "carousel_order") || "0")
       });
     }
   }
@@ -111,24 +108,23 @@ async function markGroupAsError(sheets, headerMap, groupRows, errorMessage, atte
   const updates = [];
 
   for (const item of groupRows) {
-    const row = item.values;
-    const currentAttempts = Number(normalizeValue(row[headerMap["intentos"]]) || 0);
+    const currentAttempts = Number(getCellValue(item.values, headerMap, "intentos") || "0");
 
     updates.push(
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "error"
+        value: GENERAL_STATUS.ERROR
       },
       {
         row: item.rowNumber,
         col: headerMap["estado_upload"] + 1,
-        value: "error"
+        value: STATUS.ERROR
       },
       {
         row: item.rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "free"
+        value: LOCK_STATUS.FREE
       },
       {
         row: item.rowNumber,
@@ -194,11 +190,7 @@ async function main() {
     "fecha_upload"
   ];
 
-  for (const key of requiredHeaders) {
-    if (!(key in headerMap)) {
-      throw new Error(`Falta la columna requerida: ${key}`);
-    }
-  }
+  requireHeaders(headerMap, requiredHeaders);
 
   const { selectedCarouselId, groupRows } = getPendingCarouselRows(rows, headerMap);
 
@@ -219,19 +211,20 @@ async function main() {
   const prepUpdates = [];
 
   for (const item of groupRows) {
-    const row = item.values;
-    const estadoUpload = normalizeValue(row[headerMap["estado_upload"]]).toLowerCase();
+    // Usamos el estado original en memoria (antes del lock) para saber
+    // si este slide necesita upload o ya estaba done (rescate de huérfanas).
+    const estadoUploadOriginal = getCellValue(item.values, headerMap, "estado_upload").toLowerCase();
 
     prepUpdates.push(
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "processing"
+        value: GENERAL_STATUS.PROCESSING
       },
       {
         row: item.rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "locked"
+        value: LOCK_STATUS.LOCKED
       },
       {
         row: item.rowNumber,
@@ -255,11 +248,11 @@ async function main() {
       }
     );
 
-    if (estadoUpload === "pending" || estadoUpload === "error") {
+    if (estadoUploadOriginal === STATUS.PENDING || estadoUploadOriginal === STATUS.ERROR) {
       prepUpdates.push({
         row: item.rowNumber,
         col: headerMap["estado_upload"] + 1,
-        value: "processing"
+        value: STATUS.PROCESSING
       });
     }
   }
@@ -271,16 +264,19 @@ async function main() {
       const rowNumber = item.rowNumber;
       const row = item.values;
 
-      const rowId = normalizeValue(row[headerMap["row_id"]]);
-      const fileName = normalizeValue(row[headerMap["output_file"]]);
+      const rowId = getCellValue(row, headerMap, "row_id");
+      const fileName = getCellValue(row, headerMap, "output_file");
 
-      const estadoUpload = normalizeValue(row[headerMap["estado_upload"]]).toLowerCase();
+      // Usamos el estado original en memoria para decidir si subir o saltar.
+      const estadoUploadOriginal = getCellValue(row, headerMap, "estado_upload").toLowerCase();
 
-      if (estadoUpload !== "pending" && estadoUpload !== "error") {
+      if (estadoUploadOriginal !== STATUS.PENDING && estadoUploadOriginal !== STATUS.ERROR) {
+        groupLogger.info("Slide ya subido, saltando", {
+          rowNumber,
+          estadoUpload: estadoUploadOriginal
+        });
         continue;
-      }      
-
-
+      }
 
       const rowLogger = groupLogger.child({
         rowNumber,
@@ -310,13 +306,9 @@ async function main() {
       if (fs.existsSync(localPath)) {
         try {
           fs.unlinkSync(localPath);
-          rowLogger.info("Archivo local eliminado", {
-            localPath
-          });
+          rowLogger.info("Archivo local eliminado", { localPath });
         } catch (deleteErr) {
-          rowLogger.warn("No se pudo eliminar el archivo local", {
-            localPath
-          }, deleteErr);
+          rowLogger.warn("No se pudo eliminar el archivo local", { localPath }, deleteErr);
         }
       }
 
@@ -339,7 +331,7 @@ async function main() {
         {
           row: rowNumber,
           col: headerMap["estado_upload"] + 1,
-          value: "done"
+          value: STATUS.DONE
         },
         {
           row: rowNumber,

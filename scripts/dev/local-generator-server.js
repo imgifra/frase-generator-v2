@@ -1,4 +1,5 @@
 const http = require("http");
+const net = require("net");
 const path = require("path");
 const serveStatic = require("serve-static");
 const finalhandler = require("finalhandler");
@@ -11,7 +12,6 @@ let ownedByThisProcess = false;
 
 function isPortInUse(port, host = "127.0.0.1") {
   return new Promise((resolve) => {
-    const net = require("net");
     const socket = new net.Socket();
 
     socket
