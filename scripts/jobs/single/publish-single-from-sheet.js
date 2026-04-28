@@ -59,18 +59,6 @@ function getPendingSingleRow(rows, headerMap) {
   return null;
 }
 
-function buildCombinedPostId(instagramResult, facebookResult) {
-  return JSON.stringify({
-    instagram: {
-      mediaId: instagramResult?.mediaId || "",
-      creationId: instagramResult?.creationId || ""
-    },
-    facebook: {
-      postId: facebookResult?.postId || "",
-      photoId: facebookResult?.photoId || ""
-    }
-  });
-}
 
 async function main() {
   const cycleId = process.env.PIPELINE_CYCLE_ID || "";
@@ -97,7 +85,6 @@ async function main() {
     "caption",
     "media_url",
     "cloudinary_public_id",
-    "post_id",
     "fecha_publicado",
     "estado_general",
     "estado_render",
@@ -239,11 +226,6 @@ async function main() {
         },
         {
           row: rowNumber,
-          col: headerMap["post_id"] + 1,
-          value: buildCombinedPostId(instagramResult, facebookResult)
-        },
-        {
-          row: rowNumber,
           col: headerMap["updated_at"] + 1,
           value: nowIsoLocal()
         }
@@ -271,25 +253,13 @@ async function main() {
         },
         {
           row: rowNumber,
-          col: headerMap["post_id"] + 1,
-          value: buildCombinedPostId(instagramResult, facebookResult)
-        },
-        {
-          row: rowNumber,
           col: headerMap["updated_at"] + 1,
           value: nowIsoLocal()
         }
       ]);
     }
 
-    const combinedPostId = buildCombinedPostId(instagramResult, facebookResult);
-
     await updateCellsBatch(sheets, [
-      {
-        row: rowNumber,
-        col: headerMap["post_id"] + 1,
-        value: combinedPostId
-      },
       {
         row: rowNumber,
         col: headerMap["fecha_publicado"] + 1,
@@ -351,10 +321,6 @@ async function main() {
       }
     }
   } catch (error) {
-    const partialCombinedPostId = buildCombinedPostId(
-      instagramResult,
-      facebookResult
-    );
 
     await updateCellsBatch(sheets, [
       {
@@ -376,11 +342,6 @@ async function main() {
         row: rowNumber,
         col: headerMap["facebook_post_id"] + 1,
         value: facebookResult.postId || ""
-      },
-      {
-        row: rowNumber,
-        col: headerMap["post_id"] + 1,
-        value: partialCombinedPostId
       },
       {
         row: rowNumber,

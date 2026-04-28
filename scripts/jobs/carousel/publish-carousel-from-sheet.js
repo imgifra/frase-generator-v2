@@ -253,7 +253,6 @@ async function main() {
     "carousel_caption",
     "media_url",
     "cloudinary_public_id",
-    "post_id",
     "fecha_publicado",
     "estado_general",
     "estado_render",
@@ -362,19 +361,7 @@ async function main() {
         imageUrls,
         caption: carouselCaption
       });
-    }
-
-    const combinedPostId = JSON.stringify({
-      instagram: {
-        mediaId: instagramResult.mediaId || "",
-        creationId: instagramResult.creationId || "",
-        childIds: instagramResult.childIds || []
-      },
-      facebook: {
-        postId: facebookResult.postId || "",
-        mediaFbids: facebookResult.mediaFbids || []
-      }
-    });
+    };
 
     const now = nowIsoLocal();
 
@@ -402,11 +389,6 @@ async function main() {
           value: Array.isArray(facebookResult.mediaFbids)
             ? JSON.stringify(facebookResult.mediaFbids)
             : ""
-        },
-        {
-          row: item.rowNumber,
-          col: headerMap["post_id"] + 1,
-          value: combinedPostId
         },
         {
           row: item.rowNumber,
