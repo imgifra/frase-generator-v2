@@ -178,7 +178,7 @@ async function markGroupAsError(sheets, headerMap, groupRows, errorMessage, atte
     const row = item.values;
     const estadoRender = normalizeValue(row[headerMap["estado_render"]]).toLowerCase();
 
-    lockUpdates.push(
+    updates.push(
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
