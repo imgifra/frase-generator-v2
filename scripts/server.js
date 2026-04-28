@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
-const { spawnSync } = require("child_process");
+const { spawn } = require("child_process");
 const path = require("path");
 const { logger } = require("./utils/logger");
 
@@ -29,6 +29,7 @@ app.post("/run-now", authMiddleware, (req, res) => {
 
   logger.info("run-now recibido", { carousel_id });
 
+  // Respondemos inmediatamente — el pipeline corre en background
   res.json({ ok: true, carousel_id });
 
   const env = {
@@ -37,22 +38,28 @@ app.post("/run-now", authMiddleware, (req, res) => {
     PIPELINE_CYCLE_ID: `manual_${Date.now()}`
   };
 
-  const result = spawnSync(
+  const child = spawn(
     process.execPath,
     ["scripts/pipeline/run-now.js"],
     {
       stdio: "inherit",
       cwd: PROJECT_ROOT,
-      env
+      env,
+      detached: false
     }
   );
 
-  if (result.error || result.status !== 0) {
-    logger.error("run-now falló", { carousel_id, status: result.status });
-    return;
-  }
+  child.on("error", (err) => {
+    logger.error("run-now error al iniciar proceso", { carousel_id }, err);
+  });
 
-  logger.info("run-now completado", { carousel_id });
+  child.on("close", (code) => {
+    if (code !== 0) {
+      logger.error("run-now falló", { carousel_id, exitCode: code });
+    } else {
+      logger.info("run-now completado", { carousel_id });
+    }
+  });
 });
 
 app.get("/publicar", (req, res) => {
