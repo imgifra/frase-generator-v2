@@ -9,7 +9,7 @@ const {
 } = require("../dev/local-generator-server");
 
 const GENERATOR_URL = (
-  process.env.GENERATOR_URL || "http://127.0.0.1:8080"
+  process.env.GENERATOR_URL || "http://127.0.0.1:5173"
 ).replace(/\/+$/, "");
 
 function stripAccents(text) {
