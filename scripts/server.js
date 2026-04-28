@@ -16,8 +16,8 @@ const renderApp = express();
 
 renderApp.use(express.static(PROJECT_ROOT));
 
-renderApp.listen(8080, "127.0.0.1", () => {
-  logger.info("Servidor render local activo", { port: 8080 });
+renderApp.listen(5173, "127.0.0.1", () => {
+  logger.info("Servidor render local activo", { port: 5173 });
 });
 
 function authMiddleware(req, res, next) {
