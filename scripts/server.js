@@ -74,4 +74,4 @@ app.listen(PORT, () => {
 });
 
 // Arranca pipeline maestro en paralelo
-require("./pipeline/pipeline-maestro");
+// require("./pipeline/pipeline-maestro");
