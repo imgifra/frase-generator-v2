@@ -134,7 +134,7 @@
       status.textContent = "Publicando...";
 
       try {
-        const res = await fetch("https://tu-servicio-python.railway.app/publicar-carrusel", {          method: "POST",
+        const res = await fetch("https://catalogadorlimpio-production.up.railway.app/publicar-carrusel", {          method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-token": token
@@ -154,8 +154,9 @@
           status.className = "error";
         }
       } catch (err) {
-        status.textContent = `❌ Error de conexión.`;
-        status.className = "error";
+      console.error(err);
+      status.textContent = `❌ Error de conexión: ${err.message}`;
+      status.className = "error";
       } finally {
         btn.disabled = false;
       }
