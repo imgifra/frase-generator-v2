@@ -3,7 +3,7 @@ const path = require("path");
 const serveStatic = require("serve-static");
 const finalhandler = require("finalhandler");
 
-const DEFAULT_PORT = Number(process.env.GENERATOR_PORT || 8080);
+const DEFAULT_PORT = Number(process.env.GENERATOR_PORT || 5173);
 const ROOT_DIR = path.join(__dirname, "..", "..");
 
 let serverInstance = null;
