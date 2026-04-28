@@ -12,6 +12,14 @@ const API_TOKEN = process.env.API_TOKEN;
 const PORT = process.env.PORT || 3000;
 const PROJECT_ROOT = path.join(__dirname, "..");
 
+const renderApp = express();
+
+renderApp.use(express.static(PROJECT_ROOT));
+
+renderApp.listen(8080, "127.0.0.1", () => {
+  logger.info("Servidor render local activo", { port: 8080 });
+});
+
 function authMiddleware(req, res, next) {
   const token = req.headers["x-token"];
   if (!API_TOKEN || token !== API_TOKEN) {
