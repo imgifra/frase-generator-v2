@@ -197,7 +197,7 @@ async function markGroupAsError(sheets, headerMap, groupRows, cycleId, errorMess
       {
         row: item.rowNumber,
         col: headerMap["updated_at"] + 1,
-        value: lockTime
+        value: now
       },
       {
         row: item.rowNumber,
