@@ -77,8 +77,8 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
 
     try {
       await page.goto(url, {
-        waitUntil: "networkidle",
-        timeout: 30000
+        waitUntil: "domcontentloaded",
+        timeout: 60000
       });
     } catch (error) {
       if (isConnectionRefused(error)) {
