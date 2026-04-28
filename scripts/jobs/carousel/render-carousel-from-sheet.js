@@ -176,18 +176,31 @@ async function markGroupAsError(sheets, headerMap, groupRows, cycleId, errorMess
 
   for (const item of groupRows) {
     const row = item.values;
-    const estadoRender = normalizeValue(row[headerMap["estado_render"]]).toLowerCase();
+
+    const intentosActuales = Number(
+      normalizeValue(row[headerMap["intentos"]]) || "0"
+    );
 
     updates.push(
       {
         row: item.rowNumber,
         col: headerMap["estado_general"] + 1,
-        value: "processing"
+        value: "error"
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["estado_render"] + 1,
+        value: "error"
       },
       {
         row: item.rowNumber,
         col: headerMap["lock_status"] + 1,
-        value: "locked"
+        value: "free"
+      },
+      {
+        row: item.rowNumber,
+        col: headerMap["intentos"] + 1,
+        value: String(intentosActuales + attemptsDelta)
       },
       {
         row: item.rowNumber,
@@ -202,22 +215,14 @@ async function markGroupAsError(sheets, headerMap, groupRows, cycleId, errorMess
       {
         row: item.rowNumber,
         col: headerMap["error_step"] + 1,
-        value: ""
+        value: "carousel-render"
       },
       {
         row: item.rowNumber,
         col: headerMap["error_message"] + 1,
-        value: ""
+        value: errorMessage
       }
     );
-
-    if (estadoRender === "pending" || estadoRender === "error") {
-      updates.push({
-        row: item.rowNumber,
-        col: headerMap["estado_render"] + 1,
-        value: "processing"
-      });
-    }
   }
 
   await updateCellsBatch(sheets, updates);
