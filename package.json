@@ -29,6 +29,7 @@
   "dependencies": {
     "cloudinary": "^2.9.0",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "finalhandler": "^2.1.1",
     "googleapis": "^171.4.0",
     "playwright": "^1.59.1",

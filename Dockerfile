@@ -8,4 +8,4 @@ RUN npx playwright install chromium
 
 COPY . .
 
-CMD ["node", "scripts/pipeline/pipeline-maestro.js"]
+CMD ["node", "scripts/server.js"]

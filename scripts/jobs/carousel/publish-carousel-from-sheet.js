@@ -40,6 +40,8 @@ function getPendingCarouselRows(rows, headerMap) {
       carouselId;
 
     if (isEligible) {
+      const targetId = process.env.TARGET_CAROUSEL_ID || "";
+      if (targetId && carouselId !== targetId) continue;
       selectedCarouselId = carouselId;
       break;
     }
