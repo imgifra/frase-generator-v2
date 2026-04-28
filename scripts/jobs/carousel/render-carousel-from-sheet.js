@@ -170,7 +170,7 @@ function validateCarouselRows(groupRows, selectedCarouselId) {
   }
 }
 
-async function markGroupAsError(sheets, headerMap, groupRows, errorMessage, attemptsDelta = 1) {
+async function markGroupAsError(sheets, headerMap, groupRows, cycleId, errorMessage, attemptsDelta = 1) {
   const now = nowIsoLocal();
   const updates = [];
 
@@ -425,6 +425,7 @@ async function main() {
       sheets,
       headerMap,
       groupRows,
+      cycleId,
       error.message || String(error)
     );
 
