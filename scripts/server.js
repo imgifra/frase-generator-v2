@@ -74,5 +74,8 @@ app.listen(PORT, () => {
   logger.info("Servidor HTTP activo", { port: PORT });
 });
 
-// Arranca pipeline maestro en paralelo
-require("./pipeline/pipeline-maestro");
+try {
+  require("./pipeline/pipeline-maestro");
+} catch (err) {
+  logger.error("Error arrancando pipeline maestro", {}, err);
+}
