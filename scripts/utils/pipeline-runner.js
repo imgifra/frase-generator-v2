@@ -3,6 +3,8 @@ const { logger } = require("./logger");
 
 async function runPipelineSteps({
   label,
+  publishFirst = false,
+  publishFirstStepName,
   renderStepName,
   renderScript,
   uploadStepName,
@@ -23,6 +25,57 @@ async function runPipelineSteps({
 
   pipelineLogger.info("Pipeline iniciado");
 
+  // 1. Primero intenta publicar algo que ya quedó renderizado/subido pendiente.
+  // Esto evita crear un nuevo render/upload antes de resolver una publicación incompleta.
+  if (publishFirst) {
+    const pendingPublishResult = runStep(
+      publishFirstStepName || publishStepName,
+      publishScript,
+      {
+        pipeline: label,
+        ...context
+      }
+    );
+
+    if (!pendingPublishResult.ok && !pendingPublishResult.noPending) {
+      pipelineLogger.error("Error publicando pendiente", {
+        status: pendingPublishResult.status,
+        failedStep: `${failedStepPrefix}-publish-pending`,
+        durationMs: Date.now() - startMs
+      });
+
+      pipelineLogger.info("Pipeline terminado", {
+        processed: false
+      });
+
+      return {
+        ok: false,
+        processed: false,
+        failedStep: `${failedStepPrefix}-publish-pending`
+      };
+    }
+
+    if (pendingPublishResult.ok && !pendingPublishResult.noPending) {
+      pipelineLogger.info("Se completó un post pendiente antes de crear uno nuevo.", {
+        processed: true,
+        durationMs: Date.now() - startMs
+      });
+
+      pipelineLogger.info("Pipeline terminado", {
+        processed: true
+      });
+
+      return {
+        ok: true,
+        processed: true,
+        recoveredPending: true
+      };
+    }
+
+    pipelineLogger.info("No había publicaciones pendientes; se continúa con render normal.");
+  }
+
+  // 2. Si no había pendientes, se crea una publicación nueva.
   const renderResult = runStep(renderStepName, renderScript, {
     pipeline: label,
     ...context
@@ -119,7 +172,10 @@ async function runPipelineSteps({
     processed: true
   });
 
-  return { ok: true, processed: true };
+  return {
+    ok: true,
+    processed: true
+  };
 }
 
 module.exports = {
