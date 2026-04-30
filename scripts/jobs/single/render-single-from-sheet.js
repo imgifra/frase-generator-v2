@@ -29,32 +29,39 @@ const BG_SEQUENCE = [
 /**
  * Devuelve el último background_color de un post single que sí quedó publicado.
  */
-function getLastPublishedBg(rows, headerMap) {
+function getLastAssignedBg(rows, headerMap) {
+  // Considera tanto publicados como en vuelo (render done, publish pending/error/processing)
+  // para no romper la secuencia de colores aunque haya un post sin publicar aun.
   let latestBg = "";
   let latestTime = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    if (!["single", "carousel"].includes(postTipo)) continue;
+
+    const bg = getCellValue(row, headerMap, "background_color");
+    if (!bg) continue;
 
     const estadoGeneral = getCellValue(row, headerMap, "estado_general").toLowerCase();
-    const bg = getCellValue(row, headerMap, "background_color");
-    const fechaPublicado = getCellValue(row, headerMap, "fecha_publicado");
-    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
 
-    if (
-      estadoGeneral !== GENERAL_STATUS.PUBLISHED ||
-      !["single", "carousel"].includes(postTipo) ||
-      !bg ||
-      !fechaPublicado
-    ) {
-      continue;
-    }
+    const isPublished = estadoGeneral === GENERAL_STATUS.PUBLISHED;
+    const isInFlight =
+      estadoRender === STATUS.DONE &&
+      (estadoPublish === STATUS.PENDING || estadoPublish === STATUS.ERROR || estadoPublish === STATUS.PROCESSING);
 
-    const timestamp = Date.parse(fechaPublicado);
+    if (!isPublished && !isInFlight) continue;
 
-    if (Number.isNaN(timestamp)) {
-      continue;
-    }
+    const fechaRef = isPublished
+      ? getCellValue(row, headerMap, "fecha_publicado")
+      : getCellValue(row, headerMap, "fecha_generado");
+
+    if (!fechaRef) continue;
+
+    const timestamp = Date.parse(fechaRef);
+    if (Number.isNaN(timestamp)) continue;
 
     if (timestamp > latestTime) {
       latestTime = timestamp;
@@ -115,7 +122,7 @@ function getBgForRow(row, rows, headerMap) {
     return existingBg;
   }
 
-  const lastPublishedBg = getLastPublishedBg(rows, headerMap);
+  const lastPublishedBg = getLastAssignedBg(rows, headerMap);
   return getNextColor(lastPublishedBg);
 }
 

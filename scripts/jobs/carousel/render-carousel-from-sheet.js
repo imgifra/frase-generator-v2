@@ -73,6 +73,36 @@ function getNextColor(color) {
   return BG_SEQUENCE[(index + 1) % BG_SEQUENCE.length];
 }
 
+function hasCarouselAwaitingPublish(rows, headerMap) {
+  const seenCarousels = new Map(); // carouselId -> { hasUploadDone, hasPublishPending }
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    if (postTipo !== POST_TIPOS.CAROUSEL) continue;
+
+    const carouselId = getCellValue(row, headerMap, "carousel_id");
+    if (!carouselId) continue;
+
+    const estadoUpload = getCellValue(row, headerMap, "estado_upload").toLowerCase();
+    const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
+
+    if (!seenCarousels.has(carouselId)) {
+      seenCarousels.set(carouselId, { hasUploadDone: false, hasPublishPending: false });
+    }
+
+    const entry = seenCarousels.get(carouselId);
+    if (estadoUpload === STATUS.DONE) entry.hasUploadDone = true;
+    if (estadoPublish === STATUS.PENDING || estadoPublish === STATUS.ERROR) entry.hasPublishPending = true;
+  }
+
+  for (const [, entry] of seenCarousels) {
+    if (entry.hasUploadDone && entry.hasPublishPending) return true;
+  }
+
+  return false;
+}
+
 function getPendingCarouselRows(rows, headerMap) {
   let selectedCarouselId = "";
 
@@ -249,6 +279,13 @@ async function main() {
   ];
 
   requireHeaders(headerMap, requiredHeaders);
+
+  if (hasCarouselAwaitingPublish(rows, headerMap)) {
+    log.info("Hay un carrusel con upload completo pendiente de publicar. No se inicia nuevo render.", {
+      blocked: true
+    });
+    process.exit(10);
+  }
 
   const { selectedCarouselId, groupRows } = getPendingCarouselRows(rows, headerMap);
 
