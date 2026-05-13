@@ -785,6 +785,59 @@
 /* ========= MODE: RETRO 3D ========= */
 
 
+    function wrapTextBalanced(text, maxWidth, ctxLocal) {
+      const words = text.split(/\s+/).filter(Boolean);
+      if (words.length === 0) return [];
+
+      const wordWidths = words.map(w => ctxLocal.measureText(w).width);
+      const spaceW = ctxLocal.measureText(" ").width;
+
+      const totalW = wordWidths.reduce((a, b) => a + b, 0)
+                    + spaceW * (words.length - 1);
+
+      const numLines = Math.max(1, Math.ceil(totalW / maxWidth));
+
+      function lineWidth(from, to) {
+        let w = 0;
+        for (let i = from; i < to; i++) {
+          w += wordWidths[i];
+          if (i < to - 1) w += spaceW;
+        }
+        return w;
+      }
+
+      function bestSplit(wordArr, n) {
+        if (n === 1) return [wordArr.join(" ")];
+        if (wordArr.length <= n) return wordArr;
+
+        let bestCost = Infinity;
+        let bestAt = 1;
+
+        for (let cut = 1; cut < wordArr.length - (n - 2); cut++) {
+          const leftW = lineWidth(0, cut);
+          if (leftW > maxWidth) break;
+
+          const rightLines = bestSplit(wordArr.slice(cut), n - 1);
+          const rightMax = Math.max(...rightLines.map(l =>
+            ctxLocal.measureText(l).width
+          ));
+          const cost = Math.max(leftW, rightMax) - Math.min(leftW, rightMax);
+
+          if (cost < bestCost) {
+            bestCost = cost;
+            bestAt = cut;
+          }
+        }
+
+        const leftLine = wordArr.slice(0, bestAt).join(" ");
+        return [leftLine, ...bestSplit(wordArr.slice(bestAt), n - 1)];
+      }
+
+      return bestSplit(words, numLines);
+    }
+
+
+
     function drawRetro3D(rawText, bg) {
       ctx.save();
 
@@ -835,7 +888,7 @@
 
       while (fontSize >= minFont) {
         ctx.font = `700 ${fontSize}px 'Noto Serif', serif`;
-        lines = wrapText(text, boxWidth, ctx);
+        lines = wrapTextBalanced(text, boxWidth, ctx);
 
         const lineHeight = fontSize * 0.9;
         const totalHeight = lines.length * lineHeight;
