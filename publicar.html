@@ -87,8 +87,8 @@
   <label>Caption</label>
   <input type="text" id="caption" placeholder="Ej: y ya, sin drama.">
 
-  <label>Frases (una por línea, mínimo 3)</label>
-  <textarea id="frases" placeholder="Frase 1&#10;Frase 2"></textarea>
+  <label>Frases (una por línea, mínimo 1)</label>
+  <textarea id="frases" placeholder="Frase 1"></textarea>
 
   <button id="btn" onclick="publicar()">Publicar</button>
 
@@ -112,7 +112,7 @@
 
     if (!token) { status.textContent = "Falta el token."; status.className = "error"; return; }
     if (!caption) { status.textContent = "Falta el caption."; status.className = "error"; return; }
-    if (frases.length < 2) { status.textContent = "Mínimo 3 frases."; status.className = "error"; return; }
+    if (frases.length < 1) { status.textContent = "Escribe al menos una frase."; status.className = "error"; return; }
     if (frases.length > 10) { status.textContent = "Máximo 10 frases."; status.className = "error"; return; }
 
     btn.disabled = true;

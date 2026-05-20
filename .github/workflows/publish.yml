@@ -4,12 +4,14 @@ on:
   schedule:
     - cron: '0 15 * * *'   # 10am Bogotá (UTC-5)
     - cron: '0 23 * * *'   # 6pm Bogotá (UTC-5)
+
   workflow_dispatch:
     inputs:
       frases:
         description: 'Frases separadas por ||'
         required: false
         default: ''
+
       caption:
         description: 'Caption del carrusel'
         required: false
@@ -18,8 +20,10 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,8 +41,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      #################################################################
+      # MODO FORMULARIO (publicar.html)
+      #################################################################
+
       - name: Registrar frases si vienen del formulario
-        if: ${{ inputs.frases != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.frases != '' }}
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           WORKSHEET_NAME: ${{ secrets.WORKSHEET_NAME }}
@@ -46,18 +54,48 @@ jobs:
           CAPTION_INPUT: ${{ inputs.caption }}
         run: node scripts/pipeline/register-from-form.js
 
-      - name: Run pipeline
+      - name: Run pipeline formulario
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.frases != '' }}
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           WORKSHEET_NAME: ${{ secrets.WORKSHEET_NAME }}
+
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           GRAPH_API_VERSION: ${{ secrets.GRAPH_API_VERSION }}
+
           GENERATOR_URL: ${{ secrets.GENERATOR_URL }}
           GENERATOR_PORT: ${{ secrets.GENERATOR_PORT }}
+
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+        run: node scripts/pipeline/run-once.js
+
+      #################################################################
+      # MODO PROGRAMADO (Sheet)
+      #################################################################
+
+      - name: Run pipeline programado
+        if: ${{ github.event_name == 'schedule' }}
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          WORKSHEET_NAME: ${{ secrets.WORKSHEET_NAME }}
+
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GRAPH_API_VERSION: ${{ secrets.GRAPH_API_VERSION }}
+
+          GENERATOR_URL: ${{ secrets.GENERATOR_URL }}
+          GENERATOR_PORT: ${{ secrets.GENERATOR_PORT }}
+
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
         run: node scripts/pipeline/run-once.js

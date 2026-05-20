@@ -54,7 +54,7 @@ async function main() {
 
   const frases = frasesRaw.split("||").map(f => f.trim()).filter(Boolean);
 
-  if (frases.length < 3) {
+  if (frases.length < 1) {
     console.log("No hay frases suficientes, nada que registrar.");
     process.exit(0);
   }
