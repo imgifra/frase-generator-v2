@@ -5,6 +5,15 @@ on:
     - cron: '0 15 * * *'   # 10am Bogotá (UTC-5)
     - cron: '0 23 * * *'   # 6pm Bogotá (UTC-5)
   workflow_dispatch:
+    inputs:
+      frases:
+        description: 'Frases separadas por ||'
+        required: false
+        default: ''
+      caption:
+        description: 'Caption del carrusel'
+        required: false
+        default: ''
 
 jobs:
   publish:
@@ -27,6 +36,15 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+
+      - name: Registrar frases si vienen del formulario
+        if: ${{ inputs.frases != '' }}
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          WORKSHEET_NAME: ${{ secrets.WORKSHEET_NAME }}
+          FRASES_INPUT: ${{ inputs.frases }}
+          CAPTION_INPUT: ${{ inputs.caption }}
+        run: node scripts/pipeline/register-from-form.js
 
       - name: Run pipeline
         env:

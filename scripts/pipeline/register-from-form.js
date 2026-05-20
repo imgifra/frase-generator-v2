@@ -1,0 +1,115 @@
+require("dotenv").config();
+
+const {
+  getSheetsClient,
+  buildHeaderMap,
+  requireHeaders,
+  getCellValue,
+  readRows,
+  updateCellsBatch
+} = require("../core/sheets");
+
+const { nowIsoLocal } = require("../utils/common");
+
+const BG_SEQUENCE = ["#f4c400", "#3d5afe", "#e53935", "#f6f1e8", "#0d0f14"];
+
+function getNextColor(rows, headerMap) {
+  let latestTime = 0;
+  let latestBg = "";
+
+  for (let i = 1; i < rows.length; i++) {
+    const estado = getCellValue(rows[i], headerMap, "estado_general");
+    const bg = getCellValue(rows[i], headerMap, "background_color");
+    const fecha = getCellValue(rows[i], headerMap, "fecha_publicado");
+
+    if (estado !== "published" || !bg || !fecha) continue;
+
+    try {
+      const ts = new Date(fecha).getTime();
+      if (ts > latestTime) {
+        latestTime = ts;
+        latestBg = bg.toLowerCase();
+      }
+    } catch (_) {}
+  }
+
+  if (!latestBg) return BG_SEQUENCE[0];
+  const idx = BG_SEQUENCE.map(b => b.toLowerCase()).indexOf(latestBg);
+  return idx === -1 ? BG_SEQUENCE[0] : BG_SEQUENCE[(idx + 1) % BG_SEQUENCE.length];
+}
+
+function generateCarouselId(frases) {
+  const str = frases.map(f => f.toLowerCase().trim()).sort().join("||");
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return "car_" + Math.abs(hash).toString(16).slice(0, 8);
+}
+
+async function main() {
+  const frasesRaw = process.env.FRASES_INPUT || "";
+  const caption = process.env.CAPTION_INPUT || "";
+
+  const frases = frasesRaw.split("||").map(f => f.trim()).filter(Boolean);
+
+  if (frases.length < 3) {
+    console.log("No hay frases suficientes, nada que registrar.");
+    process.exit(0);
+  }
+
+  console.log(`Registrando ${frases.length} frases con caption: "${caption}"`);
+
+  const sheets = await getSheetsClient();
+  const rows = await readRows(sheets);
+  const headers = rows[0];
+  const headerMap = buildHeaderMap(headers);
+
+  requireHeaders(headerMap, [
+    "frase_original", "frase_corregida", "post_tipo", "carousel_id",
+    "carousel_order", "carousel_caption", "hashtags", "estado_general",
+    "estado_render", "estado_upload", "estado_publish", "lock_status",
+    "background_color", "modo", "updated_at"
+  ]);
+
+  const bgColor = getNextColor(rows, headerMap);
+  const carouselId = generateCarouselId(frases);
+  const hashtags = "#monacastrosa #frasesreales #humorcotidiano #vidareal";
+  const now = nowIsoLocal();
+  const nextRow = rows.length + 1;
+  const updates = [];
+
+  frases.forEach((frase, i) => {
+    const row = nextRow + i;
+    const add = (field, value) => {
+      if (headerMap[field] !== undefined) {
+        updates.push({ row, col: headerMap[field] + 1, value });
+      }
+    };
+
+    add("frase_original", frase);
+    add("frase_corregida", frase);
+    add("post_tipo", "carousel");
+    add("carousel_id", carouselId);
+    add("carousel_order", i + 1);
+    add("carousel_caption", caption);
+    add("hashtags", hashtags);
+    add("estado_general", "pending");
+    add("estado_render", "pending");
+    add("estado_upload", "pending");
+    add("estado_publish", "pending");
+    add("lock_status", "free");
+    add("background_color", bgColor);
+    add("modo", "retro3d");
+    add("updated_at", now);
+  });
+
+  await updateCellsBatch(sheets, updates);
+  console.log(`✅ ${frases.length} frases registradas como pending — carousel_id: ${carouselId}`);
+}
+
+main().catch(err => {
+  console.error("Error registrando frases:", err);
+  process.exit(1);
+});
