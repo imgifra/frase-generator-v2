@@ -15,10 +15,16 @@ const { nowIsoLocal } = require("../../utils/common");
 
 const PLANS = [
   {
-    carousel_id: "car_reparacion_2026",
-    ids: [337, 338, 339, 340, 341, 342, 343, 344, 345, 346],
-    caption: `En reparación… sin fecha de entrega.`,
-    hashtags: "#sanacion #vidaadulta #humor #colombia #frases #parati #real #viral"
+    carousel_id: "car_miercoles_existencial",
+    ids: [350, 351, 352, 353, 354, 355, 356],
+    caption: `El miércoles también cuenta.`,
+    hashtags: "#miercoles #vidaadulta #humor #colombia #frases #parati #real #viral"
+  },
+  {
+    carousel_id: "car_relaciones_tarde",
+    ids: [357, 358, 359, 360, 361, 362, 363],
+    caption: `Uno aprende… pero tarde.`,
+    hashtags: "#tusa #relaciones #amorpropio #colombia #frases #parati #real #sentimientos"
   }
 ];
 
