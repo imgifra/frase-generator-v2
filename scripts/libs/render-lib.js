@@ -3,10 +3,6 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
-const {
-  ensureGeneratorServer,
-  stopGeneratorServer
-} = require("../dev/local-generator-server");
 
 const GENERATOR_URL = (
   process.env.GENERATOR_URL || "http://127.0.0.1:5173"
@@ -31,12 +27,7 @@ function buildSafeName(text) {
 }
 
 function buildRenderUrl({ text, mode, bg, baseUrl }) {
-  const params = new URLSearchParams({
-    text,
-    mode,
-    bg
-  });
-
+  const params = new URLSearchParams({ text, mode, bg });
   return `${baseUrl}/?${params.toString()}`;
 }
 
@@ -60,20 +51,15 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
   const fileName = `${safeName}_${mode}_${Date.now()}.png`;
   const outputPath = path.join(outputDir, fileName);
 
-  const serverInfo = await ensureGeneratorServer();
-  const baseUrl = serverInfo?.url || GENERATOR_URL;
-
-  const browser = await chromium.launch({
-    headless: true
-  });
+  const browser = await chromium.launch({ headless: true });
 
   try {
     const page = await browser.newPage({
       viewport: { width: 1400, height: 1400 }
     });
 
-    const url = buildRenderUrl({ text, mode, bg, baseUrl });
-    console.log("Abriendo:", url);
+    const url = buildRenderUrl({ text, mode, bg, baseUrl: GENERATOR_URL });
+    console.log("Abriendo:", url.replace(GENERATOR_URL, "***"));
 
     try {
       await page.goto(url, {
@@ -82,7 +68,7 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
       });
     } catch (error) {
       if (isConnectionRefused(error)) {
-        throw new Error(`No se pudo conectar al generador en ${baseUrl}.`);
+        throw new Error(`No se pudo conectar al generador en ${GENERATOR_URL}.`);
       }
       throw error;
     }
@@ -111,13 +97,9 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
     const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
     fs.writeFileSync(outputPath, base64Data, "base64");
 
-    return {
-      fileName,
-      outputPath
-    };
+    return { fileName, outputPath };
   } finally {
     await browser.close();
-    await stopGeneratorServer();
   }
 }
 
