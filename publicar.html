@@ -28,7 +28,7 @@
       color: #aaa;
     }
 
-    textarea, input {
+    textarea, input[type="text"], input[type="password"] {
       width: 100%;
       background: #1a1c22;
       border: 1px solid #333;
@@ -80,6 +80,40 @@
       margin-bottom: 16px;
     }
 
+    .solo-sheet-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #1a1c22;
+      border: 1px solid #333;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .solo-sheet-row.active {
+      border-color: #3d5afe;
+    }
+
+    .solo-sheet-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #3d5afe;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .solo-sheet-row span {
+      font-size: 14px;
+      color: #aaa;
+      user-select: none;
+    }
+
+    .solo-sheet-row.active span {
+      color: #f6f1e8;
+    }
+
     #btn-publicar {
       width: 100%;
       background: #f4c400;
@@ -90,6 +124,12 @@
       font-weight: 700;
       padding: 16px;
       cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    #btn-publicar.solo-sheet {
+      background: #3d5afe;
+      color: #f6f1e8;
     }
 
     #btn-publicar:disabled {
@@ -128,7 +168,12 @@
   <textarea id="frases" placeholder="Frase 1&#10;Frase 2"></textarea>
   <div id="hint-frases">Carrusel: mínimo 2, máximo 10 frases</div>
 
-  <button id="btn-publicar" onclick="publicar()">Publicar</button>
+  <div class="solo-sheet-row" id="solo-sheet-row" onclick="toggleSoloSheet()">
+    <input type="checkbox" id="solo-sheet" onclick="event.stopPropagation(); toggleSoloSheet()">
+    <span>📋 Solo guardar en sheet (publicar en horario programado)</span>
+  </div>
+
+  <button id="btn-publicar" onclick="publicar()">Publicar ahora</button>
 
   <div id="status"></div>
 
@@ -138,6 +183,7 @@
   const WORKFLOW = "publish.yml";
 
   let tipoActual = "carousel";
+  let soloSheet = false;
 
   function setTipo(tipo) {
     tipoActual = tipo;
@@ -153,6 +199,14 @@
       document.getElementById("hint-frases").textContent = "Carrusel: mínimo 2, máximo 10 frases";
       document.getElementById("frases").placeholder = "Frase 1\nFrase 2";
     }
+  }
+
+  function toggleSoloSheet() {
+    soloSheet = !soloSheet;
+    document.getElementById("solo-sheet").checked = soloSheet;
+    document.getElementById("solo-sheet-row").classList.toggle("active", soloSheet);
+    document.getElementById("btn-publicar").textContent = soloSheet ? "Guardar en sheet" : "Publicar ahora";
+    document.getElementById("btn-publicar").classList.toggle("solo-sheet", soloSheet);
   }
 
   async function publicar() {
@@ -178,7 +232,7 @@
     }
 
     btn.disabled = true;
-    status.textContent = "Publicando...";
+    status.textContent = soloSheet ? "Guardando en sheet..." : "Publicando...";
 
     try {
       const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
@@ -193,13 +247,18 @@
           inputs: {
             frases: frases.join("||"),
             caption,
-            tipo: tipoActual
+            tipo: tipoActual,
+            solo_registrar: soloSheet ? "true" : "false"
           }
         })
       });
 
       if (res.status === 204) {
-        status.textContent = `✅ Enviado como ${tipoActual}. En 2-3 minutos estará publicado.`;
+        if (soloSheet) {
+          status.textContent = "📋 Guardado en sheet. Se publicará en el próximo horario programado.";
+        } else {
+          status.textContent = `✅ Enviado como ${tipoActual}. En 2-3 minutos estará publicado.`;
+        }
         status.className = "ok";
         document.getElementById("frases").value = "";
         document.getElementById("caption").value = "";
