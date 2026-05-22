@@ -498,11 +498,24 @@
       const mode = modeSelect.value;
 
       const retroCycle = [
+        // Ciclo original
         "#f6f1e8", // retroWhite
         "#0d0f14", // retroBlack
         "#f4c400", // retroYellow
         "#3d5afe", // retroBlue
-        "#e53935"  // retroRed
+        "#e53935", // retroRed
+
+        // Ciclo oscuro / melancólico
+        "#0d0208", // retroWine
+        "#1a0033", // retroPurple
+        "#0a1628", // retroNavy
+        "#1c0a00", // retroCoffee
+
+        // Ciclo cálido / irónico
+        "#ff4d00", // retroOrange
+        "#d4006a", // retroPink
+        "#8d6e00", // retroMustard
+        "#2e7d32"  // retroGreen
       ];
 
       let index = 0;
@@ -1658,23 +1671,66 @@
 /* ========= VISUAL UTILS ========= */
     function drawRetroPattern(targetCtx, bg) {
       const palette = getRetro3DPalette(bg);
+      const normalizedBg = bg.toLowerCase();
+
       let patternColor;
       let alpha;
-      if (bg.toLowerCase() === "#0d0f14") { // negro
+
+      if (normalizedBg === "#0d0f14") { // negro
         patternColor = palette.frontColor;
         alpha = 0.1;
-      } else if (bg.toLowerCase() === "#f6f1e8") { // blanco crema
-        patternColor = "#7f7a72"; // gris cálido
+
+      } else if (normalizedBg === "#f6f1e8") { // blanco crema
+        patternColor = "#7f7a72";
         alpha = 0.2;
-      } else if (bg.toLowerCase() === "#f4c400") { // amarillo
-        patternColor = "#8c2f2f"; // rojo oscuro
+
+      } else if (normalizedBg === "#f4c400") { // amarillo
+        patternColor = "#8c2f2f";
         alpha = 0.2;
-      } else if (bg.toLowerCase() === "#3d5afe") { // azul
-        patternColor = "#f4c400"; // amarillo
+
+      } else if (normalizedBg === "#3d5afe") { // azul
+        patternColor = "#f4c400";
         alpha = 0.2;
-      } else { // fallback (rojo u otros)
-        patternColor = "#f4c400"; // amarillo
+
+      } else if (normalizedBg === "#e53935") { // rojo
+        patternColor = "#f4c400";
         alpha = 0.3;
+
+      } else if (normalizedBg === "#0d0208") { // negro vino
+        patternColor = palette.frontColor;
+        alpha = 0.12;
+
+      } else if (normalizedBg === "#1a0033") { // morado noche
+        patternColor = palette.frontColor;
+        alpha = 0.12;
+
+      } else if (normalizedBg === "#0a1628") { // azul marino
+        patternColor = palette.frontColor;
+        alpha = 0.12;
+
+      } else if (normalizedBg === "#1c0a00") { // café oscuro
+        patternColor = palette.frontColor;
+        alpha = 0.12;
+
+      } else if (normalizedBg === "#ff4d00") { // naranja fuego
+        patternColor = palette.shadowColor;
+        alpha = 0.18;
+
+      } else if (normalizedBg === "#d4006a") { // rosa fuerte
+        patternColor = palette.shadowColor;
+        alpha = 0.18;
+
+      } else if (normalizedBg === "#8d6e00") { // mostaza
+        patternColor = palette.shadowColor;
+        alpha = 0.18;
+
+      } else if (normalizedBg === "#2e7d32") { // verde selva
+        patternColor = palette.shadowColor;
+        alpha = 0.18;
+
+      } else {
+        patternColor = palette.frontColor;
+        alpha = getBrightness(normalizedBg) < 100 ? 0.12 : 0.18;
       }
 
       targetCtx.save();
@@ -1784,6 +1840,9 @@
       return (r * 299 + g * 587 + b * 114) / 1000;
     }
 
+
+
+
     function getRetro3DBackground(hex) {
       const retroYellow = "#f4c400";
       const retroBlue   = "#3d5afe";
@@ -1791,7 +1850,40 @@
       const retroWhite  = "#f6f1e8";
       const retroBlack  = "#0d0f14";
 
-      const input = hexToRgb(hex);
+      const retroWine    = "#0d0208";
+      const retroPurple  = "#1a0033";
+      const retroNavy    = "#0a1628";
+      const retroCoffee  = "#1c0a00";
+      const retroOrange  = "#ff4d00";
+      const retroPink    = "#d4006a";
+      const retroMustard = "#8d6e00";
+      const retroGreen   = "#2e7d32";
+
+      const normalizedHex = (hex || "").toLowerCase();
+
+      const exactColors = [
+        retroYellow,
+        retroBlue,
+        retroRed,
+        retroWhite,
+        retroBlack,
+        retroWine,
+        retroPurple,
+        retroNavy,
+        retroCoffee,
+        retroOrange,
+        retroPink,
+        retroMustard,
+        retroGreen
+      ];
+
+      // Primero respetamos colores exactos del sistema.
+      // Esto evita que fondos oscuros nuevos como #0d0208 caigan como retroBlack.
+      if (exactColors.includes(normalizedHex)) {
+        return normalizedHex;
+      }
+
+      const input = hexToRgb(normalizedHex);
 
       const whiteDistance =
         Math.pow(input.r - 255, 2) +
@@ -1811,7 +1903,19 @@
         return retroBlack;
       }
 
-      const targetColors = [retroYellow, retroBlue, retroRed];
+      const targetColors = [
+        retroYellow,
+        retroBlue,
+        retroRed,
+        retroWine,
+        retroPurple,
+        retroNavy,
+        retroCoffee,
+        retroOrange,
+        retroPink,
+        retroMustard,
+        retroGreen
+      ];
 
       let nearest = targetColors[0];
       let minDistance = Infinity;
@@ -1838,6 +1942,15 @@
       const retroRed    = "#e53935";
       const retroWhite  = "#f6f1e8";
       const retroBlack  = "#0d0f14";
+
+      const retroWine    = "#0d0208";
+      const retroPurple  = "#1a0033";
+      const retroNavy    = "#0a1628";
+      const retroCoffee  = "#1c0a00";
+      const retroOrange  = "#ff4d00";
+      const retroPink    = "#d4006a";
+      const retroMustard = "#8d6e00";
+      const retroGreen   = "#2e7d32";
       
       if (bg.toLowerCase() === retroBlack) {
         return {
@@ -1871,6 +1984,70 @@
         };
       }
 
+      if (bg.toLowerCase() === retroWine) {
+        return {
+          frontColor: "#c9184a",
+          midColor: "#c9184a",
+          shadowColor: "#6a0572",
+        };
+      }
+
+      if (bg.toLowerCase() === retroPurple) {
+        return {
+          frontColor: "#e040fb",
+          midColor: "#e040fb",
+          shadowColor: "#00e5ff",
+        };
+      }
+
+      if (bg.toLowerCase() === retroNavy) {
+        return {
+          frontColor: "#00e5ff",
+          midColor: "#00e5ff",
+          shadowColor: "#e040fb",
+        };
+      }
+
+      if (bg.toLowerCase() === retroCoffee) {
+        return {
+          frontColor: "#ff6d00",
+          midColor: "#ff6d00",
+          shadowColor: "#c9184a",
+        };
+      }
+
+      if (bg.toLowerCase() === retroOrange) {
+        return {
+          frontColor: "#fffde7",
+          midColor: "#fffde7",
+          shadowColor: "#ffd600",
+        };
+      }
+
+      if (bg.toLowerCase() === retroPink) {
+        return {
+          frontColor: "#ffd600",
+          midColor: "#ffd600",
+          shadowColor: retroOrange,
+        };
+      }
+
+      if (bg.toLowerCase() === retroMustard) {
+        return {
+          frontColor: "#ffffff",
+          midColor: "#ffffff",
+          shadowColor: retroPink,
+        };
+      }
+
+      if (bg.toLowerCase() === retroGreen) {
+        return {
+          frontColor: "#ffd600",
+          midColor: "#ffd600",
+          shadowColor: retroOrange,
+        };
+      }
+
       // fondo rojo
       return {
         frontColor: retroYellow,
@@ -1878,6 +2055,9 @@
         shadowColor: retroBlue,
       };
     }
+
+
+    
     
     function hexToRgb(hex) {
       hex = hex.replace("#", "");
