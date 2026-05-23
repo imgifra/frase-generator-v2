@@ -436,7 +436,7 @@ function layoutTextBalanced(text, boxWidth, boxHeight, ctxLocal, options) {
 
   const n        = words.length;
   let bestLayout = null, bestScore = Infinity;
-  const minLines = Math.max(2, Math.ceil(n/5));
+  const minLines = n <= 2 ? 1 : Math.max(2, Math.ceil(n/5));
   const maxLines = Math.min(n, Math.max(minLines, Math.ceil(n/2)+2));
 
   for (let lineCount = minLines; lineCount <= maxLines; lineCount++) {
@@ -550,7 +550,7 @@ function drawRetroCornerLogo() {
   if (!retroLogoImage.complete || retroLogoImage.naturalWidth === 0) return;
   const logoSize = 260;
   const margin   = 30;
-  const x = CANVAS_WIDTH  - logoSize - margin;
+  const x = (CANVAS_WIDTH - logoSize) / 2;
   const y = CANVAS_HEIGHT - logoSize - margin;
   ctx.save();
   ctx.globalAlpha = 1;
