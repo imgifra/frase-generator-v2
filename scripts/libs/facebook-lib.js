@@ -1,6 +1,7 @@
 require("dotenv").config();
 
-const GRAPH_API_VERSION = process.env.GRAPH_API_VERSION || "v25.0";
+const { buildGraphUrl, buildGraphErrorMessage } = require("./graph-client");
+
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
 

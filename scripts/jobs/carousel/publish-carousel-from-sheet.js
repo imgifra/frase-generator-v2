@@ -3,6 +3,7 @@ require("dotenv").config();
 const { publishCarouselPost } = require("../../libs/instagram-lib");
 const { publishFacebookCarouselPost } = require("../../libs/facebook-lib");
 const { deleteImage } = require("../../libs/upload-lib");
+const { postTweet } = require("../../libs/x-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
@@ -78,13 +79,10 @@ function buildCarouselPayload(groupRows, headerMap) {
 
 async function deleteCarouselAssets(publicIds, groupLogger) {
   for (const item of publicIds) {
-    if (!item.publicId) {
-      continue;
-    }
+    if (!item.publicId) continue;
 
     try {
       await deleteImage(item.publicId);
-
       groupLogger.info("Asset de Cloudinary eliminado", {
         rowNumber: item.rowNumber,
         cloudinaryPublicId: item.publicId
@@ -92,183 +90,92 @@ async function deleteCarouselAssets(publicIds, groupLogger) {
     } catch (deleteError) {
       groupLogger.warn(
         "No se pudo eliminar el asset de Cloudinary",
-        {
-          rowNumber: item.rowNumber,
-          cloudinaryPublicId: item.publicId
-        },
+        { rowNumber: item.rowNumber, cloudinaryPublicId: item.publicId },
         deleteError
       );
     }
   }
 }
 
-async function markCarouselAsPublishing({
-  sheets,
-  headerMap,
-  groupRows,
-  cycleId
-}) {
+async function markCarouselAsPublishing({ sheets, headerMap, groupRows, cycleId }) {
   const lockTs = nowIsoLocal();
 
   await updateCellsBatch(
     sheets,
     groupRows.flatMap((item) => [
-      {
-        row: item.rowNumber,
-        col: headerMap["estado_general"] + 1,
-        value: GENERAL_STATUS.PROCESSING
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["estado_publish"] + 1,
-        value: STATUS.PROCESSING
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["lock_status"] + 1,
-        value: LOCK_STATUS.LOCKED
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["last_cycle_id"] + 1,
-        value: cycleId
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["updated_at"] + 1,
-        value: lockTs
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_step"] + 1,
-        value: ""
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_message"] + 1,
-        value: ""
-      }
+      { row: item.rowNumber, col: headerMap["estado_general"] + 1, value: GENERAL_STATUS.PROCESSING },
+      { row: item.rowNumber, col: headerMap["estado_publish"] + 1, value: STATUS.PROCESSING },
+      { row: item.rowNumber, col: headerMap["lock_status"] + 1, value: LOCK_STATUS.LOCKED },
+      { row: item.rowNumber, col: headerMap["last_cycle_id"] + 1, value: cycleId },
+      { row: item.rowNumber, col: headerMap["updated_at"] + 1, value: lockTs },
+      { row: item.rowNumber, col: headerMap["error_step"] + 1, value: "" },
+      { row: item.rowNumber, col: headerMap["error_message"] + 1, value: "" }
     ])
   );
 }
 
-async function saveInstagramResultForCarousel({
-  sheets,
-  headerMap,
-  groupRows,
-  instagramResult
-}) {
+async function saveInstagramResultForCarousel({ sheets, headerMap, groupRows, instagramResult }) {
   const updatedAt = nowIsoLocal();
 
   await updateCellsBatch(
     sheets,
     groupRows.flatMap((item) => [
-      {
-        row: item.rowNumber,
-        col: headerMap["instagram_creation_id"] + 1,
-        value: instagramResult.creationId || ""
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["instagram_media_id"] + 1,
-        value: instagramResult.mediaId || ""
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["updated_at"] + 1,
-        value: updatedAt
-      }
+      { row: item.rowNumber, col: headerMap["instagram_creation_id"] + 1, value: instagramResult.creationId || "" },
+      { row: item.rowNumber, col: headerMap["instagram_media_id"] + 1, value: instagramResult.mediaId || "" },
+      { row: item.rowNumber, col: headerMap["updated_at"] + 1, value: updatedAt }
     ])
   );
 }
 
-async function saveFacebookResultForCarousel({
-  sheets,
-  headerMap,
-  groupRows,
-  facebookResult
-}) {
+async function saveFacebookResultForCarousel({ sheets, headerMap, groupRows, facebookResult }) {
   const updatedAt = nowIsoLocal();
 
   await updateCellsBatch(
     sheets,
     groupRows.flatMap((item) => [
-      {
-        row: item.rowNumber,
-        col: headerMap["facebook_post_id"] + 1,
-        value: facebookResult.postId || ""
-      },
+      { row: item.rowNumber, col: headerMap["facebook_post_id"] + 1, value: facebookResult.postId || "" },
       {
         row: item.rowNumber,
         col: headerMap["facebook_photo_id"] + 1,
-        value: Array.isArray(facebookResult.mediaFbids)
-          ? JSON.stringify(facebookResult.mediaFbids)
-          : ""
+        value: Array.isArray(facebookResult.mediaFbids) ? JSON.stringify(facebookResult.mediaFbids) : ""
       },
-      {
-        row: item.rowNumber,
-        col: headerMap["updated_at"] + 1,
-        value: updatedAt
-      }
+      { row: item.rowNumber, col: headerMap["updated_at"] + 1, value: updatedAt }
     ])
   );
 }
 
-async function markCarouselAsPublished({
-  sheets,
-  headerMap,
-  groupRows
-}) {
+async function saveXResultForCarousel({ sheets, headerMap, groupRows, xPostId }) {
+  const updatedAt = nowIsoLocal();
+
+  await updateCellsBatch(
+    sheets,
+    groupRows.flatMap((item) => [
+      { row: item.rowNumber, col: headerMap["x_post_id"] + 1, value: xPostId || "" },
+      { row: item.rowNumber, col: headerMap["updated_at"] + 1, value: updatedAt }
+    ])
+  );
+}
+
+async function markCarouselAsPublished({ sheets, headerMap, groupRows }) {
   const doneTs = nowIsoLocal();
 
   await updateCellsBatch(
     sheets,
     groupRows.flatMap((item) => [
-      {
-        row: item.rowNumber,
-        col: headerMap["fecha_publicado"] + 1,
-        value: doneTs
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["estado_publish"] + 1,
-        value: STATUS.DONE
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["estado_general"] + 1,
-        value: GENERAL_STATUS.PUBLISHED
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["lock_status"] + 1,
-        value: LOCK_STATUS.FREE
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["updated_at"] + 1,
-        value: doneTs
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_step"] + 1,
-        value: ""
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_message"] + 1,
-        value: ""
-      }
+      { row: item.rowNumber, col: headerMap["fecha_publicado"] + 1, value: doneTs },
+      { row: item.rowNumber, col: headerMap["estado_publish"] + 1, value: STATUS.DONE },
+      { row: item.rowNumber, col: headerMap["estado_general"] + 1, value: GENERAL_STATUS.PUBLISHED },
+      { row: item.rowNumber, col: headerMap["lock_status"] + 1, value: LOCK_STATUS.FREE },
+      { row: item.rowNumber, col: headerMap["updated_at"] + 1, value: doneTs },
+      { row: item.rowNumber, col: headerMap["error_step"] + 1, value: "" },
+      { row: item.rowNumber, col: headerMap["error_message"] + 1, value: "" }
     ])
   );
 }
 
 function getFirstExistingValue(groupRows, headerMap, field) {
   return groupRows.reduce((found, item) => {
-    if (found) {
-      return found;
-    }
-
+    if (found) return found;
     return getCellValue(item.values, headerMap, field);
   }, "");
 }
@@ -276,10 +183,7 @@ function getFirstExistingValue(groupRows, headerMap, field) {
 async function main() {
   const cycleId = process.env.PIPELINE_CYCLE_ID || "";
 
-  const log = logger.child({
-    job: "publish-carousel",
-    cycleId
-  });
+  const log = logger.child({ job: "publish-carousel", cycleId });
 
   const sheets = await getSheetsClient();
   const rows = await readRows(sheets);
@@ -293,30 +197,12 @@ async function main() {
   const headerMap = buildHeaderMap(headers);
 
   const requiredHeaders = [
-    "row_id",
-    "updated_at",
-    "post_tipo",
-    "caption",
-    "carousel_id",
-    "carousel_order",
-    "carousel_caption",
-    "media_url",
-    "cloudinary_public_id",
-    "fecha_publicado",
-    "estado_general",
-    "estado_render",
-    "estado_upload",
-    "estado_publish",
-    "lock_status",
-    "intentos",
-    "last_cycle_id",
-    "error_step",
-    "error_message",
-    "instagram_creation_id",
-    "instagram_media_id",
-    "facebook_photo_id",
-    "facebook_post_id",
-    "hashtags"
+    "row_id", "updated_at", "post_tipo", "caption", "carousel_id",
+    "carousel_order", "carousel_caption", "media_url", "cloudinary_public_id",
+    "fecha_publicado", "estado_general", "estado_render", "estado_upload",
+    "estado_publish", "lock_status", "intentos", "last_cycle_id",
+    "error_step", "error_message", "instagram_creation_id", "instagram_media_id",
+    "facebook_photo_id", "facebook_post_id", "hashtags", "x_post_id"
   ];
 
   requireHeaders(headerMap, requiredHeaders);
@@ -325,11 +211,11 @@ async function main() {
     rows,
     headerMap,
     (row, hm) => {
-      const estadoRender = getCellValue(row, hm, "estado_render").toLowerCase();
-      const estadoUpload = getCellValue(row, hm, "estado_upload").toLowerCase();
+      const estadoRender  = getCellValue(row, hm, "estado_render").toLowerCase();
+      const estadoUpload  = getCellValue(row, hm, "estado_upload").toLowerCase();
       const estadoPublish = getCellValue(row, hm, "estado_publish").toLowerCase();
-      const lockStatus = getCellValue(row, hm, "lock_status").toLowerCase();
-      const intentos = Number(getCellValue(row, hm, "intentos") || 0);
+      const lockStatus    = getCellValue(row, hm, "lock_status").toLowerCase();
+      const intentos      = Number(getCellValue(row, hm, "intentos") || 0);
 
       return (
         estadoRender === STATUS.DONE &&
@@ -348,46 +234,23 @@ async function main() {
 
   validateCarouselRows(groupRows, selectedCarouselId);
 
-  const { imageUrls, carouselCaption, publicIds } = buildCarouselPayload(
-    groupRows,
-    headerMap
-  );
+  const { imageUrls, carouselCaption, publicIds } = buildCarouselPayload(groupRows, headerMap);
 
-  const groupLogger = log.child({
-    carouselId: selectedCarouselId,
-    slides: groupRows.length
-  });
+  const groupLogger = log.child({ carouselId: selectedCarouselId, slides: groupRows.length });
 
-  const existingInstagramCreationId = getFirstExistingValue(
-    groupRows,
-    headerMap,
-    "instagram_creation_id"
-  );
-
-  const existingInstagramMediaId = getFirstExistingValue(
-    groupRows,
-    headerMap,
-    "instagram_media_id"
-  );
-
-  const existingFacebookPostId = getFirstExistingValue(
-    groupRows,
-    headerMap,
-    "facebook_post_id"
-  );
+  const existingInstagramCreationId = getFirstExistingValue(groupRows, headerMap, "instagram_creation_id");
+  const existingInstagramMediaId    = getFirstExistingValue(groupRows, headerMap, "instagram_media_id");
+  const existingFacebookPostId      = getFirstExistingValue(groupRows, headerMap, "facebook_post_id");
+  const existingXPostId             = getFirstExistingValue(groupRows, headerMap, "x_post_id");
 
   groupLogger.info("Carrusel seleccionado para publish", {
     hasCaption: Boolean(carouselCaption),
     hasExistingInstagram: Boolean(existingInstagramMediaId),
-    hasExistingFacebook: Boolean(existingFacebookPostId)
+    hasExistingFacebook: Boolean(existingFacebookPostId),
+    hasExistingX: Boolean(existingXPostId)
   });
 
-  await markCarouselAsPublishing({
-    sheets,
-    headerMap,
-    groupRows,
-    cycleId
-  });
+  await markCarouselAsPublishing({ sheets, headerMap, groupRows, cycleId });
 
   let instagramResult = {
     creationId: existingInstagramCreationId,
@@ -400,21 +263,13 @@ async function main() {
     mediaFbids: []
   };
 
+  let xPostId = existingXPostId;
+
   try {
     if (!instagramResult.mediaId) {
-      instagramResult = await publishCarouselPost({
-        imageUrls,
-        caption: carouselCaption
-      });
+      instagramResult = await publishCarouselPost({ imageUrls, caption: carouselCaption });
 
-      // Corrección principal:
-      // Guardamos Instagram inmediatamente para evitar duplicados si Facebook falla después.
-      await saveInstagramResultForCarousel({
-        sheets,
-        headerMap,
-        groupRows,
-        instagramResult
-      });
+      await saveInstagramResultForCarousel({ sheets, headerMap, groupRows, instagramResult });
 
       groupLogger.info("Resultado de Instagram guardado en Sheet", {
         instagramMediaId: instagramResult.mediaId || "",
@@ -422,23 +277,14 @@ async function main() {
       });
     } else {
       groupLogger.info("Instagram ya estaba publicado; se omite republicación", {
-        instagramMediaId: instagramResult.mediaId || "",
-        instagramCreationId: instagramResult.creationId || ""
+        instagramMediaId: instagramResult.mediaId || ""
       });
     }
 
     if (!facebookResult.postId) {
-      facebookResult = await publishFacebookCarouselPost({
-        imageUrls,
-        caption: carouselCaption
-      });
+      facebookResult = await publishFacebookCarouselPost({ imageUrls, caption: carouselCaption });
 
-      await saveFacebookResultForCarousel({
-        sheets,
-        headerMap,
-        groupRows,
-        facebookResult
-      });
+      await saveFacebookResultForCarousel({ sheets, headerMap, groupRows, facebookResult });
 
       groupLogger.info("Resultado de Facebook guardado en Sheet", {
         facebookPostId: facebookResult.postId || ""
@@ -449,16 +295,24 @@ async function main() {
       });
     }
 
-    await markCarouselAsPublished({
-      sheets,
-      headerMap,
-      groupRows
-    });
+    if (!xPostId) {
+      const xResult = await postTweet(carouselCaption || "");
+      xPostId = xResult.id;
+
+      await saveXResultForCarousel({ sheets, headerMap, groupRows, xPostId });
+
+      groupLogger.info("Publicado en X", { xPostId });
+    } else {
+      groupLogger.info("X ya estaba publicado; se omite republicación", { xPostId });
+    }
+
+    await markCarouselAsPublished({ sheets, headerMap, groupRows });
 
     groupLogger.info("Carrusel publicado correctamente", {
       instagramMediaId: instagramResult.mediaId || "",
       instagramCreationId: instagramResult.creationId || "",
-      facebookPostId: facebookResult.postId || ""
+      facebookPostId: facebookResult.postId || "",
+      xPostId: xPostId || ""
     });
 
     await deleteCarouselAssets(publicIds, groupLogger);
@@ -473,7 +327,6 @@ async function main() {
     );
 
     groupLogger.error("Error publicando carrusel", {}, error);
-
     throw error;
   }
 }
