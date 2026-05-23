@@ -6,12 +6,18 @@ const THREADS_API_BASE = "https://graph.threads.net/v1.0";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_ATTEMPTS = 20;
+const PARENT_READY_DELAY_MS = 5000;
 
 const TOKEN_EXPIRED_SUBCODES = new Set([460, 463, 467]);
 
 function ensureEnv() {
-  if (!THREADS_USER_ID) throw new Error("Falta THREADS_USER_ID en .env");
-  if (!THREADS_ACCESS_TOKEN) throw new Error("Falta THREADS_ACCESS_TOKEN en .env");
+  if (!THREADS_USER_ID) {
+    throw new Error("Falta THREADS_USER_ID en .env");
+  }
+
+  if (!THREADS_ACCESS_TOKEN) {
+    throw new Error("Falta THREADS_ACCESS_TOKEN en .env");
+  }
 }
 
 function sleep(ms) {
@@ -39,7 +45,8 @@ function throwIfTokenError(graphError) {
   }
 
   throw new Error(
-    `[TOKEN INVÁLIDO] El THREADS_ACCESS_TOKEN es inválido o fue revocado (code=190, subcode=${sub ?? "none"}). ` +
+    `[TOKEN INVÁLIDO] El THREADS_ACCESS_TOKEN es inválido o fue revocado ` +
+    `(code=190, subcode=${sub ?? "none"}). ` +
     "Verificá el valor del secret THREADS_ACCESS_TOKEN en GitHub."
   );
 }
@@ -57,6 +64,7 @@ async function threadsGet(path, query = {}) {
   const rawText = await res.text();
 
   let data;
+
   try {
     data = rawText ? JSON.parse(rawText) : {};
   } catch {
@@ -65,11 +73,18 @@ async function threadsGet(path, query = {}) {
 
   if (!res.ok || data?.error) {
     throwIfTokenError(data?.error);
+
     const err = data?.error;
+
     const msg = err
       ? `${err.message} | code=${err.code} | fbtrace_id=${err.fbtrace_id}`
       : `Threads API ${res.status}: ${rawText}`;
-    throw new Error(msg);
+
+    const error = new Error(msg);
+    error.status = res.status;
+    error.graphError = err || null;
+
+    throw error;
   }
 
   return data;
@@ -79,6 +94,7 @@ async function threadsPost(path, body) {
   const url = `${THREADS_API_BASE}/${path}`;
 
   const form = new URLSearchParams();
+
   for (const [key, value] of Object.entries(body)) {
     if (value !== undefined && value !== null) {
       form.append(key, String(value));
@@ -87,13 +103,16 @@ async function threadsPost(path, body) {
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
     body: form.toString()
   });
 
   const rawText = await res.text();
 
   let data;
+
   try {
     data = rawText ? JSON.parse(rawText) : {};
   } catch {
@@ -102,7 +121,9 @@ async function threadsPost(path, body) {
 
   if (!res.ok || data?.error) {
     throwIfTokenError(data?.error);
+
     const err = data?.error;
+
     const msg = err
       ? `${err.message} | code=${err.code} | fbtrace_id=${err.fbtrace_id}`
       : `Threads API ${res.status}: ${rawText}`;
@@ -110,6 +131,7 @@ async function threadsPost(path, body) {
     const error = new Error(msg);
     error.status = res.status;
     error.graphError = err || null;
+
     throw error;
   }
 
@@ -123,108 +145,260 @@ async function getContainerStatus(containerId) {
   });
 }
 
-async function waitUntilContainerReady(containerId) {
-  for (let attempt = 1; attempt <= MAX_POLL_ATTEMPTS; attempt++) {
+async function waitUntilContainerReady(
+  containerId,
+  label = "container"
+) {
+  for (
+    let attempt = 1;
+    attempt <= MAX_POLL_ATTEMPTS;
+    attempt++
+  ) {
     const statusData = await getContainerStatus(containerId);
+
     const status = statusData.status || "";
 
-    console.log(`Threads container ${containerId} estado intento ${attempt}/${MAX_POLL_ATTEMPTS}: ${status}`);
+    console.log(
+      `Threads ${label} ${containerId} ` +
+      `estado intento ${attempt}/${MAX_POLL_ATTEMPTS}: ${status}`
+    );
 
-    if (status === "FINISHED") return statusData;
-    if (status === "ERROR") throw new Error(`El contenedor de Threads ${containerId} falló: ${statusData.error_message || "error desconocido"}`);
-    if (status === "EXPIRED") throw new Error(`El contenedor de Threads ${containerId} expiró antes de publicarse`);
+    if (status === "FINISHED") {
+      return statusData;
+    }
+
+    if (status === "ERROR") {
+      throw new Error(
+        `El ${label} de Threads ${containerId} falló: ` +
+        `${statusData.error_message || "error desconocido"}`
+      );
+    }
+
+    if (status === "EXPIRED") {
+      throw new Error(
+        `El ${label} de Threads ${containerId} expiró antes de publicarse`
+      );
+    }
 
     await sleep(POLL_INTERVAL_MS);
   }
 
-  throw new Error(`El contenedor de Threads ${containerId} no estuvo listo a tiempo`);
+  throw new Error(
+    `El ${label} de Threads ${containerId} ` +
+    `no estuvo listo a tiempo`
+  );
 }
 
-async function publishThreadsImagePost({ imageUrl, caption }) {
+async function publishThreadsImagePost({
+  imageUrl,
+  caption
+}) {
   ensureEnv();
 
-  if (!imageUrl) throw new Error("imageUrl es requerido para publicar en Threads.");
-
-  const safeCaption = typeof caption === "string" ? caption.trim() : "";
-
-  console.log("Creando contenedor de imagen en Threads...");
-  console.log("imageUrl:", imageUrl);
-  console.log("caption:", safeCaption || "[sin caption]");
-
-  const container = await threadsPost(`${THREADS_USER_ID}/threads`, {
-    media_type: "IMAGE",
-    image_url: imageUrl,
-    text: safeCaption,
-    access_token: THREADS_ACCESS_TOKEN
-  });
-
-  if (!container.id) throw new Error("No se recibió id del contenedor de Threads.");
-
-  await waitUntilContainerReady(container.id);
-
-  const published = await threadsPost(`${THREADS_USER_ID}/threads_publish`, {
-    creation_id: container.id,
-    access_token: THREADS_ACCESS_TOKEN
-  });
-
-  if (!published.id) throw new Error("No se recibió id del post publicado en Threads.");
-
-  console.log("Post publicado en Threads:", published.id);
-
-  return { containerId: container.id, mediaId: published.id };
-}
-
-async function publishThreadsCarouselPost({ imageUrls, caption }) {
-  ensureEnv();
-
-  if (!Array.isArray(imageUrls) || imageUrls.length < 2 || imageUrls.length > 10) {
-    throw new Error("Un carrusel de Threads debe tener entre 2 y 10 imágenes.");
+  if (!imageUrl) {
+    throw new Error(
+      "imageUrl es requerido para publicar en Threads."
+    );
   }
 
-  const safeCaption = typeof caption === "string" ? caption.trim() : "";
+  const safeCaption =
+    typeof caption === "string"
+      ? caption.trim()
+      : "";
 
-  console.log(`Creando carrusel en Threads con ${imageUrls.length} imágenes...`);
-  console.log("caption:", safeCaption || "[sin caption]");
+  console.log(
+    "Creando contenedor de imagen en Threads..."
+  );
 
-  // Crear contenedores individuales de cada imagen
-  const childIds = [];
+  console.log("imageUrl:", imageUrl);
+  console.log(
+    "caption:",
+    safeCaption || "[sin caption]"
+  );
 
-  for (const imageUrl of imageUrls) {
-    const child = await threadsPost(`${THREADS_USER_ID}/threads`, {
+  const container = await threadsPost(
+    `${THREADS_USER_ID}/threads`,
+    {
       media_type: "IMAGE",
       image_url: imageUrl,
-      is_carousel_item: true,
+      text: safeCaption,
       access_token: THREADS_ACCESS_TOKEN
-    });
+    }
+  );
 
-    if (!child.id) throw new Error(`No se recibió id del item del carrusel para ${imageUrl}`);
-
-    childIds.push(child.id);
-    console.log(`Slide de carrusel creado: ${child.id}`);
+  if (!container.id) {
+    throw new Error(
+      "No se recibió id del contenedor de Threads."
+    );
   }
 
-  // Crear contenedor padre del carrusel
-  const parent = await threadsPost(`${THREADS_USER_ID}/threads`, {
-    media_type: "CAROUSEL",
-    children: childIds.join(","),
-    text: safeCaption,
-    access_token: THREADS_ACCESS_TOKEN
-  });
+  await waitUntilContainerReady(
+    container.id,
+    "image container"
+  );
 
-  if (!parent.id) throw new Error("No se recibió id del contenedor padre del carrusel de Threads.");
+  const published = await threadsPost(
+    `${THREADS_USER_ID}/threads_publish`,
+    {
+      creation_id: container.id,
+      access_token: THREADS_ACCESS_TOKEN
+    }
+  );
 
-  await waitUntilContainerReady(parent.id);
+  if (!published.id) {
+    throw new Error(
+      "No se recibió id del post publicado en Threads."
+    );
+  }
 
-  const published = await threadsPost(`${THREADS_USER_ID}/threads_publish`, {
-    creation_id: parent.id,
-    access_token: THREADS_ACCESS_TOKEN
-  });
+  console.log(
+    "Post publicado en Threads:",
+    published.id
+  );
 
-  if (!published.id) throw new Error("No se recibió id del carrusel publicado en Threads.");
+  return {
+    containerId: container.id,
+    mediaId: published.id
+  };
+}
 
-  console.log("Carrusel publicado en Threads:", published.id);
+async function publishThreadsCarouselPost({
+  imageUrls,
+  caption
+}) {
+  ensureEnv();
 
-  return { containerId: parent.id, mediaId: published.id, childIds };
+  if (
+    !Array.isArray(imageUrls) ||
+    imageUrls.length < 2 ||
+    imageUrls.length > 10
+  ) {
+    throw new Error(
+      "Un carrusel de Threads debe tener entre 2 y 10 imágenes."
+    );
+  }
+
+  const safeCaption =
+    typeof caption === "string"
+      ? caption.trim()
+      : "";
+
+  console.log(
+    `Creando carrusel en Threads con ${imageUrls.length} imágenes...`
+  );
+
+  console.log(
+    "caption:",
+    safeCaption || "[sin caption]"
+  );
+
+  const childIds = [];
+
+  // Crear y esperar cada child
+  for (const imageUrl of imageUrls) {
+    console.log(
+      "Creando slide de carrusel:",
+      imageUrl
+    );
+
+    const child = await threadsPost(
+      `${THREADS_USER_ID}/threads`,
+      {
+        media_type: "IMAGE",
+        image_url: imageUrl,
+        is_carousel_item: true,
+        access_token: THREADS_ACCESS_TOKEN
+      }
+    );
+
+    if (!child.id) {
+      throw new Error(
+        `No se recibió id del item del carrusel para ${imageUrl}`
+      );
+    }
+
+    console.log(
+      `Slide de carrusel creado: ${child.id}`
+    );
+
+    // ESPERAR FINISHED DEL CHILD
+    await waitUntilContainerReady(
+      child.id,
+      "carousel child"
+    );
+
+    childIds.push(child.id);
+
+    console.log(
+      `Slide listo para carrusel: ${child.id}`
+    );
+  }
+
+  console.log(
+    "Todos los children listos:",
+    childIds
+  );
+
+  // Crear contenedor padre
+  const parent = await threadsPost(
+    `${THREADS_USER_ID}/threads`,
+    {
+      media_type: "CAROUSEL",
+      children: childIds.join(","),
+      text: safeCaption,
+      access_token: THREADS_ACCESS_TOKEN
+    }
+  );
+
+  if (!parent.id) {
+    throw new Error(
+      "No se recibió id del contenedor padre del carrusel de Threads."
+    );
+  }
+
+  console.log(
+    `Contenedor padre creado: ${parent.id}`
+  );
+
+  // Delay defensivo para Threads
+  console.log(
+    `Esperando ${PARENT_READY_DELAY_MS}ms ` +
+    `para sincronización de children...`
+  );
+
+  await sleep(PARENT_READY_DELAY_MS);
+
+  // Esperar FINISHED del parent
+  await waitUntilContainerReady(
+    parent.id,
+    "carousel parent"
+  );
+
+  // Publicar carrusel
+  const published = await threadsPost(
+    `${THREADS_USER_ID}/threads_publish`,
+    {
+      creation_id: parent.id,
+      access_token: THREADS_ACCESS_TOKEN
+    }
+  );
+
+  if (!published.id) {
+    throw new Error(
+      "No se recibió id del carrusel publicado en Threads."
+    );
+  }
+
+  console.log(
+    "Carrusel publicado en Threads:",
+    published.id
+  );
+
+  return {
+    containerId: parent.id,
+    mediaId: published.id,
+    childIds
+  };
 }
 
 module.exports = {
