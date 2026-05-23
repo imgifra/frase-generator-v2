@@ -10,7 +10,8 @@
     "upload:single": "node scripts/jobs/single/upload-single-from-sheet.js",
     "upload:carousel": "node scripts/jobs/carousel/upload-carousel-from-sheet.js",
     "publish:single": "node scripts/jobs/single/publish-single-from-sheet.js",
-    "publish:carousel": "node scripts/jobs/carousel/publish-carousel-from-sheet.js"
+    "publish:carousel": "node scripts/jobs/carousel/publish-carousel-from-sheet.js",
+    "sync-palettes": "node scripts/dev/sync-palettes.js"
   },
   "repository": {
     "type": "git",
