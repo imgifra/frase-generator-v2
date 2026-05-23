@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,187 +8,168 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root[data-theme="dark"] {
+      --bg:           #080808;
+      --text:         #d9d3c9;
+      --text-title:   #e8e2d9;
+      --text-label:   #666;
+      --text-hint:    #444;
+      --text-muted:   #555;
+      --border:       #1e1e1e;
+      --border-focus: #666;
+      --placeholder:  #333;
+      --btn-main-bg:  #e8e2d9;
+      --btn-main-fg:  #080808;
+      --status-ok:    #4a7a4a;
+      --status-err:   #7a3030;
+      --toggle-bg:    #222;
+      --toggle-knob:  #d9d3c9;
+    }
+
+    :root[data-theme="light"] {
+      --bg:           #f5f2ee;
+      --text:         #2a2520;
+      --text-title:   #1a1510;
+      --text-label:   #888;
+      --text-hint:    #aaa;
+      --text-muted:   #999;
+      --border:       #ddd;
+      --border-focus: #888;
+      --placeholder:  #bbb;
+      --btn-main-bg:  #1a1510;
+      --btn-main-fg:  #f5f2ee;
+      --status-ok:    #2e6e2e;
+      --status-err:   #8b2020;
+      --toggle-bg:    #ddd;
+      --toggle-knob:  #1a1510;
+    }
+
     body {
-      background: #080808;
-      color: #d9d3c9;
+      background: var(--bg);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
       padding: 56px 24px 80px;
+      transition: background 0.25s, color 0.25s;
     }
 
-    .wrap {
-      max-width: 420px;
-      margin: 0 auto;
+    .wrap { max-width: 420px; margin: 0 auto; }
+
+    .topbar { display: flex; justify-content: flex-end; margin-bottom: 36px; }
+
+    .theme-toggle {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; background: none; border: none; padding: 4px;
     }
 
-    .eyebrow {
-      font-size: 10px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: #3a3a3a;
-      margin-bottom: 36px;
+    .toggle-icon { font-size: 13px; color: var(--text-label); width: 16px; text-align: center; transition: color 0.25s; }
+
+    .toggle-track {
+      width: 40px; height: 22px;
+      background: var(--toggle-bg);
+      border-radius: 999px;
+      position: relative;
+      transition: background 0.25s;
     }
+
+    .toggle-knob {
+      width: 16px; height: 16px;
+      background: var(--toggle-knob);
+      border-radius: 50%;
+      position: absolute;
+      top: 3px; left: 3px;
+      transition: transform 0.25s, background 0.25s;
+    }
+
+    [data-theme="light"] .toggle-knob { transform: translateX(18px); }
+
+    .eyebrow { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-label); margin-bottom: 36px; }
 
     .page-title {
       font-family: 'EB Garamond', Georgia, serif;
-      font-size: 32px;
-      font-weight: 400;
-      color: #e8e2d9;
+      font-size: 32px; font-weight: 400;
+      color: var(--text-title);
       margin-bottom: 52px;
-      line-height: 1.2;
-      letter-spacing: -0.01em;
+      line-height: 1.2; letter-spacing: -0.01em;
     }
 
-    .field {
-      margin-bottom: 32px;
-    }
+    .field { margin-bottom: 32px; }
 
     .field-label {
-      font-size: 10px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #3a3a3a;
-      margin-bottom: 10px;
-      display: block;
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-label); margin-bottom: 10px; display: block;
     }
 
     .field-input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid #1e1e1e;
-      color: #d9d3c9;
-      font-size: 15px;
+      width: 100%; background: transparent;
+      border: none; border-bottom: 1px solid var(--border);
+      color: var(--text); font-size: 15px;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      padding: 8px 0 10px;
-      outline: none;
-      transition: border-color 0.2s;
+      padding: 8px 0 10px; outline: none;
+      transition: border-color 0.2s, color 0.25s;
     }
 
-    .field-input::placeholder { color: #2a2a2a; }
-    .field-input:focus { border-bottom-color: #555; }
+    .field-input::placeholder { color: var(--placeholder); }
+    .field-input:focus { border-bottom-color: var(--border-focus); }
+    textarea.field-input { resize: none; height: 100px; line-height: 1.7; }
 
-    textarea.field-input {
-      resize: none;
-      height: 100px;
-      line-height: 1.7;
-    }
+    .field-hint { font-size: 11px; color: var(--text-hint); margin-top: 8px; }
 
-    .field-hint {
-      font-size: 11px;
-      color: #2e2e2e;
-      margin-top: 8px;
-    }
+    .tipo-tag { font-size: 11px; letter-spacing: 0.06em; color: var(--text-muted); margin-top: 8px; min-height: 16px; }
+    .tipo-tag.over { color: var(--status-err); }
 
-    .tipo-tag {
-      font-size: 11px;
-      letter-spacing: 0.06em;
-      color: #3a3a3a;
-      margin-top: 8px;
-      min-height: 16px;
-      transition: color 0.2s;
-    }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
 
-    .tipo-tag.single   { color: #888; }
-    .tipo-tag.carousel { color: #888; }
-    .tipo-tag.over     { color: #7a2020; }
-
-    .divider {
-      border: none;
-      border-top: 1px solid #111;
-      margin: 36px 0;
-    }
-
-    .color-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-      margin-bottom: 10px;
-    }
+    .color-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
 
     .swatch {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 1.5px solid transparent;
+      width: 26px; height: 26px; border-radius: 50%;
+      cursor: pointer; border: 1.5px solid transparent; flex-shrink: 0;
       transition: transform 0.15s, border-color 0.15s;
-      flex-shrink: 0;
     }
+    .swatch:hover    { transform: scale(1.18); }
+    .swatch.selected { border-color: var(--text-title); transform: scale(1.18); }
+    .swatch.aleatorio { background: conic-gradient(#ff6b6b 0deg, #f4c400 90deg, #3d5afe 180deg, #e91e63 270deg, #ff6b6b 360deg); }
 
-    .swatch:hover  { transform: scale(1.18); }
-    .swatch.selected { border-color: #e8e2d9; transform: scale(1.18); }
+    .selected-label { font-size: 11px; color: var(--text-muted); min-height: 16px; letter-spacing: 0.04em; }
 
-    .swatch.aleatorio {
-      background: conic-gradient(#ff6b6b 0deg, #f4c400 90deg, #3d5afe 180deg, #e91e63 270deg, #ff6b6b 360deg);
-    }
-
-    .selected-label {
-      font-size: 11px;
-      color: #3a3a3a;
-      min-height: 16px;
-      letter-spacing: 0.04em;
-    }
-
-    .btns {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 44px;
-    }
+    .btns { display: flex; flex-direction: column; gap: 10px; margin-top: 44px; }
 
     .btn-main {
-      width: 100%;
-      background: #e8e2d9;
-      color: #080808;
-      border: none;
-      padding: 15px 24px;
+      width: 100%; background: var(--btn-main-bg); color: var(--btn-main-fg);
+      border: none; padding: 15px 24px;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: opacity 0.15s;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer; transition: opacity 0.15s, background 0.25s, color 0.25s;
     }
-
     .btn-main:hover    { opacity: 0.85; }
     .btn-main:disabled { opacity: 0.25; cursor: not-allowed; }
 
     .btn-ghost {
-      width: 100%;
-      background: transparent;
-      color: #3a3a3a;
-      border: 1px solid #1e1e1e;
-      padding: 15px 24px;
+      width: 100%; background: transparent; color: var(--text-label);
+      border: 1px solid var(--border); padding: 15px 24px;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer; transition: color 0.15s, border-color 0.15s;
     }
-
-    .btn-ghost:hover    { color: #d9d3c9; border-color: #333; }
+    .btn-ghost:hover    { color: var(--text); border-color: var(--border-focus); }
     .btn-ghost:disabled { opacity: 0.25; cursor: not-allowed; }
 
-    #status {
-      font-size: 12px;
-      text-align: center;
-      margin-top: 20px;
-      min-height: 18px;
-      letter-spacing: 0.04em;
-      color: #3a3a3a;
-    }
-
-    #status.ok    { color: #4a7a4a; }
-    #status.error { color: #7a3030; }
+    #status { font-size: 12px; text-align: center; margin-top: 20px; min-height: 18px; letter-spacing: 0.04em; color: var(--text-muted); }
+    #status.ok    { color: var(--status-ok); }
+    #status.error { color: var(--status-err); }
   </style>
 </head>
 <body>
 
 <div class="wrap">
+
+  <div class="topbar">
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar modo">
+      <span class="toggle-icon" id="theme-icon">☽</span>
+      <div class="toggle-track"><div class="toggle-knob"></div></div>
+    </button>
+  </div>
 
   <p class="eyebrow">monacastrosa</p>
   <h1 class="page-title">Nuevo post</h1>
@@ -219,7 +200,7 @@
   </div>
 
   <div class="btns">
-    <button class="btn-main" id="btn-publicar" onclick="publicar(false)">Publicar ahora</button>
+    <button class="btn-main"  id="btn-publicar" onclick="publicar(false)">Publicar ahora</button>
     <button class="btn-ghost" id="btn-guardar"  onclick="publicar(true)">Guardar en sheet</button>
   </div>
 
@@ -265,20 +246,35 @@
 
   let colorSeleccionado = null;
 
-  function initColores() {
-    const grid = document.getElementById("color-grid");
-    const light = ["#f6f1e8", "#f4c400", "#c8e6c9", "#b3d9f2", "#d6cfc4"];
+  function toggleTheme() {
+    const html   = document.documentElement;
+    const isDark = html.getAttribute("data-theme") === "dark";
+    const next   = isDark ? "light" : "dark";
+    html.setAttribute("data-theme", next);
+    document.getElementById("theme-icon").textContent = next === "dark" ? "☽" : "○";
+    localStorage.setItem("theme", next);
+  }
 
+  (function initTheme() {
+    const saved = localStorage.getItem("theme");
+    if (saved && saved !== "dark") {
+      document.documentElement.setAttribute("data-theme", saved);
+      document.getElementById("theme-icon").textContent = "○";
+    }
+  })();
+
+  function initColores() {
+    const grid  = document.getElementById("color-grid");
+    const light = ["#f6f1e8", "#f4c400", "#c8e6c9", "#b3d9f2", "#d6cfc4"];
     COLORES.forEach(({ hex, label }) => {
       const s = document.createElement("div");
       s.className = "swatch" + (hex === null ? " aleatorio" : "");
-      if (hex === null) {
-        s.classList.add("selected");
-      } else {
+      if (hex === null) { s.classList.add("selected"); }
+      else {
         s.style.background = hex;
         if (light.includes(hex)) s.style.outline = "1px solid #2a2a2a";
       }
-      s.title = label;
+      s.title   = label;
       s.onclick = () => seleccionarColor(hex, label, s);
       grid.appendChild(s);
     });
@@ -299,26 +295,16 @@
 
   function setStatus(msg, cls) {
     const el = document.getElementById("status");
-    el.textContent = msg;
-    el.className = cls;
+    el.textContent = msg; el.className = cls;
   }
 
   function detectarTipo() {
     const frases = parseFrases();
-    const el = document.getElementById("tipo-detectado");
-    if (frases.length === 0) {
-      el.textContent = "";
-      el.className = "tipo-tag";
-    } else if (frases.length === 1) {
-      el.textContent = "Single";
-      el.className = "tipo-tag single";
-    } else if (frases.length <= 10) {
-      el.textContent = `Carrusel · ${frases.length} frases`;
-      el.className = "tipo-tag carousel";
-    } else {
-      el.textContent = `Máximo 10 frases (tienes ${frases.length})`;
-      el.className = "tipo-tag over";
-    }
+    const el     = document.getElementById("tipo-detectado");
+    if (frases.length === 0)      { el.textContent = ""; el.className = "tipo-tag"; }
+    else if (frases.length === 1) { el.textContent = "Single"; el.className = "tipo-tag"; }
+    else if (frases.length <= 10) { el.textContent = `Carrusel · ${frases.length} frases`; el.className = "tipo-tag"; }
+    else                          { el.textContent = `Máximo 10 frases (tienes ${frases.length})`; el.className = "tipo-tag over"; }
   }
 
   async function publicar(soloSheet) {
@@ -329,16 +315,13 @@
     const bg = document.getElementById("btn-guardar");
 
     setStatus("", "");
-
     if (!token)             { setStatus("Falta el token de GitHub.", "error"); return; }
     if (!caption)           { setStatus("Falta el caption.", "error"); return; }
     if (frases.length < 1)  { setStatus("Escribe al menos una frase.", "error"); return; }
     if (frases.length > 10) { setStatus("Máximo 10 frases.", "error"); return; }
 
     const tipo = frases.length === 1 ? "single" : "carousel";
-
-    bp.disabled = true;
-    bg.disabled = true;
+    bp.disabled = true; bg.disabled = true;
     setStatus(soloSheet ? "Guardando en sheet..." : "Publicando...", "");
 
     try {
@@ -348,17 +331,17 @@
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json"
+            "Accept":        "application/vnd.github+json",
+            "Content-Type":  "application/json"
           },
           body: JSON.stringify({
             ref: "main",
             inputs: {
-              frases:         frases.join("||"),
+              frases:          frases.join("||"),
               caption,
               tipo,
-              color:          colorSeleccionado || "",
-              solo_registrar: soloSheet ? "true" : "false"
+              color:           colorSeleccionado || "",
+              solo_registrar:  soloSheet ? "true" : "false"
             }
           })
         }
@@ -371,10 +354,10 @@
             : `Enviado como ${tipo}. En 2–3 minutos estará publicado.`,
           "ok"
         );
-        document.getElementById("frases").value  = "";
-        document.getElementById("caption").value = "";
+        document.getElementById("frases").value            = "";
+        document.getElementById("caption").value           = "";
         document.getElementById("tipo-detectado").textContent = "";
-        document.getElementById("tipo-detectado").className = "tipo-tag";
+        document.getElementById("tipo-detectado").className   = "tipo-tag";
       } else {
         const data = await res.json();
         setStatus(`Error: ${data.message}`, "error");
@@ -382,8 +365,7 @@
     } catch (err) {
       setStatus(`Error: ${err.message}`, "error");
     } finally {
-      bp.disabled = false;
-      bg.disabled = false;
+      bp.disabled = false; bg.disabled = false;
     }
   }
 
