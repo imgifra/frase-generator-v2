@@ -18,7 +18,7 @@ const {
   LOCK_STATUS,
   MAX_INTENTOS
 } = require("../../core/status");
-const { getLastUsedBg, getRandomColorExcept } = require("../../utils/render-utils");
+const { getRecentUsedBgs, getRandomColorAvoidingSimilar } = require("../../utils/render-utils");
 
 function findNextSingleRowForRender(rows, headerMap, targetRowNumber) {
   for (let i = 1; i < rows.length; i++) {
@@ -58,9 +58,10 @@ function getBgForRow(row, rows, headerMap) {
     return existingBg;
   }
 
-  const lastUsedBg = getLastUsedBg(rows, headerMap);
+  const recentUsedBgs = getRecentUsedBgs(rows, headerMap, 6);
 
-  return getRandomColorExcept(lastUsedBg);
+
+  return getRandomColorAvoidingSimilar(recentUsedBgs);
 }
 
 async function markRowAsProcessing({
