@@ -15,25 +15,11 @@
       padding: 24px 16px;
     }
 
-    h1 {
-      font-size: 20px;
-      margin-bottom: 24px;
-      color: #f4c400;
-    }
+    h1 { font-size: 20px; margin-bottom: 24px; color: #f4c400; }
 
-    label {
-      display: block;
-      font-size: 13px;
-      margin-bottom: 6px;
-      color: #aaa;
-    }
+    label { display: block; font-size: 13px; margin-bottom: 6px; color: #aaa; }
 
-    .field-hint {
-      font-size: 12px;
-      color: #555;
-      margin-top: -12px;
-      margin-bottom: 16px;
-    }
+    .field-hint { font-size: 12px; color: #555; margin-top: -12px; margin-bottom: 16px; }
 
     textarea, input[type="text"], input[type="password"] {
       width: 100%;
@@ -47,66 +33,68 @@
       outline: none;
     }
 
-    textarea:focus, input:focus {
-      border-color: #f4c400;
-    }
+    textarea:focus, input:focus { border-color: #f4c400; }
 
-    #frases {
-      height: 200px;
-      resize: vertical;
-    }
+    #frases { height: 200px; resize: vertical; }
 
     #tipo-detectado {
-      font-size: 12px;
-      color: #f4c400;
-      margin-top: -12px;
-      margin-bottom: 16px;
-      min-height: 18px;
+      font-size: 12px; color: #f4c400;
+      margin-top: -12px; margin-bottom: 16px; min-height: 18px;
     }
 
-    .acciones {
-      display: flex;
-      flex-direction: column;
+    .color-section { margin-bottom: 20px; }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
       gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
     }
+
+    .color-swatch {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s, transform 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .color-swatch:hover { transform: scale(1.1); }
+
+    .color-swatch.selected {
+      border-color: #f4c400;
+      transform: scale(1.1);
+    }
+
+    .color-swatch.aleatorio {
+      background: linear-gradient(135deg, #ff6b6b 0%, #f4c400 33%, #3d5afe 66%, #e91e63 100%);
+    }
+
+    #color-label { font-size: 12px; color: #f4c400; min-height: 18px; }
+
+    .acciones { display: flex; flex-direction: column; gap: 8px; }
 
     #btn-publicar {
-      width: 100%;
-      background: #f4c400;
-      color: #0d0f14;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 700;
-      padding: 16px;
-      cursor: pointer;
+      width: 100%; background: #f4c400; color: #0d0f14;
+      border: none; border-radius: 8px; font-size: 16px;
+      font-weight: 700; padding: 16px; cursor: pointer;
     }
 
     #btn-guardar {
-      width: 100%;
-      background: #1a1c22;
-      color: #f6f1e8;
-      border: 1px solid #3d5afe;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 700;
-      padding: 16px;
-      cursor: pointer;
+      width: 100%; background: #1a1c22; color: #f6f1e8;
+      border: 1px solid #3d5afe; border-radius: 8px; font-size: 16px;
+      font-weight: 700; padding: 16px; cursor: pointer;
     }
 
-    #btn-publicar:disabled,
-    #btn-guardar:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    #btn-publicar:disabled, #btn-guardar:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    #status {
-      margin-top: 16px;
-      font-size: 14px;
-      text-align: center;
-      min-height: 20px;
-    }
-
+    #status { margin-top: 16px; font-size: 14px; text-align: center; min-height: 20px; }
     .ok    { color: #4caf50; }
     .error { color: #e53935; }
   </style>
@@ -127,6 +115,12 @@
   <p class="field-hint">1 frase → single · 2 a 10 frases → carrusel</p>
   <div id="tipo-detectado"></div>
 
+  <div class="color-section">
+    <label>Color de fondo</label>
+    <div class="color-grid" id="color-grid"></div>
+    <div id="color-label">🎲 Aleatorio (por defecto)</div>
+  </div>
+
   <div class="acciones">
     <button id="btn-publicar" onclick="publicar(false)">🔥 Publicar ahora</button>
     <button id="btn-guardar"  onclick="publicar(true)">📋 Guardar en sheet</button>
@@ -139,23 +133,81 @@
   const REPO     = "frase-generator-v2";
   const WORKFLOW = "publish.yml";
 
+  const COLORES = [
+    { hex: null,      label: "Aleatorio" },
+    { hex: "#f6f1e8", label: "retroWhite" },
+    { hex: "#0d0f14", label: "retroBlack" },
+    { hex: "#f4c400", label: "retroYellow" },
+    { hex: "#3d5afe", label: "retroBlue" },
+    { hex: "#e53935", label: "retroRed" },
+    { hex: "#0d0208", label: "retroWine" },
+    { hex: "#1a0033", label: "retroPurple" },
+    { hex: "#0a1628", label: "retroNavy" },
+    { hex: "#1c0a00", label: "retroCoffee" },
+    { hex: "#d9723e", label: "retroOrange" },
+    { hex: "#d4006a", label: "retroPink" },
+    { hex: "#b28c2c", label: "retroMustard" },
+    { hex: "#2e7d32", label: "retroGreen" },
+    { hex: "#2c4a3e", label: "retroForest" },
+    { hex: "#4a2040", label: "retroPlum" },
+    { hex: "#5c3317", label: "retroToasted" },
+    { hex: "#2e3f5c", label: "retroSlate" },
+    { hex: "#7a0020", label: "retroCrimson" },
+    { hex: "#b85c38", label: "retroTerra" },
+    { hex: "#5c3d8f", label: "retroLavender" },
+    { hex: "#4a5c2e", label: "retroOlive" },
+    { hex: "#c8e6c9", label: "retroMint" },
+    { hex: "#b3d9f2", label: "retroSky" },
+    { hex: "#d6cfc4", label: "retroAsh" },
+    { hex: "#0a0f0a", label: "retroNeon" },
+  ];
+
+  let colorSeleccionado = null;
+
+  function initColores() {
+    const grid = document.getElementById("color-grid");
+    COLORES.forEach(({ hex, label }, i) => {
+      const swatch = document.createElement("div");
+      swatch.className = "color-swatch" + (hex === null ? " aleatorio" : "");
+      if (hex === null) {
+        swatch.classList.add("selected");
+        swatch.textContent = "🎲";
+      } else {
+        swatch.style.background = hex;
+      }
+      // borde sutil para colores muy claros
+      const lightColors = ["#f6f1e8","#f4c400","#c8e6c9","#b3d9f2","#d6cfc4"];
+      if (hex && lightColors.includes(hex)) {
+        swatch.style.outline = "1px solid #444";
+      }
+      swatch.title = label;
+      swatch.onclick = () => seleccionarColor(hex, label, swatch);
+      grid.appendChild(swatch);
+    });
+  }
+
+  function seleccionarColor(hex, label, el) {
+    document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("selected"));
+    el.classList.add("selected");
+    colorSeleccionado = hex;
+    document.getElementById("color-label").textContent =
+      hex === null ? "🎲 Aleatorio (por defecto)" : `${label} — ${hex}`;
+  }
+
   function parseFrases() {
     return document.getElementById("frases").value
-      .split("\n")
-      .map(f => f.trim())
-      .filter(Boolean);
+      .split("\n").map(f => f.trim()).filter(Boolean);
   }
 
   function setStatus(msg, cls) {
     const el = document.getElementById("status");
     el.textContent = msg;
-    el.className   = cls;
+    el.className = cls;
   }
 
   function detectarTipo() {
     const frases = parseFrases();
     const el = document.getElementById("tipo-detectado");
-
     if (frases.length === 0) {
       el.textContent = "";
     } else if (frases.length === 1) {
@@ -203,6 +255,7 @@
               frases:         frases.join("||"),
               caption,
               tipo,
+              color:          colorSeleccionado || "",
               solo_registrar: soloSheet ? "true" : "false"
             }
           })
@@ -230,6 +283,8 @@
       btnGuardar.disabled  = false;
     }
   }
+
+  initColores();
 </script>
 
 </body>

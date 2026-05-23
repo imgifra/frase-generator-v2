@@ -18,34 +18,16 @@ function generateCarouselId(frases) {
     hash = ((hash << 5) - hash) + str.charCodeAt(i);
     hash |= 0;
   }
-  // Incluimos timestamp para evitar colisiones entre carruseles con las mismas frases (reposts).
   return "car_" + Math.abs(hash).toString(16).slice(0, 8) + "_" + Date.now();
 }
 
-/**
- * Encuentra la primera fila vacía en el sheet buscando desde abajo hacia arriba.
- * "Vacía" significa que la columna frase_original no tiene valor.
- *
- * Usar rows.length + 1 era frágil: si había filas vacías en el medio o el sheet
- * tenía huecos por borrado, el script sobreescribía datos existentes.
- *
- * @param {Array} rows - Todas las filas del sheet (incluyendo header en [0])
- * @param {Object} headerMap - Mapa de nombre de columna → índice
- * @returns {number} Número de fila en Sheets (1-based) donde insertar
- */
 function findNextEmptyRow(rows, headerMap) {
-  // Recorremos desde la última fila hacia atrás buscando la primera con datos.
-  // La fila a insertar es inmediatamente después de esa.
   for (let i = rows.length - 1; i >= 1; i--) {
     const value = getCellValue(rows[i], headerMap, "frase_original");
     if (value) {
-      // Esta fila tiene datos → la siguiente es la primera vacía.
-      return i + 2; // +1 por 1-based, +1 para ir a la siguiente
+      return i + 2;
     }
   }
-
-  // Si no encontramos ninguna fila con datos (sheet vacío excepto header),
-  // la primera fila disponible es la 2.
   return 2;
 }
 
@@ -66,8 +48,8 @@ function validateFrasesByTipo(tipo, frases) {
 async function main() {
   const frasesRaw = process.env.FRASES_INPUT || "";
   const caption = process.env.CAPTION_INPUT || "";
-
   const tipoRaw = process.env.TIPO_INPUT || "carousel";
+  const colorInput = process.env.COLOR_INPUT || "";
 
   if (!["single", "carousel"].includes(tipoRaw)) {
     throw new Error(`TIPO_INPUT inválido: ${tipoRaw}. Usa "single" o "carousel".`);
@@ -145,6 +127,7 @@ async function main() {
     add("estado_publish", "pending");
     add("lock_status", "free");
     add("modo", "retro3d");
+    if (colorInput) add("background_color", colorInput);
     add("updated_at", now);
 
     if (tipo === "carousel") {

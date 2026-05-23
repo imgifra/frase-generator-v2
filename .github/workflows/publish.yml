@@ -28,6 +28,10 @@ on:
         description: 'Reintentar posts en error: true | false'
         required: false
         default: 'false'
+      color:
+        description: 'Color de fondo hex (vacío = aleatorio)'
+        required: false
+        default: ''
 
 concurrency:
   group: publish-posts
@@ -81,6 +85,7 @@ jobs:
           FRASES_INPUT: ${{ inputs.frases }}
           CAPTION_INPUT: ${{ inputs.caption }}
           TIPO_INPUT: ${{ inputs.tipo }}
+          COLOR_INPUT: ${{ inputs.color }}
         run: node scripts/pipeline/register-from-form.js
 
       - name: Run pipeline formulario
@@ -103,5 +108,5 @@ jobs:
         run: node scripts/pipeline/run-once.js
 
       - name: Actualizar métricas
-        if: ${{ always() && github.event_name == 'schedule' }}
+        if: ${{ always() && github.event_name == 'schedule' && github.event.schedule == '0 15 * * 0' }}
         run: node scripts/jobs/metrics/fetch-metrics.js
