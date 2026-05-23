@@ -4,7 +4,7 @@ const { normalizeValue, colToLetter } = require("../utils/common");
 
 const SHEET_ID = process.env.SHEET_ID;
 const WORKSHEET_NAME = process.env.WORKSHEET_NAME;
-const SHEET_RANGE = process.env.SHEET_RANGE || "A:AZ";
+const SHEET_RANGE = process.env.SHEET_RANGE || "A:BZ";
 
 if (!SHEET_ID) {
   throw new Error("Falta SHEET_ID en el .env");

@@ -3,130 +3,229 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Publicar Post</title>
+  <title>Publicar · monacastrosa</title>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
+      background: #080808;
+      color: #d9d3c9;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0d0f14;
-      color: #f6f1e8;
       min-height: 100vh;
-      padding: 24px 16px;
+      padding: 56px 24px 80px;
     }
 
-    h1 { font-size: 20px; margin-bottom: 24px; color: #f4c400; }
+    .wrap {
+      max-width: 420px;
+      margin: 0 auto;
+    }
 
-    label { display: block; font-size: 13px; margin-bottom: 6px; color: #aaa; }
+    .eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #3a3a3a;
+      margin-bottom: 36px;
+    }
 
-    .field-hint { font-size: 12px; color: #555; margin-top: -12px; margin-bottom: 16px; }
+    .page-title {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: #e8e2d9;
+      margin-bottom: 52px;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
 
-    textarea, input[type="text"], input[type="password"] {
+    .field {
+      margin-bottom: 32px;
+    }
+
+    .field-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #3a3a3a;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .field-input {
       width: 100%;
-      background: #1a1c22;
-      border: 1px solid #333;
-      border-radius: 8px;
-      color: #f6f1e8;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #1e1e1e;
+      color: #d9d3c9;
       font-size: 15px;
-      padding: 12px;
-      margin-bottom: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 8px 0 10px;
       outline: none;
+      transition: border-color 0.2s;
     }
 
-    textarea:focus, input:focus { border-color: #f4c400; }
+    .field-input::placeholder { color: #2a2a2a; }
+    .field-input:focus { border-bottom-color: #555; }
 
-    #frases { height: 200px; resize: vertical; }
-
-    #tipo-detectado {
-      font-size: 12px; color: #f4c400;
-      margin-top: -12px; margin-bottom: 16px; min-height: 18px;
+    textarea.field-input {
+      resize: none;
+      height: 100px;
+      line-height: 1.7;
     }
 
-    .color-section { margin-bottom: 20px; }
+    .field-hint {
+      font-size: 11px;
+      color: #2e2e2e;
+      margin-top: 8px;
+    }
+
+    .tipo-tag {
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: #3a3a3a;
+      margin-top: 8px;
+      min-height: 16px;
+      transition: color 0.2s;
+    }
+
+    .tipo-tag.single   { color: #888; }
+    .tipo-tag.carousel { color: #888; }
+    .tipo-tag.over     { color: #7a2020; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #111;
+      margin: 36px 0;
+    }
 
     .color-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 8px;
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
-
-    .color-swatch {
-      width: 100%;
-      aspect-ratio: 1;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: border-color 0.15s, transform 0.15s;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 10px;
     }
 
-    .color-swatch:hover { transform: scale(1.1); }
-
-    .color-swatch.selected {
-      border-color: #f4c400;
-      transform: scale(1.1);
+    .swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+      flex-shrink: 0;
     }
 
-    .color-swatch.aleatorio {
-      background: linear-gradient(135deg, #ff6b6b 0%, #f4c400 33%, #3d5afe 66%, #e91e63 100%);
+    .swatch:hover  { transform: scale(1.18); }
+    .swatch.selected { border-color: #e8e2d9; transform: scale(1.18); }
+
+    .swatch.aleatorio {
+      background: conic-gradient(#ff6b6b 0deg, #f4c400 90deg, #3d5afe 180deg, #e91e63 270deg, #ff6b6b 360deg);
     }
 
-    #color-label { font-size: 12px; color: #f4c400; min-height: 18px; }
-
-    .acciones { display: flex; flex-direction: column; gap: 8px; }
-
-    #btn-publicar {
-      width: 100%; background: #f4c400; color: #0d0f14;
-      border: none; border-radius: 8px; font-size: 16px;
-      font-weight: 700; padding: 16px; cursor: pointer;
+    .selected-label {
+      font-size: 11px;
+      color: #3a3a3a;
+      min-height: 16px;
+      letter-spacing: 0.04em;
     }
 
-    #btn-guardar {
-      width: 100%; background: #1a1c22; color: #f6f1e8;
-      border: 1px solid #3d5afe; border-radius: 8px; font-size: 16px;
-      font-weight: 700; padding: 16px; cursor: pointer;
+    .btns {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 44px;
     }
 
-    #btn-publicar:disabled, #btn-guardar:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-main {
+      width: 100%;
+      background: #e8e2d9;
+      color: #080808;
+      border: none;
+      padding: 15px 24px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
 
-    #status { margin-top: 16px; font-size: 14px; text-align: center; min-height: 20px; }
-    .ok    { color: #4caf50; }
-    .error { color: #e53935; }
+    .btn-main:hover    { opacity: 0.85; }
+    .btn-main:disabled { opacity: 0.25; cursor: not-allowed; }
+
+    .btn-ghost {
+      width: 100%;
+      background: transparent;
+      color: #3a3a3a;
+      border: 1px solid #1e1e1e;
+      padding: 15px 24px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .btn-ghost:hover    { color: #d9d3c9; border-color: #333; }
+    .btn-ghost:disabled { opacity: 0.25; cursor: not-allowed; }
+
+    #status {
+      font-size: 12px;
+      text-align: center;
+      margin-top: 20px;
+      min-height: 18px;
+      letter-spacing: 0.04em;
+      color: #3a3a3a;
+    }
+
+    #status.ok    { color: #4a7a4a; }
+    #status.error { color: #7a3030; }
   </style>
 </head>
 <body>
 
-  <h1>🔥 Publicar Post</h1>
+<div class="wrap">
 
-  <label>Token de GitHub</label>
-  <input type="password" id="token" placeholder="ghp_..." autocomplete="current-password">
-  <p class="field-hint">Solo necesitas permisos de <code>workflow</code> en este repo.</p>
+  <p class="eyebrow">monacastrosa</p>
+  <h1 class="page-title">Nuevo post</h1>
 
-  <label>Caption</label>
-  <input type="text" id="caption" placeholder="Ej: y ya, sin drama.">
+  <div class="field">
+    <span class="field-label">Token de GitHub</span>
+    <input class="field-input" type="password" id="token" placeholder="ghp_..." autocomplete="current-password">
+    <p class="field-hint">Necesita permiso <code>workflow</code> en este repo.</p>
+  </div>
 
-  <label>Frases (una por línea)</label>
-  <textarea id="frases" placeholder="Frase 1&#10;Frase 2" oninput="detectarTipo()"></textarea>
-  <p class="field-hint">1 frase → single · 2 a 10 frases → carrusel</p>
-  <div id="tipo-detectado"></div>
+  <div class="field">
+    <span class="field-label">Caption</span>
+    <input class="field-input" type="text" id="caption" placeholder="y ya, sin drama.">
+  </div>
 
-  <div class="color-section">
-    <label>Color de fondo</label>
+  <div class="field">
+    <span class="field-label">Frases</span>
+    <textarea class="field-input" id="frases" placeholder="Una por línea&#10;1 frase → single · 2–10 → carrusel" oninput="detectarTipo()"></textarea>
+    <p class="tipo-tag" id="tipo-detectado"></p>
+  </div>
+
+  <hr class="divider">
+
+  <div class="field">
+    <span class="field-label">Color</span>
     <div class="color-grid" id="color-grid"></div>
-    <div id="color-label">🎲 Aleatorio (por defecto)</div>
+    <p class="selected-label" id="color-label">Aleatorio</p>
   </div>
 
-  <div class="acciones">
-    <button id="btn-publicar" onclick="publicar(false)">🔥 Publicar ahora</button>
-    <button id="btn-guardar"  onclick="publicar(true)">📋 Guardar en sheet</button>
+  <div class="btns">
+    <button class="btn-main" id="btn-publicar" onclick="publicar(false)">Publicar ahora</button>
+    <button class="btn-ghost" id="btn-guardar"  onclick="publicar(true)">Guardar en sheet</button>
   </div>
 
-  <div id="status"></div>
+  <p id="status"></p>
+
+</div>
 
 <script>
   const OWNER    = "imgifra";
@@ -162,38 +261,35 @@
     { hex: "#d6cfc4", label: "retroAsh" },
     { hex: "#0a0f0a", label: "retroNeon" },
   ];
-// COLORES_END
+  // COLORES_END
 
   let colorSeleccionado = null;
 
   function initColores() {
     const grid = document.getElementById("color-grid");
-    COLORES.forEach(({ hex, label }, i) => {
-      const swatch = document.createElement("div");
-      swatch.className = "color-swatch" + (hex === null ? " aleatorio" : "");
+    const light = ["#f6f1e8", "#f4c400", "#c8e6c9", "#b3d9f2", "#d6cfc4"];
+
+    COLORES.forEach(({ hex, label }) => {
+      const s = document.createElement("div");
+      s.className = "swatch" + (hex === null ? " aleatorio" : "");
       if (hex === null) {
-        swatch.classList.add("selected");
-        swatch.textContent = "🎲";
+        s.classList.add("selected");
       } else {
-        swatch.style.background = hex;
+        s.style.background = hex;
+        if (light.includes(hex)) s.style.outline = "1px solid #2a2a2a";
       }
-      // borde sutil para colores muy claros
-      const lightColors = ["#f6f1e8","#f4c400","#c8e6c9","#b3d9f2","#d6cfc4"];
-      if (hex && lightColors.includes(hex)) {
-        swatch.style.outline = "1px solid #444";
-      }
-      swatch.title = label;
-      swatch.onclick = () => seleccionarColor(hex, label, swatch);
-      grid.appendChild(swatch);
+      s.title = label;
+      s.onclick = () => seleccionarColor(hex, label, s);
+      grid.appendChild(s);
     });
   }
 
   function seleccionarColor(hex, label, el) {
-    document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("selected"));
+    document.querySelectorAll(".swatch").forEach(s => s.classList.remove("selected"));
     el.classList.add("selected");
     colorSeleccionado = hex;
     document.getElementById("color-label").textContent =
-      hex === null ? "🎲 Aleatorio (por defecto)" : `${label} — ${hex}`;
+      hex === null ? "Aleatorio" : `${label} · ${hex}`;
   }
 
   function parseFrases() {
@@ -212,12 +308,16 @@
     const el = document.getElementById("tipo-detectado");
     if (frases.length === 0) {
       el.textContent = "";
+      el.className = "tipo-tag";
     } else if (frases.length === 1) {
-      el.textContent = "🖼️ Single detectado";
+      el.textContent = "Single";
+      el.className = "tipo-tag single";
     } else if (frases.length <= 10) {
-      el.textContent = `🎠 Carrusel detectado (${frases.length} frases)`;
+      el.textContent = `Carrusel · ${frases.length} frases`;
+      el.className = "tipo-tag carousel";
     } else {
-      el.textContent = `⚠️ Máximo 10 frases (tienes ${frases.length})`;
+      el.textContent = `Máximo 10 frases (tienes ${frases.length})`;
+      el.className = "tipo-tag over";
     }
   }
 
@@ -225,8 +325,8 @@
     const token   = document.getElementById("token").value.trim();
     const caption = document.getElementById("caption").value.trim();
     const frases  = parseFrases();
-    const btnPublicar = document.getElementById("btn-publicar");
-    const btnGuardar  = document.getElementById("btn-guardar");
+    const bp = document.getElementById("btn-publicar");
+    const bg = document.getElementById("btn-guardar");
 
     setStatus("", "");
 
@@ -237,8 +337,8 @@
 
     const tipo = frases.length === 1 ? "single" : "carousel";
 
-    btnPublicar.disabled = true;
-    btnGuardar.disabled  = true;
+    bp.disabled = true;
+    bg.disabled = true;
     setStatus(soloSheet ? "Guardando en sheet..." : "Publicando...", "");
 
     try {
@@ -267,22 +367,23 @@
       if (res.status === 204) {
         setStatus(
           soloSheet
-            ? "📋 Guardado en sheet. Se publicará en el próximo horario programado."
-            : `✅ Enviado como ${tipo}. En 2-3 minutos estará publicado.`,
+            ? "Guardado en sheet. Se publicará en el próximo horario."
+            : `Enviado como ${tipo}. En 2–3 minutos estará publicado.`,
           "ok"
         );
         document.getElementById("frases").value  = "";
         document.getElementById("caption").value = "";
         document.getElementById("tipo-detectado").textContent = "";
+        document.getElementById("tipo-detectado").className = "tipo-tag";
       } else {
         const data = await res.json();
-        setStatus(`❌ Error: ${data.message}`, "error");
+        setStatus(`Error: ${data.message}`, "error");
       }
     } catch (err) {
-      setStatus(`❌ Error: ${err.message}`, "error");
+      setStatus(`Error: ${err.message}`, "error");
     } finally {
-      btnPublicar.disabled = false;
-      btnGuardar.disabled  = false;
+      bp.disabled = false;
+      bg.disabled = false;
     }
   }
 

@@ -16,70 +16,14 @@ const {
   GENERAL_STATUS,
   POST_TIPOS,
   LOCK_STATUS,
-  MAX_INTENTOS,
-  BG_SEQUENCE
+  MAX_INTENTOS
 } = require("../../core/status");
 const {
   getPendingCarouselRows,
   validateCarouselRows,
   markCarouselGroupAsError
 } = require("../../utils/carousel-utils");
-
-function getLastPublishedBg(rows, headerMap) {
-  let latestBg = "";
-  let latestTime = 0;
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-
-    const estadoGeneral = getCellValue(row, headerMap, "estado_general").toLowerCase();
-    const bg = getCellValue(row, headerMap, "background_color");
-    const fechaPublicado = getCellValue(row, headerMap, "fecha_publicado");
-    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
-
-    if (
-      estadoGeneral !== GENERAL_STATUS.PUBLISHED ||
-      !["single", "carousel"].includes(postTipo) ||
-      !bg ||
-      !fechaPublicado
-    ) {
-      continue;
-    }
-
-    const timestamp = Date.parse(fechaPublicado);
-
-    if (Number.isNaN(timestamp)) {
-      continue;
-    }
-
-    if (timestamp > latestTime) {
-      latestTime = timestamp;
-      latestBg = bg.toLowerCase();
-    }
-  }
-
-  return latestBg;
-}
-
-function getRandomColorExcept(lastColor) {
-  const normalizedLast = (lastColor || "").toLowerCase().trim();
-
-  const availableColors = BG_SEQUENCE.filter(
-    (color) => color.toLowerCase() !== normalizedLast
-  );
-
-  if (!availableColors.length) {
-    return BG_SEQUENCE[0];
-  }
-
-  const randomIndex = Math.floor(Math.random() * availableColors.length);
-
-  return availableColors[randomIndex];
-}
-
-
-
-
+const { getLastUsedBg, getRandomColorExcept } = require("../../utils/render-utils");
 
 function hasCarouselAwaitingPublish(rows, headerMap) {
   const seenCarousels = new Map();
@@ -88,23 +32,17 @@ function hasCarouselAwaitingPublish(rows, headerMap) {
     const row = rows[i];
 
     const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
-
-    if (postTipo !== POST_TIPOS.CAROUSEL) {
-      continue;
-    }
+    if (postTipo !== POST_TIPOS.CAROUSEL) continue;
 
     const carouselId = getCellValue(row, headerMap, "carousel_id");
+    if (!carouselId) continue;
 
-    if (!carouselId) {
-      continue;
-    }
-
-    const estadoUpload = getCellValue(row, headerMap, "estado_upload").toLowerCase();
+    const estadoUpload  = getCellValue(row, headerMap, "estado_upload").toLowerCase();
     const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
 
     if (!seenCarousels.has(carouselId)) {
       seenCarousels.set(carouselId, {
-        hasUploadDone: false,
+        hasUploadDone:    false,
         hasPublishPending: false
       });
     }
@@ -129,112 +67,40 @@ function hasCarouselAwaitingPublish(rows, headerMap) {
   return false;
 }
 
-async function markCarouselAsProcessing({
-  sheets,
-  headerMap,
-  groupRows,
-  cycleId
-}) {
+async function markCarouselAsProcessing({ sheets, headerMap, groupRows, cycleId }) {
   const lockTs = nowIsoLocal();
   const lockUpdates = [];
 
   for (const item of groupRows) {
     lockUpdates.push(
-      {
-        row: item.rowNumber,
-        col: headerMap["estado_general"] + 1,
-        value: GENERAL_STATUS.PROCESSING
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["estado_render"] + 1,
-        value: STATUS.PROCESSING
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["lock_status"] + 1,
-        value: LOCK_STATUS.LOCKED
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["last_cycle_id"] + 1,
-        value: cycleId
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["updated_at"] + 1,
-        value: lockTs
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_step"] + 1,
-        value: ""
-      },
-      {
-        row: item.rowNumber,
-        col: headerMap["error_message"] + 1,
-        value: ""
-      }
+      { row: item.rowNumber, col: headerMap["estado_general"] + 1, value: GENERAL_STATUS.PROCESSING },
+      { row: item.rowNumber, col: headerMap["estado_render"]  + 1, value: STATUS.PROCESSING },
+      { row: item.rowNumber, col: headerMap["lock_status"]    + 1, value: LOCK_STATUS.LOCKED },
+      { row: item.rowNumber, col: headerMap["last_cycle_id"]  + 1, value: cycleId },
+      { row: item.rowNumber, col: headerMap["updated_at"]     + 1, value: lockTs },
+      { row: item.rowNumber, col: headerMap["error_step"]     + 1, value: "" },
+      { row: item.rowNumber, col: headerMap["error_message"]  + 1, value: "" }
     );
   }
 
   await updateCellsBatch(sheets, lockUpdates);
 }
 
-async function markSlideAsRendered({
-  sheets,
-  headerMap,
-  rowNumber,
-  carouselBg,
-  fileName
-}) {
+async function markSlideAsRendered({ sheets, headerMap, rowNumber, carouselBg, fileName }) {
   const doneTs = nowIsoLocal();
 
   await updateCellsBatch(sheets, [
-    {
-      row: rowNumber,
-      col: headerMap["background_color"] + 1,
-      value: carouselBg
-    },
-    {
-      row: rowNumber,
-      col: headerMap["output_file"] + 1,
-      value: fileName
-    },
-    {
-      row: rowNumber,
-      col: headerMap["fecha_generado"] + 1,
-      value: doneTs
-    },
-    {
-      row: rowNumber,
-      col: headerMap["estado_render"] + 1,
-      value: STATUS.DONE
-    },
+    { row: rowNumber, col: headerMap["background_color"] + 1, value: carouselBg },
+    { row: rowNumber, col: headerMap["output_file"]      + 1, value: fileName },
+    { row: rowNumber, col: headerMap["fecha_generado"]   + 1, value: doneTs },
+    { row: rowNumber, col: headerMap["estado_render"]    + 1, value: STATUS.DONE },
 
-    // Importante:
     // Liberamos cada slide al terminar su render para que upload-carousel pueda tomarlo.
-    {
-      row: rowNumber,
-      col: headerMap["lock_status"] + 1,
-      value: LOCK_STATUS.FREE
-    },
+    { row: rowNumber, col: headerMap["lock_status"]   + 1, value: LOCK_STATUS.FREE },
 
-    {
-      row: rowNumber,
-      col: headerMap["updated_at"] + 1,
-      value: doneTs
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_step"] + 1,
-      value: ""
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_message"] + 1,
-      value: ""
-    }
+    { row: rowNumber, col: headerMap["updated_at"]    + 1, value: doneTs },
+    { row: rowNumber, col: headerMap["error_step"]    + 1, value: "" },
+    { row: rowNumber, col: headerMap["error_message"] + 1, value: "" }
   ]);
 }
 
@@ -247,14 +113,14 @@ async function main() {
   });
 
   const sheets = await getSheetsClient();
-  const rows = await readRows(sheets);
+  const rows   = await readRows(sheets);
 
   if (rows.length < 2) {
     log.info("No hay datos en la hoja");
     return;
   }
 
-  const headers = rows[0];
+  const headers   = rows[0];
   const headerMap = buildHeaderMap(headers);
 
   const requiredHeaders = [
@@ -296,8 +162,8 @@ async function main() {
     headerMap,
     (row, hm) => {
       const estadoRender = getCellValue(row, hm, "estado_render").toLowerCase();
-      const lockStatus = getCellValue(row, hm, "lock_status").toLowerCase();
-      const intentos = Number(getCellValue(row, hm, "intentos") || 0);
+      const lockStatus   = getCellValue(row, hm, "lock_status").toLowerCase();
+      const intentos     = Number(getCellValue(row, hm, "intentos") || 0);
 
       return (
         (estadoRender === STATUS.PENDING || estadoRender === STATUS.ERROR) &&
@@ -321,27 +187,22 @@ async function main() {
 
   groupLogger.info("Carrusel seleccionado para render");
 
-  const lastPublishedBg = getLastPublishedBg(rows, headerMap);
-  const sheetBg = getCellValue(groupRows[0].values, headerMap, "background_color");
-  const carouselBg = sheetBg ? sheetBg : getRandomColorExcept(lastPublishedBg);
+  const lastUsedBg = getLastUsedBg(rows, headerMap);
+  const sheetBg    = getCellValue(groupRows[0].values, headerMap, "background_color");
+  const carouselBg = sheetBg ? sheetBg : getRandomColorExcept(lastUsedBg);
 
   try {
-    await markCarouselAsProcessing({
-      sheets,
-      headerMap,
-      groupRows,
-      cycleId
-    });
+    await markCarouselAsProcessing({ sheets, headerMap, groupRows, cycleId });
 
     for (const item of groupRows) {
       const rowNumber = item.rowNumber;
-      const row = item.values;
+      const row       = item.values;
 
-      const rowId = getCellValue(row, headerMap, "row_id");
-      const fraseOriginal = getCellValue(row, headerMap, "frase_original");
+      const rowId          = getCellValue(row, headerMap, "row_id");
+      const fraseOriginal  = getCellValue(row, headerMap, "frase_original");
       const fraseCorregida = getCellValue(row, headerMap, "frase_corregida");
-      const mode = getCellValue(row, headerMap, "modo") || "retro3d";
-      const textToRender = fraseCorregida || fraseOriginal;
+      const mode           = getCellValue(row, headerMap, "modo") || "retro3d";
+      const textToRender   = fraseCorregida || fraseOriginal;
       const estadoRenderOriginal = getCellValue(row, headerMap, "estado_render").toLowerCase();
 
       if (
@@ -352,7 +213,6 @@ async function main() {
           rowNumber,
           estadoRender: estadoRenderOriginal
         });
-
         continue;
       }
 
@@ -360,23 +220,14 @@ async function main() {
         throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);
       }
 
-      const rowLogger = groupLogger.child({
-        rowNumber,
-        rowId,
-        order: item.order,
-        mode
-      });
+      const rowLogger = groupLogger.child({ rowNumber, rowId, order: item.order, mode });
 
       rowLogger.info("Renderizando slide", {
         textLength: textToRender.length,
         backgroundColor: carouselBg
       });
 
-      const result = await renderPhrase({
-        text: textToRender,
-        mode,
-        bg: carouselBg
-      });
+      const result = await renderPhrase({ text: textToRender, mode, bg: carouselBg });
 
       await markSlideAsRendered({
         sheets,
@@ -386,14 +237,10 @@ async function main() {
         fileName: result.fileName
       });
 
-      rowLogger.info("Slide renderizado correctamente", {
-        outputFile: result.fileName
-      });
+      rowLogger.info("Slide renderizado correctamente", { outputFile: result.fileName });
     }
 
-    groupLogger.info("Carrusel renderizado completo", {
-      backgroundColor: carouselBg
-    });
+    groupLogger.info("Carrusel renderizado completo", { backgroundColor: carouselBg });
   } catch (error) {
     await markCarouselGroupAsError(
       sheets,

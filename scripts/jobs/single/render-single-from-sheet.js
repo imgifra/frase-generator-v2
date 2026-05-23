@@ -16,85 +16,9 @@ const {
   GENERAL_STATUS,
   POST_TIPOS,
   LOCK_STATUS,
-  MAX_INTENTOS,
-  BG_SEQUENCE
+  MAX_INTENTOS
 } = require("../../core/status");
-
-function getLastAssignedBg(rows, headerMap) {
-  let latestBg = "";
-  let latestTime = 0;
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-
-    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
-
-    if (!["single", "carousel"].includes(postTipo)) {
-      continue;
-    }
-
-    const bg = getCellValue(row, headerMap, "background_color");
-
-    if (!bg) {
-      continue;
-    }
-
-    const estadoGeneral = getCellValue(row, headerMap, "estado_general").toLowerCase();
-    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
-    const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
-
-    const isPublished = estadoGeneral === GENERAL_STATUS.PUBLISHED;
-
-    const isInFlight =
-      estadoRender === STATUS.DONE &&
-      (
-        estadoPublish === STATUS.PENDING ||
-        estadoPublish === STATUS.ERROR ||
-        estadoPublish === STATUS.PROCESSING
-      );
-
-    if (!isPublished && !isInFlight) {
-      continue;
-    }
-
-    const fechaRef = isPublished
-      ? getCellValue(row, headerMap, "fecha_publicado")
-      : getCellValue(row, headerMap, "fecha_generado");
-
-    if (!fechaRef) {
-      continue;
-    }
-
-    const timestamp = Date.parse(fechaRef);
-
-    if (Number.isNaN(timestamp)) {
-      continue;
-    }
-
-    if (timestamp > latestTime) {
-      latestTime = timestamp;
-      latestBg = bg.toLowerCase();
-    }
-  }
-
-  return latestBg;
-}
-
-function getRandomColorExcept(lastColor) {
-  const normalizedLast = (lastColor || "").toLowerCase().trim();
-
-  const availableColors = BG_SEQUENCE.filter(
-    (color) => color.toLowerCase() !== normalizedLast
-  );
-
-  if (!availableColors.length) {
-    return BG_SEQUENCE[0];
-  }
-
-  const randomIndex = Math.floor(Math.random() * availableColors.length);
-
-  return availableColors[randomIndex];
-}
+const { getLastUsedBg, getRandomColorExcept } = require("../../utils/render-utils");
 
 function findNextSingleRowForRender(rows, headerMap, targetRowNumber) {
   for (let i = 1; i < rows.length; i++) {
@@ -105,10 +29,10 @@ function findNextSingleRowForRender(rows, headerMap, targetRowNumber) {
       continue;
     }
 
-    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const postTipo    = getCellValue(row, headerMap, "post_tipo").toLowerCase();
     const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
-    const lockStatus = getCellValue(row, headerMap, "lock_status").toLowerCase();
-    const intentos = Number(getCellValue(row, headerMap, "intentos") || 0);
+    const lockStatus  = getCellValue(row, headerMap, "lock_status").toLowerCase();
+    const intentos    = Number(getCellValue(row, headerMap, "intentos") || 0);
 
     const isEligible =
       postTipo === POST_TIPOS.SINGLE &&
@@ -134,11 +58,10 @@ function getBgForRow(row, rows, headerMap) {
     return existingBg;
   }
 
-  const lastAssignedBg = getLastAssignedBg(rows, headerMap);
+  const lastUsedBg = getLastUsedBg(rows, headerMap);
 
-  return getRandomColorExcept(lastAssignedBg);
+  return getRandomColorExcept(lastUsedBg);
 }
-
 
 async function markRowAsProcessing({
   sheets,
@@ -149,41 +72,13 @@ async function markRowAsProcessing({
   const lockTs = nowIsoLocal();
 
   await updateCellsBatch(sheets, [
-    {
-      row: rowNumber,
-      col: headerMap["estado_general"] + 1,
-      value: GENERAL_STATUS.PROCESSING
-    },
-    {
-      row: rowNumber,
-      col: headerMap["estado_render"] + 1,
-      value: STATUS.PROCESSING
-    },
-    {
-      row: rowNumber,
-      col: headerMap["lock_status"] + 1,
-      value: LOCK_STATUS.LOCKED
-    },
-    {
-      row: rowNumber,
-      col: headerMap["last_cycle_id"] + 1,
-      value: cycleId
-    },
-    {
-      row: rowNumber,
-      col: headerMap["updated_at"] + 1,
-      value: lockTs
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_step"] + 1,
-      value: ""
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_message"] + 1,
-      value: ""
-    }
+    { row: rowNumber, col: headerMap["estado_general"] + 1, value: GENERAL_STATUS.PROCESSING },
+    { row: rowNumber, col: headerMap["estado_render"]  + 1, value: STATUS.PROCESSING },
+    { row: rowNumber, col: headerMap["lock_status"]    + 1, value: LOCK_STATUS.LOCKED },
+    { row: rowNumber, col: headerMap["last_cycle_id"]  + 1, value: cycleId },
+    { row: rowNumber, col: headerMap["updated_at"]     + 1, value: lockTs },
+    { row: rowNumber, col: headerMap["error_step"]     + 1, value: "" },
+    { row: rowNumber, col: headerMap["error_message"]  + 1, value: "" }
   ]);
 }
 
@@ -197,50 +92,17 @@ async function markRowAsRendered({
   const doneTs = nowIsoLocal();
 
   await updateCellsBatch(sheets, [
-    {
-      row: rowNumber,
-      col: headerMap["background_color"] + 1,
-      value: bg
-    },
-    {
-      row: rowNumber,
-      col: headerMap["output_file"] + 1,
-      value: fileName
-    },
-    {
-      row: rowNumber,
-      col: headerMap["fecha_generado"] + 1,
-      value: doneTs
-    },
-    {
-      row: rowNumber,
-      col: headerMap["estado_render"] + 1,
-      value: STATUS.DONE
-    },
+    { row: rowNumber, col: headerMap["background_color"] + 1, value: bg },
+    { row: rowNumber, col: headerMap["output_file"]      + 1, value: fileName },
+    { row: rowNumber, col: headerMap["fecha_generado"]   + 1, value: doneTs },
+    { row: rowNumber, col: headerMap["estado_render"]    + 1, value: STATUS.DONE },
 
-    // Importante:
     // Después del render exitoso liberamos la fila para que upload-single pueda tomarla.
-    {
-      row: rowNumber,
-      col: headerMap["lock_status"] + 1,
-      value: LOCK_STATUS.FREE
-    },
+    { row: rowNumber, col: headerMap["lock_status"]   + 1, value: LOCK_STATUS.FREE },
 
-    {
-      row: rowNumber,
-      col: headerMap["updated_at"] + 1,
-      value: doneTs
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_step"] + 1,
-      value: ""
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_message"] + 1,
-      value: ""
-    }
+    { row: rowNumber, col: headerMap["updated_at"]    + 1, value: doneTs },
+    { row: rowNumber, col: headerMap["error_step"]    + 1, value: "" },
+    { row: rowNumber, col: headerMap["error_message"] + 1, value: "" }
   ]);
 }
 
@@ -254,41 +116,13 @@ async function markRowAsRenderError({
   const errorTs = nowIsoLocal();
 
   await updateCellsBatch(sheets, [
-    {
-      row: rowNumber,
-      col: headerMap["estado_general"] + 1,
-      value: GENERAL_STATUS.ERROR
-    },
-    {
-      row: rowNumber,
-      col: headerMap["estado_render"] + 1,
-      value: STATUS.ERROR
-    },
-    {
-      row: rowNumber,
-      col: headerMap["lock_status"] + 1,
-      value: LOCK_STATUS.FREE
-    },
-    {
-      row: rowNumber,
-      col: headerMap["intentos"] + 1,
-      value: currentAttempts + 1
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_step"] + 1,
-      value: "render"
-    },
-    {
-      row: rowNumber,
-      col: headerMap["error_message"] + 1,
-      value: error.message || String(error)
-    },
-    {
-      row: rowNumber,
-      col: headerMap["updated_at"] + 1,
-      value: errorTs
-    }
+    { row: rowNumber, col: headerMap["estado_general"] + 1, value: GENERAL_STATUS.ERROR },
+    { row: rowNumber, col: headerMap["estado_render"]  + 1, value: STATUS.ERROR },
+    { row: rowNumber, col: headerMap["lock_status"]    + 1, value: LOCK_STATUS.FREE },
+    { row: rowNumber, col: headerMap["intentos"]       + 1, value: currentAttempts + 1 },
+    { row: rowNumber, col: headerMap["error_step"]     + 1, value: "render" },
+    { row: rowNumber, col: headerMap["error_message"]  + 1, value: error.message || String(error) },
+    { row: rowNumber, col: headerMap["updated_at"]     + 1, value: errorTs }
   ]);
 }
 
@@ -339,11 +173,7 @@ async function main() {
 
   requireHeaders(headerMap, requiredHeaders);
 
-  const selectedRow = findNextSingleRowForRender(
-    rows,
-    headerMap,
-    targetRowNumber
-  );
+  const selectedRow = findNextSingleRowForRender(rows, headerMap, targetRowNumber);
 
   if (!selectedRow) {
     log.info("No hay singles pendientes para render");
@@ -351,20 +181,16 @@ async function main() {
   }
 
   const rowNumber = selectedRow.rowNumber;
-  const row = selectedRow.values;
+  const row       = selectedRow.values;
 
-  const rowId = getCellValue(row, headerMap, "row_id");
+  const rowId         = getCellValue(row, headerMap, "row_id");
   const fraseOriginal = getCellValue(row, headerMap, "frase_original");
   const fraseCorregida = getCellValue(row, headerMap, "frase_corregida");
-  const mode = getCellValue(row, headerMap, "modo") || "retro3d";
-  const textToRender = fraseCorregida || fraseOriginal;
+  const mode          = getCellValue(row, headerMap, "modo") || "retro3d";
+  const textToRender  = fraseCorregida || fraseOriginal;
   const currentAttempts = Number(getCellValue(row, headerMap, "intentos") || 0);
 
-  const rowLogger = log.child({
-    rowNumber,
-    rowId,
-    mode
-  });
+  const rowLogger = log.child({ rowNumber, rowId, mode });
 
   const bg = getBgForRow(row, rows, headerMap);
 
@@ -378,39 +204,18 @@ async function main() {
       selectedBg: bg
     });
 
-    await markRowAsProcessing({
-      sheets,
-      headerMap,
-      rowNumber,
-      cycleId
-    });
+    await markRowAsProcessing({ sheets, headerMap, rowNumber, cycleId });
 
-    const result = await renderPhrase({
-      text: textToRender,
-      mode,
-      bg
-    });
+    const result = await renderPhrase({ text: textToRender, mode, bg });
 
-    await markRowAsRendered({
-      sheets,
-      headerMap,
-      rowNumber,
-      bg,
-      fileName: result.fileName
-    });
+    await markRowAsRendered({ sheets, headerMap, rowNumber, bg, fileName: result.fileName });
 
     rowLogger.info("Fila renderizada correctamente", {
       outputFile: result.fileName,
       bg
     });
   } catch (error) {
-    await markRowAsRenderError({
-      sheets,
-      headerMap,
-      rowNumber,
-      currentAttempts,
-      error
-    });
+    await markRowAsRenderError({ sheets, headerMap, rowNumber, currentAttempts, error });
 
     rowLogger.error("Error renderizando fila", {}, error);
 

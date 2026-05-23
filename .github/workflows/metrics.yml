@@ -1,0 +1,52 @@
+name: Actualizar Métricas
+
+on:
+  schedule:
+    - cron: '0 15 * * 0'   # domingos 10am Bogotá (UTC-5)
+
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Días hacia atrás a procesar (defecto: 30)'
+        required: false
+        default: '30'
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+
+    env:
+      SHEET_ID: ${{ secrets.SHEET_ID }}
+      WORKSHEET_NAME: ${{ secrets.WORKSHEET_NAME }}
+
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      GRAPH_API_VERSION: ${{ secrets.GRAPH_API_VERSION }}
+
+      FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+      FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+
+      THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+      THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+
+      METRICS_DAYS: ${{ github.event.inputs.days || '30' }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Create service account file
+        run: |
+          mkdir -p config
+          echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > config/service_account.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Actualizar métricas
+        run: node scripts/jobs/metrics/fetch-metrics.js

@@ -103,15 +103,7 @@ function validateCarouselRows(groupRows, selectedCarouselId) {
  * @param {string} cycleId       - ID del ciclo actual (para last_cycle_id)
  * @param {number} [attemptsDelta=1] - Cuántos intentos sumar
  */
-async function markCarouselGroupAsError(
-  sheets,
-  headerMap,
-  groupRows,
-  errorStep,
-  errorMessage,
-  cycleId,
-  attemptsDelta = 1
-) {
+async function markCarouselGroupAsError(  sheets,  headerMap,  groupRows,  errorStep,  errorMessage,  cycleId,  attemptsDelta = 1) {
   const errorTs = nowIsoLocal();
   const updates = [];
 

@@ -14,19 +14,15 @@ const {
 } = require("../../core/sheets");
 const { nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
-const {
-  STATUS,
-  GENERAL_STATUS,
-  POST_TIPOS,
-  LOCK_STATUS
-} = require("../../core/status");
+
+const {  STATUS,  GENERAL_STATUS,  POST_TIPOS,  LOCK_STATUS,  MAX_INTENTOS   } = require("../../core/status");
+
 const {
   getPendingCarouselRows,
   validateCarouselRows,
   markCarouselGroupAsError
 } = require("../../utils/carousel-utils");
 
-const MAX_INTENTOS = 3;
 
 function buildCarouselPayload(groupRows, headerMap) {
   const imageUrls = [];

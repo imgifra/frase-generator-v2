@@ -3,7 +3,6 @@ name: Publish Posts
 on:
   schedule:
     - cron: '0 15 * * *'   # 10am Bogotá (UTC-5)
-    - cron: '0 20 * * *'   # 3pm Bogotá (UTC-5)
     - cron: '0 23 * * *'   # 6pm Bogotá (UTC-5)
 
   workflow_dispatch:
@@ -110,7 +109,3 @@ jobs:
       - name: Run pipeline programado
         if: ${{ github.event_name == 'schedule' }}
         run: node scripts/pipeline/run-once.js
-
-      - name: Actualizar métricas
-        if: ${{ always() && github.event_name == 'schedule' && github.event.schedule == '0 15 * * 0' }}
-        run: node scripts/jobs/metrics/fetch-metrics.js
