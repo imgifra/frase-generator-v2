@@ -3,8 +3,6 @@ require("dotenv").config();
 const { publishImagePost } = require("../../libs/instagram-lib");
 const { publishFacebookImagePost } = require("../../libs/facebook-lib");
 const { deleteImage } = require("../../libs/upload-lib");
-const { postTweet } = require("../../libs/x-lib");
-
 const {
   getSheetsClient,
   buildHeaderMap,
@@ -78,7 +76,7 @@ async function main() {
     "estado_render", "estado_upload", "estado_publish", "lock_status",
     "intentos", "last_cycle_id", "error_step", "error_message",
     "instagram_creation_id", "instagram_media_id",
-    "facebook_photo_id", "facebook_post_id", "x_post_id"
+    "facebook_photo_id", "facebook_post_id"
   ];
 
   requireHeaders(headerMap, requiredHeaders);
@@ -103,7 +101,6 @@ async function main() {
   const existingInstagramMediaId = getCellValue(row, headerMap, "instagram_media_id");
   const existingFacebookPhotoId = getCellValue(row, headerMap, "facebook_photo_id");
   const existingFacebookPostId = getCellValue(row, headerMap, "facebook_post_id");
-  const existingXPostId = getCellValue(row, headerMap, "x_post_id");
 
   const rowLogger = log.child({ rowNumber, rowId });
 
@@ -115,7 +112,6 @@ async function main() {
     attempt: currentAttempts + 1,
     hasExistingInstagram: Boolean(existingInstagramMediaId),
     hasExistingFacebook: Boolean(existingFacebookPostId),
-    hasExistingX: Boolean(existingXPostId)
   });
 
   const lockTs = nowIsoLocal();
@@ -141,7 +137,6 @@ async function main() {
     postId: existingFacebookPostId
   };
 
-  let xPostId = existingXPostId;
 
   try {
     if (!instagramResult.mediaId) {
@@ -164,17 +159,7 @@ async function main() {
       ]);
     }
 
-    if (!xPostId) {
-      const xResult = await postTweet(caption || "");
-      xPostId = xResult.id;
 
-      await updateCellsBatch(sheets, [
-        { row: rowNumber, col: headerMap["x_post_id"] + 1, value: xPostId || "" },
-        { row: rowNumber, col: headerMap["updated_at"] + 1, value: nowIsoLocal() }
-      ]);
-
-      rowLogger.info("Publicado en X", { xPostId });
-    }
 
     const doneTs = nowIsoLocal();
 
@@ -191,7 +176,6 @@ async function main() {
     rowLogger.info("Fila publicada correctamente", {
       instagramMediaId: instagramResult.mediaId || "",
       facebookPostId: facebookResult.postId || "",
-      xPostId: xPostId || "",
       totalAttempts: currentAttempts + 1
     });
 
@@ -211,7 +195,6 @@ async function main() {
       { row: rowNumber, col: headerMap["instagram_media_id"] + 1, value: instagramResult.mediaId || "" },
       { row: rowNumber, col: headerMap["facebook_photo_id"] + 1, value: facebookResult.photoId || "" },
       { row: rowNumber, col: headerMap["facebook_post_id"] + 1, value: facebookResult.postId || "" },
-      { row: rowNumber, col: headerMap["x_post_id"] + 1, value: xPostId || "" },
       { row: rowNumber, col: headerMap["estado_general"] + 1, value: GENERAL_STATUS.ERROR },
       { row: rowNumber, col: headerMap["estado_publish"] + 1, value: STATUS.ERROR },
       { row: rowNumber, col: headerMap["lock_status"] + 1, value: LOCK_STATUS.FREE },

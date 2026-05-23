@@ -3,7 +3,6 @@ require("dotenv").config();
 const { publishCarouselPost } = require("../../libs/instagram-lib");
 const { publishFacebookCarouselPost } = require("../../libs/facebook-lib");
 const { deleteImage } = require("../../libs/upload-lib");
-const { postTweet } = require("../../libs/x-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
@@ -144,17 +143,7 @@ async function saveFacebookResultForCarousel({ sheets, headerMap, groupRows, fac
   );
 }
 
-async function saveXResultForCarousel({ sheets, headerMap, groupRows, xPostId }) {
-  const updatedAt = nowIsoLocal();
 
-  await updateCellsBatch(
-    sheets,
-    groupRows.flatMap((item) => [
-      { row: item.rowNumber, col: headerMap["x_post_id"] + 1, value: xPostId || "" },
-      { row: item.rowNumber, col: headerMap["updated_at"] + 1, value: updatedAt }
-    ])
-  );
-}
 
 async function markCarouselAsPublished({ sheets, headerMap, groupRows }) {
   const doneTs = nowIsoLocal();
@@ -202,7 +191,7 @@ async function main() {
     "fecha_publicado", "estado_general", "estado_render", "estado_upload",
     "estado_publish", "lock_status", "intentos", "last_cycle_id",
     "error_step", "error_message", "instagram_creation_id", "instagram_media_id",
-    "facebook_photo_id", "facebook_post_id", "hashtags", "x_post_id"
+    "facebook_photo_id", "facebook_post_id", "hashtags"
   ];
 
   requireHeaders(headerMap, requiredHeaders);
@@ -241,13 +230,11 @@ async function main() {
   const existingInstagramCreationId = getFirstExistingValue(groupRows, headerMap, "instagram_creation_id");
   const existingInstagramMediaId    = getFirstExistingValue(groupRows, headerMap, "instagram_media_id");
   const existingFacebookPostId      = getFirstExistingValue(groupRows, headerMap, "facebook_post_id");
-  const existingXPostId             = getFirstExistingValue(groupRows, headerMap, "x_post_id");
 
   groupLogger.info("Carrusel seleccionado para publish", {
     hasCaption: Boolean(carouselCaption),
     hasExistingInstagram: Boolean(existingInstagramMediaId),
     hasExistingFacebook: Boolean(existingFacebookPostId),
-    hasExistingX: Boolean(existingXPostId)
   });
 
   await markCarouselAsPublishing({ sheets, headerMap, groupRows, cycleId });
@@ -263,7 +250,6 @@ async function main() {
     mediaFbids: []
   };
 
-  let xPostId = existingXPostId;
 
   try {
     if (!instagramResult.mediaId) {
@@ -295,16 +281,7 @@ async function main() {
       });
     }
 
-    if (!xPostId) {
-      const xResult = await postTweet(carouselCaption || "");
-      xPostId = xResult.id;
 
-      await saveXResultForCarousel({ sheets, headerMap, groupRows, xPostId });
-
-      groupLogger.info("Publicado en X", { xPostId });
-    } else {
-      groupLogger.info("X ya estaba publicado; se omite republicación", { xPostId });
-    }
 
     await markCarouselAsPublished({ sheets, headerMap, groupRows });
 
@@ -312,7 +289,6 @@ async function main() {
       instagramMediaId: instagramResult.mediaId || "",
       instagramCreationId: instagramResult.creationId || "",
       facebookPostId: facebookResult.postId || "",
-      xPostId: xPostId || ""
     });
 
     await deleteCarouselAssets(publicIds, groupLogger);
