@@ -95,6 +95,10 @@ node scripts/dev/render-all-retro-colors.js # previsualiza las 26 paletas
 # Sincronizar paletas (después de editar retro-palettes.js)
 npm run sync-palettes
 npm run check-palettes-sync  # verificar que están sincronizadas
+
+# Diagnóstico rápido
+npm run doctor        # valida archivos, exports, sintaxis, docs y paletas
+npm run doctor:sheet  # audita columnas y estados del Google Sheet
 ```
 
 ---

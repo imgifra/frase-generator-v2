@@ -91,11 +91,62 @@ function validateFrasesByTipo(tipo, frases) {
   }
 }
 
+function normalizePhraseForDedupe(value) {
+  return (value || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function findDuplicatePhrases({ rows, headerMap, tipo, frases }) {
+  const inputSet = new Map();
+
+  frases.forEach((frase, index) => {
+    const normalized = normalizePhraseForDedupe(frase);
+    if (normalized && !inputSet.has(normalized)) {
+      inputSet.set(normalized, { frase, index });
+    }
+  });
+
+  const duplicates = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const rowNumber = i + 1;
+
+    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    if (postTipo !== tipo) continue;
+
+    const estadoGeneral = getCellValue(row, headerMap, "estado_general").toLowerCase();
+    if (estadoGeneral === "discarded" || estadoGeneral === "cancelled") continue;
+
+    const existingPhrase = getCellValue(row, headerMap, "frase_corregida") ||
+      getCellValue(row, headerMap, "frase_original");
+    const normalized = normalizePhraseForDedupe(existingPhrase);
+
+    if (!inputSet.has(normalized)) continue;
+
+    duplicates.push({
+      rowNumber,
+      rowId: "row_id" in headerMap ? getCellValue(row, headerMap, "row_id") : "",
+      frase: inputSet.get(normalized).frase,
+      estadoGeneral
+    });
+  }
+
+  return duplicates;
+}
+
 async function main() {
   const frasesRaw  = process.env.FRASES_INPUT  || "";
   const caption    = process.env.CAPTION_INPUT  || "";
   const tipoRaw    = process.env.TIPO_INPUT     || "carousel";
   const colorInput = process.env.COLOR_INPUT    || "";
+  const allowDuplicate = process.env.ALLOW_DUPLICATE === "true";
 
   if (!["single", "carousel"].includes(tipoRaw)) {
     throw new Error(`TIPO_INPUT inválido: ${tipoRaw}. Usa "single" o "carousel".`);
@@ -123,6 +174,7 @@ async function main() {
   const headerMap = buildHeaderMap(headers);
 
   const requiredHeaders = [
+    "row_id",
     "frase_original", "frase_corregida", "post_tipo", "hashtags",
     "estado_general", "estado_render", "estado_upload", "estado_publish",
     "lock_status", "modo", "updated_at"
@@ -135,6 +187,19 @@ async function main() {
   }
 
   requireHeaders(headerMap, requiredHeaders);
+
+  if (!allowDuplicate) {
+    const duplicates = findDuplicatePhrases({ rows, headerMap, tipo, frases });
+
+    if (duplicates.length > 0) {
+      logger.error("Registro cancelado por frase duplicada", { tipo, duplicates });
+      throw new Error(
+        `Frase duplicada detectada (${tipo}). ` +
+        `Primera coincidencia en fila ${duplicates[0].rowNumber}. ` +
+        `Si realmente quieres repetirla, usa ALLOW_DUPLICATE=true.`
+      );
+    }
+  }
 
   const carouselId = tipo === "carousel" ? generateCarouselId() : "";
   const nextRow    = findNextEmptyRow(rows, headerMap);

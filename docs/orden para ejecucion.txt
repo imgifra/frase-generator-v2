@@ -29,5 +29,11 @@ node scripts/dev/render-preview.js
 # Sincronizar paletas después de editar retro-palettes.js
 npm run sync-palettes
 
+# Diagnosticar el repo localmente
+npm run doctor
+
+# Auditar columnas y estados del Google Sheet
+npm run doctor:sheet
+
 # Generar resumen del repo
 npx repomix@latest

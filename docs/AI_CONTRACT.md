@@ -208,6 +208,7 @@ como identificador — es mutable si alguien reordena el sheet manualmente.
 4. **¿Agregaste una columna nueva al sheet?** → documentarla aquí y en `arquitectura-proyecto.md`
 5. **¿El nuevo código genera IDs?** → usar `crypto.randomUUID()`, nunca `Date.now()` solo
 6. **¿Creaste un nuevo punto de entrada al pipeline?** → llamar `releaseStaleLocks` al inicio
+7. **¿Tocaste pipeline, docs o paletas?** → correr `npm run doctor`
 
 ---
 
