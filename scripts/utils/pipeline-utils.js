@@ -240,4 +240,4 @@ module.exports = {
   runStep,
   releaseStaleLocks,
   PROJECT_ROOT,
-};  
+};
