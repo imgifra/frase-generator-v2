@@ -22,20 +22,16 @@ function drawRetroPattern(targetCtx, bg) {
   }
   const totalTextWidth = charWidths.reduce((a, b) => a + b, 0);
 
-  // horizontal tileable
   const reps = Math.round(CANVAS_WIDTH / (totalTextWidth + 10));
   const stepX = CANVAS_WIDTH / reps;
   const scale = stepX / totalTextWidth;
 
-  // sampleStep proporcional al ancho medio de carácter
   const avgCharWidth = (totalTextWidth / text.length) * scale;
   const sampleStep = Math.max(2, avgCharWidth * 0.5);
 
-  // vertical tileable
   const rowsCount = Math.round(CANVAS_HEIGHT / 28);
   const stepY = CANVAS_HEIGHT / rowsCount;
 
-  // arranca un paso antes para cubrir borde superior con cualquier amplitude
   const startY = -(stepY + amplitude);
 
   for (
@@ -91,21 +87,17 @@ function addGrain(targetCtx, amount = 15) {
   targetCtx.putImageData(imageData, 0, 0);
 }
 
-function getContrastColor(hex) {
-  hex = hex.replace("#", "");
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 150 ? "#000000" : "#ffffff";
-}
-
 function getBrightness(hex) {
   hex = hex.replace("#", "");
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
   return (r * 299 + g * 587 + b * 114) / 1000;
+}
+
+// MEJORA #12: delega en getBrightness en lugar de duplicar el parseo hex
+function getContrastColor(hex) {
+  return getBrightness(hex) > 150 ? "#000000" : "#ffffff";
 }
 
 function hexToRgb(hex) {

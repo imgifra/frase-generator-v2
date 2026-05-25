@@ -41,7 +41,7 @@ function getPendingSingleRow(rows, headerMap, targetRowNumber) {
       estadoRender === STATUS.DONE &&
       estadoUpload === STATUS.DONE &&
       (estadoPublish === STATUS.PENDING || estadoPublish === STATUS.ERROR) &&
-      (lockStatus === LOCK_STATUS.FREE || lockStatus === LOCK_STATUS.LOCKED) &&
+      lockStatus === LOCK_STATUS.FREE &&   // FIX: solo FREE es elegible; LOCKED significa que otro ciclo la está procesando
       intentos < MAX_INTENTOS;
 
     if (isEligible) {

@@ -14,9 +14,7 @@ const {
 } = require("../../core/sheets");
 const { nowIsoLocal } = require("../../utils/common");
 const { logger } = require("../../utils/logger");
-
-const {  STATUS,  GENERAL_STATUS,  POST_TIPOS,  LOCK_STATUS,  MAX_INTENTOS   } = require("../../core/status");
-
+const { STATUS, GENERAL_STATUS, POST_TIPOS, LOCK_STATUS, MAX_INTENTOS } = require("../../core/status");
 const {
   getPendingCarouselRows,
   validateCarouselRows,
@@ -145,7 +143,7 @@ async function main() {
         estadoRender === STATUS.DONE &&
         estadoUpload === STATUS.DONE &&
         (estadoPublish === STATUS.PENDING || estadoPublish === STATUS.ERROR) &&
-        (lockStatus === LOCK_STATUS.FREE || lockStatus === LOCK_STATUS.LOCKED) &&
+        lockStatus === LOCK_STATUS.FREE &&   // FIX: solo FREE es elegible; LOCKED significa que otro ciclo la está procesando
         intentos < MAX_INTENTOS
       );
     }

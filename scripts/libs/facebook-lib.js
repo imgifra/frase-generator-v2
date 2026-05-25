@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const { buildGraphUrl, buildGraphErrorMessage } = require("./graph-client");
+const { buildGraphUrl, buildGraphErrorMessage, graphPost } = require("./graph-client");
 
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
@@ -13,53 +13,6 @@ function ensureEnv() {
   if (!FB_PAGE_ACCESS_TOKEN) {
     throw new Error("Falta FB_PAGE_ACCESS_TOKEN en .env");
   }
-}
-
-async function graphPost(path, body) {
-  const url = buildGraphUrl(path);
-
-  const form = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(body)) {
-    if (value === undefined || value === null) continue;
-
-    if (Array.isArray(value)) {
-      value.forEach((item) => form.append(key, String(item)));
-      continue;
-    }
-
-    form.append(key, String(value));
-  }
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: form.toString()
-  });
-
-  const rawText = await res.text();
-
-  let data;
-  try {
-    data = rawText ? JSON.parse(rawText) : {};
-  } catch {
-    data = null;
-  }
-
-  if (!res.ok || data?.error) {
-    const message = buildGraphErrorMessage(res, data, rawText);
-    const error = new Error(message);
-
-    error.status = res.status;
-    error.responseBody = rawText;
-    error.graphError = data?.error || null;
-
-    throw error;
-  }
-
-  return data;
 }
 
 async function graphPostWithRetry(path, body, retries = 3, delayMs = 5000) {

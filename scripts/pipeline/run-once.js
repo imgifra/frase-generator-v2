@@ -3,17 +3,21 @@ require("dotenv").config();
 const { logger } = require("../utils/logger");
 const { runCarouselPipeline } = require("./run-carousel");
 const { runSinglePipeline } = require("./run-single");
+const { releaseStaleLocks } = require("../utils/pipeline-utils");
+const {
+  notifySuccess,
+  notifyError,
+  notifyNoPending,
+  notifyStaleLocks,
+  notifyFatal
+} = require("../libs/telegram-lib");
 
 function getTipoInput() {
   const raw = (process.env.TIPO_INPUT || "").trim().toLowerCase();
 
-  if (!raw) {
-    return "auto";
-  }
+  if (!raw) return "auto";
 
-  if (raw === "single" || raw === "carousel" || raw === "auto") {
-    return raw;
-  }
+  if (raw === "single" || raw === "carousel" || raw === "auto") return raw;
 
   throw new Error(
     `TIPO_INPUT inválido: "${process.env.TIPO_INPUT}". Usa "single", "carousel" o "auto".`
@@ -21,18 +25,11 @@ function getTipoInput() {
 }
 
 async function runSingle({ cycleId, branch }) {
-  return runSinglePipeline({
-    cycleId,
-    branch
-  });
+  return runSinglePipeline({ cycleId, branch });
 }
 
 async function runCarousel({ cycleId, branch, targetCarouselId }) {
-  return runCarouselPipeline({
-    cycleId,
-    branch,
-    targetCarouselId
-  });
+  return runCarouselPipeline({ cycleId, branch, targetCarouselId });
 }
 
 async function runAuto({ cycleId, branch, targetCarouselId }) {
@@ -68,11 +65,17 @@ async function runAuto({ cycleId, branch, targetCarouselId }) {
     autoLogger.info("Modo auto procesó SINGLE", singleResult);
     return { ...singleResult, autoSelected: "single", autoTried: ["carousel", "single"] };
   }
+
+  return {
+    ok: true,
+    processed: false,
+    noPending: true,
+    autoTried: ["carousel", "single"]
+  };
 }
 
-
-
 async function main() {
+  const startMs = Date.now();
   const cycleId = `${Date.now()}`;
   const isFormMode = process.env.FORM_MODE === "true";
   const branch = isFormMode ? "form" : "scheduled";
@@ -86,37 +89,65 @@ async function main() {
     targetCarouselId
   });
 
+  // Liberar locks stale de ciclos anteriores y notificar si hubo
+  const staleReleased = await releaseStaleLocks({ cycleId });
+  if (staleReleased > 0) {
+    await notifyStaleLocks({ filasLiberadas: staleReleased, cycleId });
+  }
+
   let result;
 
   if (tipo === "single") {
-    result = await runSingle({
-      cycleId,
-      branch
-    });
+    result = await runSingle({ cycleId, branch });
   } else if (tipo === "carousel") {
-    result = await runCarousel({
-      cycleId,
-      branch,
-      targetCarouselId
-    });
+    result = await runCarousel({ cycleId, branch, targetCarouselId });
   } else {
-    result = await runAuto({
-      cycleId,
-      branch,
-      targetCarouselId
-    });
+    result = await runAuto({ cycleId, branch, targetCarouselId });
   }
 
+  const durationMs = Date.now() - startMs;
+  const tipoFinal  = result.autoSelected || tipo;
+
+  // ── Notificaciones Telegram ──────────────────────────────────────────────
   if (!result.ok) {
+    await notifyError({
+      tipo:       tipoFinal,
+      cycleId,
+      failedStep: result.failedStep || result.failedBranch || "desconocido",
+      durationMs
+    });
+
     logger.error("Pipeline falló", result);
     process.exit(1);
+  }
+
+  if (result.processed) {
+    await notifySuccess({
+      tipo:      tipoFinal,
+      cycleId,
+      branch,
+      recovered: Boolean(result.recoveredPending),
+      durationMs
+    });
+  } else {
+    // Solo notificar "sin pendientes" en modo scheduled para no spamear
+    // cuando el formulario simplemente registra sin publicar
+    if (branch === "scheduled") {
+      await notifyNoPending({ cycleId, branch });
+    }
   }
 
   logger.info("Pipeline completado", result);
   process.exit(0);
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   logger.error("Error fatal", {}, error);
+
+  await notifyFatal({
+    cycleId:      `${Date.now()}`,
+    errorMessage: error.message
+  });
+
   process.exit(1);
 });

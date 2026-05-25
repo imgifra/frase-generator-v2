@@ -21,13 +21,53 @@ function generateCarouselId(frases) {
   return "car_" + Math.abs(hash).toString(16).slice(0, 8) + "_" + Date.now();
 }
 
+/**
+ * Retorna el número de fila (1-based, contando header) donde escribir las
+ * nuevas frases — es decir, la primera fila completamente vacía al final
+ * del bloque de datos.
+ *
+ * Estrategia: recorremos de atrás hacia adelante buscando la última fila que
+ * tenga al menos un valor en las columnas clave. La fila siguiente a esa es
+ * donde empezamos a escribir.
+ *
+ * Esto es más robusto que buscar solo frase_original porque:
+ *   - Una fila puede tener frase_original vacía pero tener datos en otras
+ *     columnas (estado, lock, etc.) por ediciones manuales o errores previos.
+ *   - Si solo miramos frase_original podríamos sobrescribir esas filas.
+ *
+ * Columnas que se consideran para determinar si una fila "tiene datos":
+ * son las mismas que escribe este script — si alguna tiene valor, la fila
+ * no está vacía.
+ */
+const KEY_COLUMNS = [
+  "frase_original",
+  "frase_corregida",
+  "estado_general",
+  "estado_render",
+  "estado_upload",
+  "estado_publish",
+  "lock_status"
+];
+
 function findNextEmptyRow(rows, headerMap) {
+  // Columnas a revisar: solo las que existen en el headerMap
+  const colsToCheck = KEY_COLUMNS.filter(col => col in headerMap);
+
   for (let i = rows.length - 1; i >= 1; i--) {
-    const value = getCellValue(rows[i], headerMap, "frase_original");
-    if (value) {
-      return i + 2;
+    const row = rows[i];
+
+    const hasData = colsToCheck.some(col => {
+      const value = getCellValue(row, headerMap, col);
+      return value !== "";
+    });
+
+    if (hasData) {
+      // Esta fila tiene datos — la siguiente es la primera vacía
+      return i + 2; // +1 por base-1 de Sheets, +1 para ir a la siguiente
     }
   }
+
+  // La hoja solo tiene el header
   return 2;
 }
 

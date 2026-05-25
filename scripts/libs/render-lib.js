@@ -14,13 +14,13 @@ const GENERATOR_URL = (
   process.env.GENERATOR_URL || `http://127.0.0.1:${GENERATOR_PORT}`
 ).replace(/\/+$/, "");
 
-// render-lib.js está en scripts/libs.
-// La raíz real del proyecto queda dos niveles arriba.
 const ROOT_DIR = path.resolve(__dirname, "..", "..");
 
-// Tiempo máximo esperando que window.renderReady sea true.
-// Cubre descarga de fuentes externas (Google Fonts, CDN de Brat) en GitHub Actions.
 const RENDER_READY_TIMEOUT_MS = 30_000;
+
+// Dimensiones del canvas — deben coincidir con CANVAS_WIDTH/CANVAS_HEIGHT en app.js
+const CANVAS_WIDTH  = 1080;
+const CANVAS_HEIGHT = 1350; // FIX #2: era 1080, pero el canvas es 1080×1350
 
 let serverReadyPromise = null;
 let serverInstance = null;
@@ -85,27 +85,30 @@ async function ensureServer() {
 }
 
 async function stopServer() {
-  if (!serverInstance || !serverOwnedByThisProcess) {
-    serverReadyPromise = null;
-    serverInstance = null;
-    serverOwnedByThisProcess = false;
-    return;
-  }
-
-  await new Promise((resolve, reject) => {
-    serverInstance.close((err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      resolve();
-    });
-  });
+  // FIX #14: limpiar el singleton ANTES de cerrar el servidor.
+  // Si close() falla, el singleton ya no apunta a la instancia rota,
+  // así que el próximo ensureServer() arranca uno nuevo en lugar de
+  // reutilizar una promesa resuelta que apunta a nada.
+  const instanceToClose = serverInstance;
+  const wasOwned = serverOwnedByThisProcess;
 
   serverReadyPromise = null;
   serverInstance = null;
   serverOwnedByThisProcess = false;
+
+  if (!instanceToClose || !wasOwned) {
+    return;
+  }
+
+  await new Promise((resolve, reject) => {
+    instanceToClose.close((err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve();
+    });
+  });
 }
 
 function stripAccents(text) {
@@ -169,15 +172,12 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
   try {
     const page = await browser.newPage({
       viewport: {
-        width: 1080,
-        height: 1080
+        width:  CANVAS_WIDTH,
+        height: CANVAS_HEIGHT  // FIX #2: ahora usa la constante correcta
       },
       deviceScaleFactor: 1
     });
 
-    // Navegamos con domcontentloaded — es suficiente para que el JS empiece a correr.
-    // No usamos networkidle porque las fuentes externas (Google Fonts, CDN de Brat)
-    // pueden tardar o fallar en GitHub Actions sin que eso indique un error real.
     await page.goto(url, {
       waitUntil: "domcontentloaded",
       timeout: 60_000
@@ -189,9 +189,6 @@ async function renderPhrase({ text, mode = "normal", bg = "#ffffff" }) {
       );
     });
 
-    // Esperamos a que app.js setee window.renderReady = true, lo cual ocurre
-    // dentro de document.fonts.ready.then(() => { draw(); window.renderReady = true; })
-    // Esto garantiza que el canvas ya dibujó con todas las fuentes cargadas.
     await page.waitForFunction(
       () => window.renderReady === true,
       { timeout: RENDER_READY_TIMEOUT_MS }

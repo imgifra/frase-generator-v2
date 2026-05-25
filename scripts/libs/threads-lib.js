@@ -1,23 +1,19 @@
 require("dotenv").config();
 
-const THREADS_USER_ID = process.env.THREADS_USER_ID;
-const THREADS_ACCESS_TOKEN = process.env.THREADS_ACCESS_TOKEN;
-const THREADS_API_BASE = "https://graph.threads.net/v1.0";
+const { logger } = require("../utils/logger"); // MEJORA #13: logger estructurado en lugar de console.log
 
-const POLL_INTERVAL_MS = 3000;
+const THREADS_USER_ID       = process.env.THREADS_USER_ID;
+const THREADS_ACCESS_TOKEN  = process.env.THREADS_ACCESS_TOKEN;
+const THREADS_API_BASE      = "https://graph.threads.net/v1.0";
+
+const POLL_INTERVAL_MS  = 3000;
 const MAX_POLL_ATTEMPTS = 20;
-const PARENT_READY_DELAY_MS = 5000;
 
 const TOKEN_EXPIRED_SUBCODES = new Set([460, 463, 467]);
 
 function ensureEnv() {
-  if (!THREADS_USER_ID) {
-    throw new Error("Falta THREADS_USER_ID en .env");
-  }
-
-  if (!THREADS_ACCESS_TOKEN) {
-    throw new Error("Falta THREADS_ACCESS_TOKEN en .env");
-  }
+  if (!THREADS_USER_ID)      throw new Error("Falta THREADS_USER_ID en .env");
+  if (!THREADS_ACCESS_TOKEN) throw new Error("Falta THREADS_ACCESS_TOKEN en .env");
 }
 
 function sleep(ms) {
@@ -45,8 +41,7 @@ function throwIfTokenError(graphError) {
   }
 
   throw new Error(
-    `[TOKEN INVÁLIDO] El THREADS_ACCESS_TOKEN es inválido o fue revocado ` +
-    `(code=190, subcode=${sub ?? "none"}). ` +
+    `[TOKEN INVÁLIDO] El THREADS_ACCESS_TOKEN es inválido o fue revocado (code=190, subcode=${sub ?? "none"}). ` +
     "Verificá el valor del secret THREADS_ACCESS_TOKEN en GitHub."
   );
 }
@@ -60,11 +55,10 @@ async function threadsGet(path, query = {}) {
     }
   }
 
-  const res = await fetch(url.toString());
+  const res     = await fetch(url.toString());
   const rawText = await res.text();
 
   let data;
-
   try {
     data = rawText ? JSON.parse(rawText) : {};
   } catch {
@@ -73,18 +67,11 @@ async function threadsGet(path, query = {}) {
 
   if (!res.ok || data?.error) {
     throwIfTokenError(data?.error);
-
     const err = data?.error;
-
     const msg = err
       ? `${err.message} | code=${err.code} | fbtrace_id=${err.fbtrace_id}`
       : `Threads API ${res.status}: ${rawText}`;
-
-    const error = new Error(msg);
-    error.status = res.status;
-    error.graphError = err || null;
-
-    throw error;
+    throw new Error(msg);
   }
 
   return data;
@@ -94,7 +81,6 @@ async function threadsPost(path, body) {
   const url = `${THREADS_API_BASE}/${path}`;
 
   const form = new URLSearchParams();
-
   for (const [key, value] of Object.entries(body)) {
     if (value !== undefined && value !== null) {
       form.append(key, String(value));
@@ -102,17 +88,14 @@ async function threadsPost(path, body) {
   }
 
   const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: form.toString()
+    method:  "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body:    form.toString()
   });
 
   const rawText = await res.text();
 
   let data;
-
   try {
     data = rawText ? JSON.parse(rawText) : {};
   } catch {
@@ -121,17 +104,14 @@ async function threadsPost(path, body) {
 
   if (!res.ok || data?.error) {
     throwIfTokenError(data?.error);
-
     const err = data?.error;
-
     const msg = err
       ? `${err.message} | code=${err.code} | fbtrace_id=${err.fbtrace_id}`
       : `Threads API ${res.status}: ${rawText}`;
 
     const error = new Error(msg);
-    error.status = res.status;
-    error.graphError = err || null;
-
+    error.status      = res.status;
+    error.graphError  = err || null;
     throw error;
   }
 
@@ -140,265 +120,108 @@ async function threadsPost(path, body) {
 
 async function getContainerStatus(containerId) {
   return threadsGet(`${containerId}`, {
-    fields: "id,status,error_message",
+    fields:       "id,status,error_message",
     access_token: THREADS_ACCESS_TOKEN
   });
 }
 
-async function waitUntilContainerReady(
-  containerId,
-  label = "container"
-) {
-  for (
-    let attempt = 1;
-    attempt <= MAX_POLL_ATTEMPTS;
-    attempt++
-  ) {
+async function waitUntilContainerReady(containerId) {
+  for (let attempt = 1; attempt <= MAX_POLL_ATTEMPTS; attempt++) {
     const statusData = await getContainerStatus(containerId);
+    const status     = statusData.status || "";
 
-    const status = statusData.status || "";
+    logger.info("Threads container estado", { containerId, attempt, maxAttempts: MAX_POLL_ATTEMPTS, status });
 
-    console.log(
-      `Threads ${label} ${containerId} ` +
-      `estado intento ${attempt}/${MAX_POLL_ATTEMPTS}: ${status}`
-    );
-
-    if (status === "FINISHED") {
-      return statusData;
-    }
-
-    if (status === "ERROR") {
-      throw new Error(
-        `El ${label} de Threads ${containerId} falló: ` +
-        `${statusData.error_message || "error desconocido"}`
-      );
-    }
-
-    if (status === "EXPIRED") {
-      throw new Error(
-        `El ${label} de Threads ${containerId} expiró antes de publicarse`
-      );
-    }
+    if (status === "FINISHED") return statusData;
+    if (status === "ERROR")    throw new Error(`El contenedor de Threads ${containerId} falló: ${statusData.error_message || "error desconocido"}`);
+    if (status === "EXPIRED")  throw new Error(`El contenedor de Threads ${containerId} expiró antes de publicarse`);
 
     await sleep(POLL_INTERVAL_MS);
   }
 
-  throw new Error(
-    `El ${label} de Threads ${containerId} ` +
-    `no estuvo listo a tiempo`
-  );
+  throw new Error(`El contenedor de Threads ${containerId} no estuvo listo a tiempo`);
 }
 
-async function publishThreadsImagePost({
-  imageUrl,
-  caption
-}) {
+async function publishThreadsImagePost({ imageUrl, caption }) {
   ensureEnv();
 
-  if (!imageUrl) {
-    throw new Error(
-      "imageUrl es requerido para publicar en Threads."
-    );
-  }
+  if (!imageUrl) throw new Error("imageUrl es requerido para publicar en Threads.");
 
-  const safeCaption =
-    typeof caption === "string"
-      ? caption.trim()
-      : "";
+  const safeCaption = typeof caption === "string" ? caption.trim() : "";
 
-  console.log(
-    "Creando contenedor de imagen en Threads..."
-  );
+  logger.info("Creando contenedor de imagen en Threads", { imageUrl, caption: safeCaption || "[sin caption]" });
 
-  console.log("imageUrl:", imageUrl);
-  console.log(
-    "caption:",
-    safeCaption || "[sin caption]"
-  );
+  const container = await threadsPost(`${THREADS_USER_ID}/threads`, {
+    media_type:   "IMAGE",
+    image_url:    imageUrl,
+    text:         safeCaption,
+    access_token: THREADS_ACCESS_TOKEN
+  });
 
-  const container = await threadsPost(
-    `${THREADS_USER_ID}/threads`,
-    {
-      media_type: "IMAGE",
-      image_url: imageUrl,
-      text: safeCaption,
-      access_token: THREADS_ACCESS_TOKEN
-    }
-  );
+  if (!container.id) throw new Error("No se recibió id del contenedor de Threads.");
 
-  if (!container.id) {
-    throw new Error(
-      "No se recibió id del contenedor de Threads."
-    );
-  }
+  await waitUntilContainerReady(container.id);
 
-  await waitUntilContainerReady(
-    container.id,
-    "image container"
-  );
+  const published = await threadsPost(`${THREADS_USER_ID}/threads_publish`, {
+    creation_id:  container.id,
+    access_token: THREADS_ACCESS_TOKEN
+  });
 
-  const published = await threadsPost(
-    `${THREADS_USER_ID}/threads_publish`,
-    {
-      creation_id: container.id,
-      access_token: THREADS_ACCESS_TOKEN
-    }
-  );
+  if (!published.id) throw new Error("No se recibió id del post publicado en Threads.");
 
-  if (!published.id) {
-    throw new Error(
-      "No se recibió id del post publicado en Threads."
-    );
-  }
+  logger.info("Post publicado en Threads", { mediaId: published.id });
 
-  console.log(
-    "Post publicado en Threads:",
-    published.id
-  );
-
-  return {
-    containerId: container.id,
-    mediaId: published.id
-  };
+  return { containerId: container.id, mediaId: published.id };
 }
 
-async function publishThreadsCarouselPost({
-  imageUrls,
-  caption
-}) {
+async function publishThreadsCarouselPost({ imageUrls, caption }) {
   ensureEnv();
 
-  if (
-    !Array.isArray(imageUrls) ||
-    imageUrls.length < 2 ||
-    imageUrls.length > 10
-  ) {
-    throw new Error(
-      "Un carrusel de Threads debe tener entre 2 y 10 imágenes."
-    );
+  if (!Array.isArray(imageUrls) || imageUrls.length < 2 || imageUrls.length > 10) {
+    throw new Error("Un carrusel de Threads debe tener entre 2 y 10 imágenes.");
   }
 
-  const safeCaption =
-    typeof caption === "string"
-      ? caption.trim()
-      : "";
+  const safeCaption = typeof caption === "string" ? caption.trim() : "";
 
-  console.log(
-    `Creando carrusel en Threads con ${imageUrls.length} imágenes...`
-  );
-
-  console.log(
-    "caption:",
-    safeCaption || "[sin caption]"
-  );
+  logger.info("Creando carrusel en Threads", { slides: imageUrls.length, caption: safeCaption || "[sin caption]" });
 
   const childIds = [];
 
-  // Crear y esperar cada child
   for (const imageUrl of imageUrls) {
-    console.log(
-      "Creando slide de carrusel:",
-      imageUrl
-    );
+    const child = await threadsPost(`${THREADS_USER_ID}/threads`, {
+      media_type:       "IMAGE",
+      image_url:        imageUrl,
+      is_carousel_item: true,
+      access_token:     THREADS_ACCESS_TOKEN
+    });
 
-    const child = await threadsPost(
-      `${THREADS_USER_ID}/threads`,
-      {
-        media_type: "IMAGE",
-        image_url: imageUrl,
-        is_carousel_item: true,
-        access_token: THREADS_ACCESS_TOKEN
-      }
-    );
-
-    if (!child.id) {
-      throw new Error(
-        `No se recibió id del item del carrusel para ${imageUrl}`
-      );
-    }
-
-    console.log(
-      `Slide de carrusel creado: ${child.id}`
-    );
-
-    // ESPERAR FINISHED DEL CHILD
-    await waitUntilContainerReady(
-      child.id,
-      "carousel child"
-    );
+    if (!child.id) throw new Error(`No se recibió id del item del carrusel para ${imageUrl}`);
 
     childIds.push(child.id);
-
-    console.log(
-      `Slide listo para carrusel: ${child.id}`
-    );
+    logger.info("Slide de carrusel creado", { containerId: child.id, imageUrl });
   }
 
-  console.log(
-    "Todos los children listos:",
-    childIds
-  );
+  const parent = await threadsPost(`${THREADS_USER_ID}/threads`, {
+    media_type:   "CAROUSEL",
+    children:     childIds.join(","),
+    text:         safeCaption,
+    access_token: THREADS_ACCESS_TOKEN
+  });
 
-  // Crear contenedor padre
-  const parent = await threadsPost(
-    `${THREADS_USER_ID}/threads`,
-    {
-      media_type: "CAROUSEL",
-      children: childIds.join(","),
-      text: safeCaption,
-      access_token: THREADS_ACCESS_TOKEN
-    }
-  );
+  if (!parent.id) throw new Error("No se recibió id del contenedor padre del carrusel de Threads.");
 
-  if (!parent.id) {
-    throw new Error(
-      "No se recibió id del contenedor padre del carrusel de Threads."
-    );
-  }
+  await waitUntilContainerReady(parent.id);
 
-  console.log(
-    `Contenedor padre creado: ${parent.id}`
-  );
+  const published = await threadsPost(`${THREADS_USER_ID}/threads_publish`, {
+    creation_id:  parent.id,
+    access_token: THREADS_ACCESS_TOKEN
+  });
 
-  // Delay defensivo para Threads
-  console.log(
-    `Esperando ${PARENT_READY_DELAY_MS}ms ` +
-    `para sincronización de children...`
-  );
+  if (!published.id) throw new Error("No se recibió id del carrusel publicado en Threads.");
 
-  await sleep(PARENT_READY_DELAY_MS);
+  logger.info("Carrusel publicado en Threads", { mediaId: published.id, childIds });
 
-  // Esperar FINISHED del parent
-  await waitUntilContainerReady(
-    parent.id,
-    "carousel parent"
-  );
-
-  // Publicar carrusel
-  const published = await threadsPost(
-    `${THREADS_USER_ID}/threads_publish`,
-    {
-      creation_id: parent.id,
-      access_token: THREADS_ACCESS_TOKEN
-    }
-  );
-
-  if (!published.id) {
-    throw new Error(
-      "No se recibió id del carrusel publicado en Threads."
-    );
-  }
-
-  console.log(
-    "Carrusel publicado en Threads:",
-    published.id
-  );
-
-  return {
-    containerId: parent.id,
-    mediaId: published.id,
-    childIds
-  };
+  return { containerId: parent.id, mediaId: published.id, childIds };
 }
 
 module.exports = {

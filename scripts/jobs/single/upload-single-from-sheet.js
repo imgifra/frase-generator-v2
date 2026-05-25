@@ -40,7 +40,7 @@ function findNextUploadRow(rows, headerMap, targetRowNumber) {
       postTipo === POST_TIPOS.SINGLE &&
       estadoRender === STATUS.DONE &&
       (estadoUpload === STATUS.PENDING || estadoUpload === STATUS.ERROR) &&
-      (lockStatus === LOCK_STATUS.FREE || lockStatus === LOCK_STATUS.LOCKED) &&
+      lockStatus === LOCK_STATUS.FREE &&   // FIX: solo FREE es elegible; LOCKED significa que otro ciclo la está procesando
       intentos < MAX_INTENTOS;
 
     if (isEligible) {

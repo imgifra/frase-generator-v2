@@ -44,24 +44,38 @@ async function graphGet(path, query = {}) {
   }
 
   if (!res.ok || data?.error) {
-    const err = data?.error;
-    const msg = err
-      ? `${err.message} (code=${err.code}, subcode=${err.error_subcode})`
-      : `Graph API ${res.status}: ${rawText}`;
-    throw new Error(msg);
+    const message = buildGraphErrorMessage(res, data, rawText);
+    const error = new Error(message);
+    error.status = res.status;
+    error.responseBody = rawText;
+    error.graphError = data?.error || null;
+    throw error;
   }
 
   return data;
 }
 
+/**
+ * Hace un POST a la Graph API usando form-urlencoded.
+ *
+ * Soporta valores array: si un valor es un array, cada elemento se agrega
+ * como una entrada separada con la misma clave — necesario para campos como
+ * attached_media[0], attached_media[1], etc. en carruseles de Facebook.
+ */
 async function graphPost(path, body) {
   const url = buildGraphUrl(path);
 
   const form = new URLSearchParams();
+
   for (const [key, value] of Object.entries(body)) {
-    if (value !== undefined && value !== null) {
-      form.append(key, String(value));
+    if (value === undefined || value === null) continue;
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => form.append(key, String(item)));
+      continue;
     }
+
+    form.append(key, String(value));
   }
 
   const res = await fetch(url, {
@@ -80,15 +94,11 @@ async function graphPost(path, body) {
   }
 
   if (!res.ok || data?.error) {
-    const err = data?.error;
-    const msg = err
-      ? `${err.message} (code=${err.code}, subcode=${err.error_subcode})`
-      : `Graph API ${res.status}: ${rawText}`;
-
-    const error = new Error(msg);
+    const message = buildGraphErrorMessage(res, data, rawText);
+    const error = new Error(message);
     error.status = res.status;
     error.responseBody = rawText;
-    error.graphError = err || null;
+    error.graphError = data?.error || null;
     throw error;
   }
 
