@@ -157,6 +157,7 @@ async function main() {
       }
     };
 
+    add("row_id", `${Date.now()}_${i}`);  // ID único estable — inmune a reordenamientos del sheet
     add("frase_original", frase);
     add("frase_corregida", frase);
     add("post_tipo", tipo);

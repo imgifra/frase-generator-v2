@@ -136,6 +136,26 @@
     <button class="btn-ghost" id="btn-guardar"  onclick="publicar(true)">Guardar en sheet</button>
   </div>
   <p id="status"></p>
+
+<hr class="divider" style="margin-top: 60px;">
+
+<p class="eyebrow" style="margin-bottom: 16px;">Republicar post</p>
+<p style="font-size: 12px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.6;">
+  ¿Falló el publish pero el render y upload están bien?<br>
+  Pegá el <code>row_id</code> (single) o <code>carousel_id</code> (carousel) y se salta render y upload.
+</p>
+
+<div class="field">
+  <span class="field-label">ID a republicar</span>
+  <input class="field-input" type="text" id="publish-only-id" placeholder="1779703200412 · o carousel_id">
+</div>
+
+<div class="btns" style="margin-top: 24px;">
+  <button class="btn-main" id="btn-republish" onclick="republicar()">Republicar ahora</button>
+</div>
+<p id="status-republish"></p>
+
+
 </div>
 
 <script>
@@ -778,6 +798,49 @@ async function publicar(soloSheet) {
     setStatus(`Error: ${err.message}`, "error");
   } finally {
     bp.disabled = false; bg.disabled = false;
+  }
+}
+
+
+function setStatusRepublish(msg, cls) {
+  const el = document.getElementById("status-republish");
+  el.textContent = msg; el.className = cls;
+}
+
+async function republicar() {
+  const token = document.getElementById("token").value.trim();
+  const id    = document.getElementById("publish-only-id").value.trim();
+  const btn   = document.getElementById("btn-republish");
+
+  setStatusRepublish("", "");
+  if (!token) { setStatusRepublish("Falta el token de GitHub.", "error"); return; }
+  if (!id)    { setStatusRepublish("Falta el ID a republicar.", "error"); return; }
+
+  // Detectar tipo: si tiene guión en el medio probablemente es carousel_id
+  // (ej: "1779703200412_carousel"), sino single. El pipeline lo detecta solo con tipo=auto.
+  btn.disabled = true;
+  setStatusRepublish("Enviando...", "");
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+      {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: "main", inputs: { publish_only: id, tipo: "auto", frases: "", caption: "", color: "", solo_registrar: "false", reintentar: "false" } })
+      }
+    );
+    if (res.status === 204) {
+      setStatusRepublish("Enviado. En 1–2 minutos debería llegar la notificación de Telegram.", "ok");
+      document.getElementById("publish-only-id").value = "";
+    } else {
+      const data = await res.json();
+      setStatusRepublish(`Error: ${data.message}`, "error");
+    }
+  } catch (err) {
+    setStatusRepublish(`Error: ${err.message}`, "error");
+  } finally {
+    btn.disabled = false;
   }
 }
 

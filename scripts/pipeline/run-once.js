@@ -74,20 +74,186 @@ async function runAuto({ cycleId, branch, targetCarouselId }) {
   };
 }
 
+/**
+ * Modo publish-only: saltea render y upload, va directo a publish.
+ * Usa TARGET_ROW_NUMBER (single) o TARGET_CAROUSEL_ID (carousel) para apuntar
+ * a la fila exacta. El publish-from-sheet ya tiene la lógica de skip si la
+ * plataforma ya estaba publicada, así que es idempotente.
+ */
+async function runPublishOnly({ cycleId, tipo, publishOnlyId }) {
+  const log = logger.child({ cycleId, mode: "publish-only", tipo, publishOnlyId });
+
+  log.info("Modo publish-only iniciado — se omite render y upload");
+
+  // Para single: el ID es el row_id del sheet, que publish-single-from-sheet
+  // no usa directamente para seleccionar (usa TARGET_ROW_NUMBER). Buscamos la
+  // fila por row_id y pasamos el número de fila como env.
+  // Para carousel: el ID es el carousel_id, que ya acepta TARGET_CAROUSEL_ID.
+  //
+  // publish-only fuerza el estado a pending para que el script lo tome,
+  // incluso si tiene estado_publish = error y ya agotó los intentos.
+  // Reseteamos intentos a 0 para darle una chance limpia.
+
+  const {
+    getSheetsClient,
+    buildHeaderMap,
+    getCellValue,
+    readRows,
+    updateCellsBatch
+  } = require("../core/sheets");
+  const { STATUS, GENERAL_STATUS, LOCK_STATUS, POST_TIPOS } = require("../core/status");
+  const { runStep } = require("../utils/pipeline-utils");
+
+  const sheets    = await getSheetsClient();
+  const rows      = await readRows(sheets);
+  const headers   = rows[0];
+  const headerMap = buildHeaderMap(headers);
+
+  // Detectar tipo si es "auto": buscar la fila por row_id o carousel_id
+  let resolvedTipo = tipo;
+  let targetRowNumber = null;
+  let targetCarouselId = null;
+
+  if (resolvedTipo === "auto" || resolvedTipo === "single") {
+    // Buscar por row_id
+    for (let i = 1; i < rows.length; i++) {
+      const rowId = getCellValue(rows[i], headerMap, "row_id");
+      if (rowId === publishOnlyId) {
+        targetRowNumber = i + 1;
+        resolvedTipo = "single";
+        break;
+      }
+    }
+  }
+
+  if (!targetRowNumber && (resolvedTipo === "auto" || resolvedTipo === "carousel")) {
+    // Buscar por carousel_id
+    for (let i = 1; i < rows.length; i++) {
+      const carouselId = getCellValue(rows[i], headerMap, "carousel_id");
+      if (carouselId === publishOnlyId) {
+        targetCarouselId = publishOnlyId;
+        resolvedTipo = "carousel";
+        break;
+      }
+    }
+  }
+
+  if (!targetRowNumber && !targetCarouselId) {
+    log.error("No se encontró ninguna fila con ese row_id o carousel_id", { publishOnlyId });
+    return { ok: false, processed: false, failedStep: "publish-only-not-found" };
+  }
+
+  log.info("Fila(s) encontrada(s)", { resolvedTipo, targetRowNumber, targetCarouselId });
+
+  // Resetear estado para que el publish-script la tome:
+  // - estado_publish → pending
+  // - intentos → 0
+  // - lock_status → free
+  // - estado_general → pending
+  const resetTs = new Date().toISOString();
+
+  if (resolvedTipo === "single" && targetRowNumber) {
+    await updateCellsBatch(sheets, [
+      { row: targetRowNumber, col: headerMap["estado_publish"]  + 1, value: STATUS.PENDING },
+      { row: targetRowNumber, col: headerMap["estado_general"]  + 1, value: GENERAL_STATUS.PENDING },
+      { row: targetRowNumber, col: headerMap["lock_status"]     + 1, value: LOCK_STATUS.FREE },
+      { row: targetRowNumber, col: headerMap["intentos"]        + 1, value: "0" },
+      { row: targetRowNumber, col: headerMap["updated_at"]      + 1, value: resetTs },
+      { row: targetRowNumber, col: headerMap["error_step"]      + 1, value: "" },
+      { row: targetRowNumber, col: headerMap["error_message"]   + 1, value: "" }
+    ]);
+  } else if (resolvedTipo === "carousel" && targetCarouselId) {
+    // Resetear todas las filas del carrusel
+    const groupRows = [];
+    for (let i = 1; i < rows.length; i++) {
+      const cid = getCellValue(rows[i], headerMap, "carousel_id");
+      if (cid === targetCarouselId) groupRows.push(i + 1);
+    }
+    await updateCellsBatch(sheets, groupRows.flatMap((rowNum) => [
+      { row: rowNum, col: headerMap["estado_publish"]  + 1, value: STATUS.PENDING },
+      { row: rowNum, col: headerMap["estado_general"]  + 1, value: GENERAL_STATUS.PENDING },
+      { row: rowNum, col: headerMap["lock_status"]     + 1, value: LOCK_STATUS.FREE },
+      { row: rowNum, col: headerMap["intentos"]        + 1, value: "0" },
+      { row: rowNum, col: headerMap["updated_at"]      + 1, value: resetTs },
+      { row: rowNum, col: headerMap["error_step"]      + 1, value: "" },
+      { row: rowNum, col: headerMap["error_message"]   + 1, value: "" }
+    ]));
+  }
+
+  // Llamar al publish script directamente, con la fila ya apuntada
+  const publishScript = resolvedTipo === "carousel"
+    ? "scripts/jobs/carousel/publish-carousel-from-sheet.js"
+    : "scripts/jobs/single/publish-single-from-sheet.js";
+
+  const stepContext = {
+    cycleId,
+    ...(targetRowNumber  ? { targetRowNumber:  String(targetRowNumber) } : {}),
+    ...(targetCarouselId ? { targetCarouselId: targetCarouselId        } : {})
+  };
+
+  const result = runStep("PUBLISH ONLY", publishScript, stepContext);
+
+  if (!result.ok) {
+    log.error("publish-only falló", { publishOnlyId, resolvedTipo });
+    return { ok: false, processed: false, failedStep: `${resolvedTipo}-publish-only`, tipo: resolvedTipo };
+  }
+
+  log.info("publish-only completado", { publishOnlyId, resolvedTipo });
+  return { ok: true, processed: true, tipo: resolvedTipo };
+}
+
 async function main() {
-  const startMs = Date.now();
-  const cycleId = `${Date.now()}`;
-  const isFormMode = process.env.FORM_MODE === "true";
-  const branch = isFormMode ? "form" : "scheduled";
+  const startMs  = Date.now();
+  const cycleId  = `${Date.now()}`;
+  const isFormMode     = process.env.FORM_MODE === "true";
+  const isPublishOnly  = process.env.PUBLISH_ONLY === "true";
+  const publishOnlyId  = (process.env.PUBLISH_ONLY_ID || "").trim();
+  const branch         = isFormMode ? "form" : "scheduled";
   const targetCarouselId = process.env.TARGET_CAROUSEL_ID || "";
   const tipo = getTipoInput();
 
   logger.info("Ejecutando pipeline una sola vez", {
     cycleId,
-    mode: branch,
+    mode: isPublishOnly ? "publish-only" : branch,
     tipo,
-    targetCarouselId
+    targetCarouselId,
+    publishOnlyId: publishOnlyId || undefined
   });
+
+  // ── Modo publish-only ──────────────────────────────────────────────────────
+  if (isPublishOnly) {
+    if (!publishOnlyId) {
+      logger.error("PUBLISH_ONLY=true pero PUBLISH_ONLY_ID está vacío");
+      process.exit(1);
+    }
+
+    let result;
+    try {
+      result = await runPublishOnly({ cycleId, tipo, publishOnlyId });
+    } catch (err) {
+      await notifyFatal({ cycleId, errorMessage: err.message || String(err) });
+      logger.error("Error fatal en publish-only", {}, err);
+      process.exit(1);
+    }
+
+    const durationMs  = Date.now() - startMs;
+    const tipoFinal   = result.tipo || tipo;
+
+    if (!result.ok) {
+      await notifyError({
+        tipo:       tipoFinal,
+        cycleId,
+        failedStep: result.failedStep || "publish-only",
+        durationMs
+      });
+      process.exit(1);
+    }
+
+    await notifySuccess({ tipo: tipoFinal, cycleId, branch: "form", durationMs });
+    return;
+  }
+
+  // ── Flujo normal ───────────────────────────────────────────────────────────
 
   // Liberar locks stale de ciclos anteriores y notificar si hubo
   const staleReleased = await releaseStaleLocks({ cycleId });
@@ -130,24 +296,29 @@ async function main() {
       durationMs
     });
   } else {
-    // Solo notificar "sin pendientes" en modo scheduled para no spamear
-    // cuando el formulario simplemente registra sin publicar
-    if (branch === "scheduled") {
+    // Solo notificar "sin pendientes" en modo scheduled para no spamear en formulario
+    if (!isFormMode) {
       await notifyNoPending({ cycleId, branch });
     }
   }
 
-  logger.info("Pipeline completado", result);
-  process.exit(0);
+  logger.info("Pipeline completado", { ok: true, processed: result.processed, cycleId, durationMs });
 }
 
-main().catch(async (error) => {
-  logger.error("Error fatal", {}, error);
+process.on("uncaughtException", async (err) => {
+  const cycleId = `${Date.now()}`;
+  logger.error("Error fatal no capturado", {}, err);
+  try {
+    await notifyFatal({ cycleId, errorMessage: err.message || String(err) });
+  } catch (_) { /* si telegram también falla, no bloqueamos */ }
+  process.exit(1);
+});
 
-  await notifyFatal({
-    cycleId:      `${Date.now()}`,
-    errorMessage: error.message
-  });
-
+main().catch(async (err) => {
+  const cycleId = `${Date.now()}`;
+  logger.error("Error en main de run-once", {}, err);
+  try {
+    await notifyFatal({ cycleId, errorMessage: err.message || String(err) });
+  } catch (_) { /* ignorar */ }
   process.exit(1);
 });

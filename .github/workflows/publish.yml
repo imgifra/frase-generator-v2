@@ -31,6 +31,10 @@ on:
         description: 'Color de fondo hex (vacío = aleatorio)'
         required: false
         default: ''
+      publish_only:
+        description: 'Republicar sin re-renderizar. Pasar row_id (single) o carousel_id (carousel)'
+        required: false
+        default: ''
 
 concurrency:
   group: publish-posts
@@ -102,8 +106,16 @@ jobs:
           TIPO_INPUT: ${{ inputs.tipo }}
         run: node scripts/pipeline/run-once.js
 
+      - name: Run publish-only
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_only != '' && inputs.frases == '' }}
+        env:
+          PUBLISH_ONLY: "true"
+          PUBLISH_ONLY_ID: ${{ inputs.publish_only }}
+          TIPO_INPUT: ${{ inputs.tipo }}
+        run: node scripts/pipeline/run-once.js
+
       - name: Run pipeline reintentar
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.reintentar == 'true' && inputs.frases == '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.reintentar == 'true' && inputs.frases == '' && inputs.publish_only == '' }}
         env:
           TIPO_INPUT: ${{ inputs.tipo }}
         run: node scripts/pipeline/run-once.js

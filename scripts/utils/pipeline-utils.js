@@ -43,7 +43,8 @@ function buildStepEnv(context = {}) {
     PIPELINE_CYCLE_ID:   context.cycleId          || process.env.PIPELINE_CYCLE_ID   || "",
     PIPELINE_SLOT_KEY:   context.slotKey           || process.env.PIPELINE_SLOT_KEY   || "",
     PIPELINE_BRANCH:     context.branch            || process.env.PIPELINE_BRANCH     || "",
-    TARGET_CAROUSEL_ID:  context.targetCarouselId  || process.env.TARGET_CAROUSEL_ID  || ""
+    TARGET_CAROUSEL_ID:  context.targetCarouselId  || process.env.TARGET_CAROUSEL_ID  || "",
+    TARGET_ROW_NUMBER:   context.targetRowNumber   || process.env.TARGET_ROW_NUMBER   || ""
   };
 }
 
