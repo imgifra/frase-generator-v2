@@ -20,25 +20,23 @@ const {
 } = require("../../core/status");
 const { getRecentUsedBgs, getRandomColorAvoidingSimilar } = require("../../utils/render-utils");
 
-function findNextRenderRow(rows, headerMap, targetRowNumber) {
+function findNextSingleRowForRender(rows, headerMap, targetRowNumber) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const currentRowNumber = i + 1;
 
-    if (targetRowNumber && currentRowNumber !== targetRowNumber) continue;
+    if (targetRowNumber && currentRowNumber !== targetRowNumber) {
+      continue;
+    }
 
-    const postTipo      = getCellValue(row, headerMap, "post_tipo").toLowerCase();
-    const estadoRender  = getCellValue(row, headerMap, "estado_render").toLowerCase();
-    const estadoUpload  = getCellValue(row, headerMap, "estado_upload").toLowerCase();
-    const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
-    const lockStatus    = getCellValue(row, headerMap, "lock_status").toLowerCase();
-    const intentos      = Number(getCellValue(row, headerMap, "intentos") || 0);
+    const postTipo    = getCellValue(row, headerMap, "post_tipo").toLowerCase();
+    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
+    const lockStatus  = getCellValue(row, headerMap, "lock_status").toLowerCase();
+    const intentos    = Number(getCellValue(row, headerMap, "intentos") || 0);
 
     const isEligible =
       postTipo === POST_TIPOS.SINGLE &&
       (estadoRender === STATUS.PENDING || estadoRender === STATUS.ERROR) &&
-      estadoUpload === STATUS.PENDING &&
-      estadoPublish === STATUS.PENDING &&
       lockStatus === LOCK_STATUS.FREE &&
       intentos < MAX_INTENTOS;
 
@@ -53,7 +51,24 @@ function findNextRenderRow(rows, headerMap, targetRowNumber) {
   return null;
 }
 
-async function markSingleAsProcessing({ sheets, headerMap, rowNumber, cycleId }) {
+function getBgForRow(row, rows, headerMap) {
+  const existingBg = getCellValue(row, headerMap, "background_color");
+
+  if (existingBg) {
+    return existingBg;
+  }
+
+  const recentUsedBgs = getRecentUsedBgs(rows, headerMap, 6);
+
+  return getRandomColorAvoidingSimilar(recentUsedBgs);
+}
+
+async function markRowAsProcessing({
+  sheets,
+  headerMap,
+  rowNumber,
+  cycleId
+}) {
   const lockTs = nowIsoLocal();
 
   await updateCellsBatch(sheets, [
@@ -67,7 +82,13 @@ async function markSingleAsProcessing({ sheets, headerMap, rowNumber, cycleId })
   ]);
 }
 
-async function markSingleAsRendered({ sheets, headerMap, rowNumber, bg, fileName }) {
+async function markRowAsRendered({
+  sheets,
+  headerMap,
+  rowNumber,
+  bg,
+  fileName
+}) {
   const doneTs = nowIsoLocal();
 
   await updateCellsBatch(sheets, [
@@ -75,14 +96,23 @@ async function markSingleAsRendered({ sheets, headerMap, rowNumber, bg, fileName
     { row: rowNumber, col: headerMap["output_file"]      + 1, value: fileName },
     { row: rowNumber, col: headerMap["fecha_generado"]   + 1, value: doneTs },
     { row: rowNumber, col: headerMap["estado_render"]    + 1, value: STATUS.DONE },
-    { row: rowNumber, col: headerMap["lock_status"]      + 1, value: LOCK_STATUS.FREE },
-    { row: rowNumber, col: headerMap["updated_at"]       + 1, value: doneTs },
-    { row: rowNumber, col: headerMap["error_step"]       + 1, value: "" },
-    { row: rowNumber, col: headerMap["error_message"]    + 1, value: "" }
+
+    // Después del render exitoso liberamos la fila para que upload-single pueda tomarla.
+    { row: rowNumber, col: headerMap["lock_status"]   + 1, value: LOCK_STATUS.FREE },
+
+    { row: rowNumber, col: headerMap["updated_at"]    + 1, value: doneTs },
+    { row: rowNumber, col: headerMap["error_step"]    + 1, value: "" },
+    { row: rowNumber, col: headerMap["error_message"] + 1, value: "" }
   ]);
 }
 
-async function markSingleAsError({ sheets, headerMap, rowNumber, currentAttempts, error, cycleId }) {
+async function markRowAsRenderError({
+  sheets,
+  headerMap,
+  rowNumber,
+  currentAttempts,
+  error
+}) {
   const errorTs = nowIsoLocal();
 
   await updateCellsBatch(sheets, [
@@ -90,7 +120,6 @@ async function markSingleAsError({ sheets, headerMap, rowNumber, currentAttempts
     { row: rowNumber, col: headerMap["estado_render"]  + 1, value: STATUS.ERROR },
     { row: rowNumber, col: headerMap["lock_status"]    + 1, value: LOCK_STATUS.FREE },
     { row: rowNumber, col: headerMap["intentos"]       + 1, value: currentAttempts + 1 },
-    { row: rowNumber, col: headerMap["last_cycle_id"]  + 1, value: cycleId },
     { row: rowNumber, col: headerMap["error_step"]     + 1, value: "render" },
     { row: rowNumber, col: headerMap["error_message"]  + 1, value: error.message || String(error) },
     { row: rowNumber, col: headerMap["updated_at"]     + 1, value: errorTs }
@@ -99,6 +128,7 @@ async function markSingleAsError({ sheets, headerMap, rowNumber, currentAttempts
 
 async function main() {
   const cycleId = process.env.PIPELINE_CYCLE_ID || "";
+
   const targetRowNumber = process.env.TARGET_ROW_NUMBER
     ? Number(process.env.TARGET_ROW_NUMBER)
     : null;
@@ -109,19 +139,18 @@ async function main() {
   });
 
   const sheets = await getSheetsClient();
-  const rows   = await readRows(sheets);
+  const rows = await readRows(sheets);
 
   if (rows.length < 2) {
     log.info("No hay datos en la hoja");
     return;
   }
 
-  const headers   = rows[0];
+  const headers = rows[0];
   const headerMap = buildHeaderMap(headers);
 
   const requiredHeaders = [
     "row_id",
-    "updated_at",
     "frase_original",
     "frase_corregida",
     "modo",
@@ -137,12 +166,14 @@ async function main() {
     "error_message",
     "output_file",
     "fecha_generado",
-    "post_tipo"
+    "fecha_publicado",
+    "post_tipo",
+    "updated_at"
   ];
 
   requireHeaders(headerMap, requiredHeaders);
 
-  const selectedRow = findNextRenderRow(rows, headerMap, targetRowNumber);
+  const selectedRow = findNextSingleRowForRender(rows, headerMap, targetRowNumber);
 
   if (!selectedRow) {
     log.info("No hay singles pendientes para render");
@@ -156,69 +187,46 @@ async function main() {
   const fraseOriginal  = getCellValue(row, headerMap, "frase_original");
   const fraseCorregida = getCellValue(row, headerMap, "frase_corregida");
   const mode           = getCellValue(row, headerMap, "modo") || "retro3d";
-  const sheetBg        = getCellValue(row, headerMap, "background_color");
+  const textToRender   = fraseCorregida || fraseOriginal;
   const currentAttempts = Number(getCellValue(row, headerMap, "intentos") || 0);
 
-  const textToRender = fraseCorregida || fraseOriginal;
+  const rowLogger = log.child({ rowNumber, rowId, mode });
 
-  if (!textToRender) {
-    throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);
-  }
-
-  const recentUsedBgs = getRecentUsedBgs(rows, headerMap, 6);
-  const bg = sheetBg ? sheetBg : getRandomColorAvoidingSimilar(recentUsedBgs);
-
-  const rowLogger = log.child({
-    rowNumber,
-    rowId,
-    mode
-  });
+  const bg = getBgForRow(row, rows, headerMap);
 
   try {
-    await markSingleAsProcessing({
-      sheets,
-      headerMap,
-      rowNumber,
-      cycleId
-    });
+    if (!textToRender) {
+      throw new Error(`La fila ${rowNumber} no tiene frase para renderizar.`);
+    }
 
-    rowLogger.info("Renderizando single", {
+    rowLogger.info("Fila seleccionada para render", {
       textLength: textToRender.length,
-      backgroundColor: bg
+      selectedBg: bg
     });
 
-    const result = await renderPhrase({
-      text: textToRender,
-      mode,
+    await markRowAsProcessing({ sheets, headerMap, rowNumber, cycleId });
+
+    const result = await renderPhrase({ text: textToRender, mode, bg });
+
+    await markRowAsRendered({ sheets, headerMap, rowNumber, bg, fileName: result.fileName });
+
+    rowLogger.info("Fila renderizada correctamente", {
+      outputFile: result.fileName,
       bg
     });
-
-    await markSingleAsRendered({
-      sheets,
-      headerMap,
-      rowNumber,
-      bg,
-      fileName: result.fileName
-    });
-
-    rowLogger.info("Single renderizado correctamente", {
-      outputFile: result.fileName
-    });
   } catch (error) {
-    await markSingleAsError({
-      sheets,
-      headerMap,
-      rowNumber,
-      currentAttempts,
-      error,
-      cycleId
-    });
+    await markRowAsRenderError({ sheets, headerMap, rowNumber, currentAttempts, error });
 
-    rowLogger.error("Error renderizando single", {}, error);
+    rowLogger.error("Error renderizando fila", {}, error);
+
     throw error;
   }
 }
 
+// FIX: usar finally para garantizar que stopServer() siempre se llama,
+// incluso si main() resuelve correctamente pero stopServer() lanza.
+// El patrón anterior (.then + .catch separados) dejaba stopServer() sin
+// try/catch en el camino feliz, lo que producía unhandled rejections.
 main()
   .catch((err) => {
     logger.error("Error en render-single-from-sheet", {}, err);
@@ -230,6 +238,5 @@ main()
     } catch (stopError) {
       logger.warn("No se pudo cerrar el servidor de render", {}, stopError);
     }
-
     process.exit(process.exitCode ?? 0);
   });
