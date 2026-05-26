@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: archivo-x-curator
+    env: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm run start:archivo-x
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: NODE_ENV
+        value: production
+      - key: SHEET_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT
+        sync: false
+      - key: CURATOR_TOKEN
+        sync: false

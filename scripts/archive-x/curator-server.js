@@ -12,7 +12,8 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const SHEET_ID = process.env.SHEET_ID;
 const WORKSHEET_NAME = process.env.SAVED_TWEETS_WORKSHEET_NAME || "archivo_x";
 const WORKSHEET_RANGE = "A:L";
-const PORT = Number(process.env.CURATOR_PORT || 5177);
+const PORT = Number(process.env.PORT || process.env.CURATOR_PORT || 5177);
+const HOST = process.env.CURATOR_HOST || process.env.HOST || "127.0.0.1";
 const CURATOR_TOKEN = process.env.CURATOR_TOKEN;
 
 /**
@@ -399,8 +400,13 @@ async function main() {
     res.status(500).json({ error: err.message || String(err) });
   });
 
-  app.listen(PORT, () => {
+  app.listen(PORT, HOST, () => {
     console.log(`Curador archivo_x: http://localhost:${PORT}`);
+    if (HOST === "0.0.0.0") {
+      console.log(`Red local: http://TU-IP-LOCAL:${PORT}`);
+    } else {
+      console.log(`Host: ${HOST}`);
+    }
     console.log(`Pestaña: ${WORKSHEET_NAME}`);
     console.log("Flujo: Curaduría 100% manual");
     console.log("Decisiones editoriales: pendiente, aprobada, descartada");

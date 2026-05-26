@@ -20,7 +20,8 @@
     "analyze:phrases-offline": "node scripts/jobs/inspiration/curate-saved-tweets.js",
     "curate:saved-tweets": "node scripts/jobs/inspiration/curate-saved-tweets.js",
     "import:saved-tweets": "node scripts/archive-x/import-saved-tweets-to-sheet.js",
-    "curate:archivo-x": "node scripts/archive-x/curator-server.js"
+    "curate:archivo-x": "node scripts/archive-x/curator-server.js",
+    "start:archivo-x": "node scripts/archive-x/curator-server.js"
   },
   "repository": {
     "type": "git",

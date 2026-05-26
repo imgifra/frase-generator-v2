@@ -657,7 +657,8 @@
       selectedTemporalidad: "atemporal",
       selectedDecision: "pendiente",   // "pendiente" | "aprobada" | "descartada"
       saving: false,
-      worksheet: ""
+      worksheet: "",
+      token: ""
     };
 
     const els = {
@@ -691,6 +692,30 @@
     function setStatus(message) {
       const line = document.getElementById("statusLine");
       if (line) line.textContent = message || "";
+    }
+
+    function initToken() {
+      const params = new URLSearchParams(window.location.search);
+      const token = clean(params.get("token"));
+
+      if (token) {
+        localStorage.setItem("archive-x-token", token);
+        state.token = token;
+        params.delete("token");
+        const nextQuery = params.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+        window.history.replaceState({}, "", nextUrl);
+        return;
+      }
+
+      state.token = clean(localStorage.getItem("archive-x-token"));
+    }
+
+    function apiHeaders(extra = {}) {
+      return {
+        ...extra,
+        ...(state.token ? { "X-Curator-Token": state.token } : {})
+      };
     }
 
     // ─── stats ─────────────────────────────────────────────────────────────────
@@ -808,7 +833,7 @@
       state.selectedDecision = clean(item.decision_editorial).toLowerCase() || "pendiente";
 
       const phrase      = clean(item.frase_original);
-      const finalPhrase = clean(item.frase_final);
+      const finalPhrase = clean(item.frase_final) || phrase;
       const notes       = clean(item.notas);
       const temporada   = clean(item.temporada);
       const temporalidad = state.selectedTemporalidad;
@@ -989,7 +1014,7 @@
       try {
         const res = await fetch(`/api/phrases/${item.rowNumber}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: apiHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload)
         });
 
@@ -1065,7 +1090,9 @@
     async function load() {
       els.phrasePanel.innerHTML = '<div class="empty">Cargando frases...</div>';
 
-      const res = await fetch("/api/phrases");
+      const res = await fetch("/api/phrases", {
+        headers: apiHeaders()
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo cargar archivo_x");
 
@@ -1091,6 +1118,7 @@
     els.reloadBtn.addEventListener("click",     () => load().catch(showFatal));
 
     initTheme();
+    initToken();
     load().catch(showFatal);
   </script>
 </body>
