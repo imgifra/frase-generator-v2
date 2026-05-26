@@ -87,6 +87,7 @@ npm run upload:single
 npm run upload:carousel
 npm run publish:single
 npm run publish:carousel
+npm run build:carousel-plan  # genera output/carousel-plan.json y actualiza "plan_carruseles"
 
 # Desarrollo
 npm run render                               # preview rápido de una frase
@@ -102,7 +103,31 @@ npm run doctor:sheet  # audita columnas y estados del Google Sheet
 
 # Inspiración viral
 npm run fetch:inspiration  # llena la pestaña "inspiracion" con candidatos para revisar
+npm run curate:saved-tweets -- archivo.txt  # filtra un archivo local de tweets guardados y genera CSV
+npm run import:saved-tweets  # importa data/tweets-guardados-x.txt a la pestaña "archivo_x"
+npm run curate:archivo-x     # abre una interfaz local para clasificar archivo_x
 ```
+
+### Flujo editorial de X
+
+En `archivo_x`, empieza filtrando por estas columnas:
+
+| Columna | Uso |
+|---|---|
+| `sirve` | Decisión rápida: `si`, `reescribir`, `revisar`, `fecha` o `no` |
+| `estado` | Flujo editorial: `pendiente`, `reescribir`, `listo`, `descartada` |
+| `prioridad` | Orden de revisión: `alta`, `media`, `baja`, `descartar` |
+| `grupo_carrusel` | Tema final para agrupar carruseles |
+| `frase_final` | Tu versión lista o reescrita |
+| `notas` | Observaciones para decidir después |
+
+`frase_original` es referencia. `calidad`, `riesgo`, `temporada` y `recomendacion_auto` son apoyo para filtrar, no columnas que tengas que editar primero.
+
+En `plan_carruseles`, revisa principalmente `usar`, `estado`, `revisar`, `grupo`, `orden`, `frase_final` y `notas`.
+
+Para clasificar más rápido, corre `npm run curate:archivo-x` y abre la URL local que imprime la terminal. La interfaz guarda directo en `archivo_x` y marca `clasificado_manual = si`; esas categorías manuales se conservan cuando vuelvas a importar el archivo de X.
+
+La lista vigente de grupos está en [`docs/taxonomia-grupos.md`](docs/taxonomia-grupos.md).
 
 ---
 
@@ -164,3 +189,7 @@ publicar.html          # formulario de publicación (GitHub Pages)
 | `INSPIRATION_MAX_TEXT_LENGTH` | Opcional: máximo de texto. Default: `150` caracteres |
 | `INSPIRATION_DRY_RUN` | Opcional: `true` prueba la búsqueda sin guardar filas |
 | `BLUESKY_IDENTIFIER` / `BLUESKY_APP_PASSWORD` | Opcional: fallback autenticado para Bluesky si el endpoint público devuelve 403 |
+| `SAVED_TWEETS_INPUT` | Opcional: archivo local para importar al Sheet. Default: `data/tweets-guardados-x.txt` |
+| `SAVED_TWEETS_WORKSHEET_NAME` | Opcional: pestaña destino para el archivo de X. Default: `archivo_x` |
+| `SAVED_TWEETS_IMPORT_MODE` | Opcional: `all`, `review` o `priority`. Default: `all`, para que `archivo_x` sea el archivo maestro filtrable |
+| `SAVED_TWEETS_DRY_RUN` | Opcional: `true` evalúa el archivo local sin guardar filas |

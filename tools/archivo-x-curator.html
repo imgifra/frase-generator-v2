@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Curador archivo_x</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f3ed;
+      --panel: #fffaf2;
+      --ink: #191714;
+      --muted: #6f665a;
+      --line: #ded4c4;
+      --accent: #0f766e;
+      --accent-soft: #d9f3ef;
+      --danger: #a52828;
+      --danger-soft: #f8dddd;
+      --gold: #a56a00;
+      --gold-soft: #faeccf;
+      --shadow: 0 12px 28px rgba(36, 28, 16, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+
+    .shell {
+      width: min(1420px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 20px 0 28px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 0 12px;
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 180px 230px 1fr 120px;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .field,
+    select,
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    select,
+    input {
+      min-height: 42px;
+      padding: 0 12px;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .phrase-panel {
+      min-height: 620px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .meta strong {
+      color: var(--ink);
+    }
+
+    .phrase {
+      padding: 26px 28px 16px;
+      font-size: clamp(28px, 4.2vw, 54px);
+      line-height: 1.05;
+      letter-spacing: 0;
+      min-height: 260px;
+      display: flex;
+      align-items: center;
+    }
+
+    .editor {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 16px 16px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    textarea {
+      min-height: 122px;
+      resize: vertical;
+      padding: 12px;
+      line-height: 1.35;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding: 14px 16px;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-height: 40px;
+      border-radius: 8px;
+      padding: 0 14px;
+      font-weight: 650;
+    }
+
+    .btn.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn.ghost {
+      background: transparent;
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .side {
+      display: grid;
+      gap: 16px;
+    }
+
+    .side-section {
+      padding: 14px;
+    }
+
+    .side-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .use-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .use-grid .btn.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: #07554f;
+    }
+
+    .use-grid .btn.no.active {
+      border-color: var(--danger);
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .group-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .group-btn {
+      min-height: 42px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.2;
+    }
+
+    .group-btn.active,
+    .group-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .group-btn span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .empty {
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      text-align: center;
+      padding: 28px;
+    }
+
+    .status-line {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      header,
+      .main,
+      .filters,
+      .editor {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        justify-content: flex-start;
+      }
+
+      .phrase {
+        min-height: 220px;
+        padding: 22px 20px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <h1>Curador de archivo_x</h1>
+        <div class="subtitle" id="worksheetLabel">Cargando archivo editorial</div>
+      </div>
+      <div class="stats" id="stats"></div>
+    </header>
+
+    <section class="filters">
+      <select id="filterSelect" aria-label="Filtro">
+        <option value="pending">Pendientes</option>
+        <option value="usable">Usables</option>
+        <option value="rewrite">Reescribir</option>
+        <option value="manual">Clasificadas</option>
+        <option value="rejected">Descartadas</option>
+        <option value="all">Todas</option>
+      </select>
+      <select id="groupFilter" aria-label="Grupo">
+        <option value="">Todos los grupos</option>
+      </select>
+      <input id="searchInput" type="search" placeholder="Buscar frase">
+      <button class="btn ghost" id="reloadBtn" type="button">Actualizar</button>
+    </section>
+
+    <main class="main">
+      <section class="panel phrase-panel" id="phrasePanel">
+        <div class="empty">Cargando frases...</div>
+      </section>
+
+      <aside class="side">
+        <section class="panel side-section">
+          <p class="side-title">Decisión</p>
+          <div class="use-grid" id="useGrid"></div>
+        </section>
+
+        <section class="panel side-section">
+          <p class="side-title">Grupo carrusel</p>
+          <div class="group-grid" id="groupGrid"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const useOptions = [
+      { value: "si", label: "Sirve" },
+      { value: "reescribir", label: "Reescribir" },
+      { value: "revisar", label: "Revisar" },
+      { value: "fecha", label: "Fecha" },
+      { value: "no", label: "No sirve" }
+    ];
+
+    const state = {
+      items: [],
+      filtered: [],
+      taxonomy: [],
+      index: 0,
+      selectedGroup: "",
+      selectedUse: "si",
+      saving: false,
+      worksheet: ""
+    };
+
+    const els = {
+      phrasePanel: document.getElementById("phrasePanel"),
+      stats: document.getElementById("stats"),
+      worksheetLabel: document.getElementById("worksheetLabel"),
+      filterSelect: document.getElementById("filterSelect"),
+      groupFilter: document.getElementById("groupFilter"),
+      searchInput: document.getElementById("searchInput"),
+      reloadBtn: document.getElementById("reloadBtn"),
+      useGrid: document.getElementById("useGrid"),
+      groupGrid: document.getElementById("groupGrid")
+    };
+
+    function clean(value) {
+      return String(value || "").trim();
+    }
+
+    function isManual(item) {
+      return clean(item.clasificado_manual).toLowerCase() === "si";
+    }
+
+    function statusFromUse(value) {
+      const map = {
+        si: "listo",
+        no: "descartada",
+        reescribir: "reescribir",
+        revisar: "revisar",
+        fecha: "fecha"
+      };
+      return map[value] || "pendiente";
+    }
+
+    function currentItem() {
+      return state.filtered[state.index] || null;
+    }
+
+    function getItemText(item) {
+      return clean(item.frase_final) || clean(item.frase_original);
+    }
+
+    function renderStats(summary) {
+      const total = summary?.total || state.items.length;
+      const manual = summary?.manual || state.items.filter(isManual).length;
+      const pending = summary?.pending || Math.max(0, total - manual);
+      const visible = state.filtered.length;
+
+      els.stats.innerHTML = [
+        ["Total", total],
+        ["Pendientes", pending],
+        ["Clasificadas", manual],
+        ["Vista", visible]
+      ].map(([label, value]) => `<span class="chip"><strong>${value}</strong>&nbsp;${label}</span>`).join("");
+    }
+
+    function renderUseButtons() {
+      els.useGrid.innerHTML = "";
+
+      for (const option of useOptions) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `btn ${option.value === "no" ? "no" : ""} ${state.selectedUse === option.value ? "active" : ""}`;
+        button.textContent = option.label;
+        button.disabled = state.saving;
+        button.addEventListener("click", () => {
+          state.selectedUse = option.value;
+          renderUseButtons();
+          if (option.value === "no") {
+            saveCurrent({ sirve: "no", estado: "descartada" }, true);
+          }
+        });
+        els.useGrid.appendChild(button);
+      }
+    }
+
+    function renderGroupButtons() {
+      els.groupGrid.innerHTML = "";
+
+      for (const group of state.taxonomy) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `group-btn ${state.selectedGroup === group.name ? "active" : ""}`;
+        button.title = group.hint || group.name;
+        button.disabled = state.saving;
+        button.innerHTML = `<strong>${group.name}</strong><span>${group.hint || ""}</span>`;
+        button.addEventListener("click", () => {
+          state.selectedGroup = group.name;
+          saveCurrent({ grupo_carrusel: group.name }, true);
+        });
+        els.groupGrid.appendChild(button);
+      }
+    }
+
+    function renderPhrase() {
+      const item = currentItem();
+
+      if (!item) {
+        els.phrasePanel.innerHTML = '<div class="empty">No hay frases en esta vista.</div>';
+        state.selectedGroup = "";
+        state.selectedUse = "si";
+        renderUseButtons();
+        renderGroupButtons();
+        renderStats();
+        return;
+      }
+
+      state.selectedGroup = clean(item.grupo_carrusel);
+      state.selectedUse = clean(item.sirve).toLowerCase() || "si";
+
+      const phrase = clean(item.frase_original);
+      const finalPhrase = clean(item.frase_final);
+      const notes = clean(item.notas);
+      const rowMeta = [
+        `Fila ${item.rowNumber}`,
+        item.sirve || "sin decisión",
+        item.estado || "sin estado",
+        item.recomendacion_auto || "",
+        item.calidad ? `calidad ${item.calidad}` : "",
+        item.riesgo ? `riesgo ${item.riesgo}` : ""
+      ].filter(Boolean);
+
+      els.phrasePanel.innerHTML = `
+        <div class="panel-head">
+          <div class="meta">${rowMeta.map(value => `<span class="chip">${value}</span>`).join("")}</div>
+          <div class="chip"><strong>${state.index + 1}</strong>&nbsp;/&nbsp;${state.filtered.length}</div>
+        </div>
+        <div class="phrase">${escapeHtml(phrase)}</div>
+        <div class="editor">
+          <label>
+            frase_final
+            <textarea id="finalPhrase">${escapeHtml(finalPhrase)}</textarea>
+          </label>
+          <label>
+            notas
+            <textarea id="notes">${escapeHtml(notes)}</textarea>
+          </label>
+        </div>
+        <div class="actions">
+          <div class="action-group">
+            <button class="btn ghost" id="prevBtn" type="button">Anterior</button>
+            <button class="btn ghost" id="nextBtn" type="button">Siguiente</button>
+          </div>
+          <div class="status-line" id="statusLine"></div>
+          <div class="action-group">
+            <button class="btn" id="saveBtn" type="button">Guardar</button>
+            <button class="btn primary" id="saveNextBtn" type="button">Guardar y siguiente</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("prevBtn").addEventListener("click", () => move(-1));
+      document.getElementById("nextBtn").addEventListener("click", () => move(1));
+      document.getElementById("saveBtn").addEventListener("click", () => saveCurrent({}, false));
+      document.getElementById("saveNextBtn").addEventListener("click", () => saveCurrent({}, true));
+
+      renderUseButtons();
+      renderGroupButtons();
+      renderStats();
+    }
+
+    function escapeHtml(value) {
+      return clean(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function setStatus(message) {
+      const line = document.getElementById("statusLine");
+      if (line) line.textContent = message || "";
+    }
+
+    function move(delta) {
+      if (!state.filtered.length) return;
+      state.index = Math.max(0, Math.min(state.filtered.length - 1, state.index + delta));
+      renderPhrase();
+    }
+
+    function applyFilters(keepCurrent = true) {
+      const previousRow = keepCurrent ? currentItem()?.rowNumber : null;
+      const filter = els.filterSelect.value;
+      const group = els.groupFilter.value;
+      const search = clean(els.searchInput.value).toLowerCase();
+
+      state.filtered = state.items.filter(item => {
+        const manual = isManual(item);
+        const sirve = clean(item.sirve).toLowerCase();
+        const estado = clean(item.estado).toLowerCase();
+
+        if (filter === "pending" && manual) return false;
+        if (filter === "manual" && !manual) return false;
+        if (filter === "usable" && (sirve === "no" || estado === "descartada")) return false;
+        if (filter === "rewrite" && sirve !== "reescribir" && estado !== "reescribir") return false;
+        if (filter === "rejected" && sirve !== "no" && estado !== "descartada") return false;
+        if (group && item.grupo_carrusel !== group) return false;
+
+        if (search) {
+          const haystack = `${item.frase_original || ""} ${item.frase_final || ""} ${item.notas || ""}`.toLowerCase();
+          if (!haystack.includes(search)) return false;
+        }
+
+        return true;
+      });
+
+      if (previousRow) {
+        const nextIndex = state.filtered.findIndex(item => item.rowNumber === previousRow);
+        state.index = nextIndex >= 0 ? nextIndex : Math.min(state.index, Math.max(0, state.filtered.length - 1));
+      } else {
+        state.index = Math.min(state.index, Math.max(0, state.filtered.length - 1));
+      }
+
+      renderPhrase();
+    }
+
+    async function saveCurrent(extra, advance) {
+      const item = currentItem();
+      if (!item || state.saving) return;
+
+      state.saving = true;
+      setStatus("Guardando...");
+      renderUseButtons();
+      renderGroupButtons();
+
+      const finalPhrase = document.getElementById("finalPhrase")?.value || "";
+      const notes = document.getElementById("notes")?.value || "";
+      const payload = {
+        sirve: state.selectedUse,
+        estado: statusFromUse(state.selectedUse),
+        grupo_carrusel: state.selectedGroup,
+        frase_final: finalPhrase,
+        notas: notes,
+        ...extra
+      };
+
+      try {
+        const res = await fetch(`/api/phrases/${item.rowNumber}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "No se pudo guardar");
+
+        const itemIndex = state.items.findIndex(row => row.rowNumber === item.rowNumber);
+        if (itemIndex >= 0) state.items[itemIndex] = data.item;
+
+        state.saving = false;
+        if (advance) {
+          applyFilters(false);
+        } else {
+          applyFilters(true);
+          setStatus("Guardado");
+        }
+      } catch (err) {
+        state.saving = false;
+        setStatus(err.message || String(err));
+        renderUseButtons();
+        renderGroupButtons();
+      }
+    }
+
+    function renderGroupFilter() {
+      const current = els.groupFilter.value;
+      els.groupFilter.innerHTML = '<option value="">Todos los grupos</option>';
+      for (const group of state.taxonomy) {
+        const option = document.createElement("option");
+        option.value = group.name;
+        option.textContent = group.name;
+        els.groupFilter.appendChild(option);
+      }
+      els.groupFilter.value = current;
+    }
+
+    async function load() {
+      els.phrasePanel.innerHTML = '<div class="empty">Cargando frases...</div>';
+
+      const res = await fetch("/api/phrases");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo cargar archivo_x");
+
+      state.items = data.items || [];
+      state.taxonomy = data.taxonomy || [];
+      state.worksheet = data.worksheet || "archivo_x";
+      els.worksheetLabel.textContent = `Pestaña: ${state.worksheet}`;
+      renderGroupFilter();
+      renderStats(data.summary);
+      applyFilters(false);
+    }
+
+    els.filterSelect.addEventListener("change", () => applyFilters(false));
+    els.groupFilter.addEventListener("change", () => applyFilters(false));
+    els.searchInput.addEventListener("input", () => applyFilters(false));
+    els.reloadBtn.addEventListener("click", () => load().catch(showFatal));
+
+    function showFatal(err) {
+      els.phrasePanel.innerHTML = `<div class="empty">${escapeHtml(err.message || String(err))}</div>`;
+    }
+
+    load().catch(showFatal);
+  </script>
+</body>
+</html>

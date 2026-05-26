@@ -16,7 +16,14 @@ const REQUIRED_FILES = [
   "scripts/utils/render-utils.js",
   "scripts/utils/pipeline-runner.js",
   "scripts/pipeline/register-from-form.js",
-  "scripts/jobs/inspiration/fetch-inspiration.js"
+  "scripts/jobs/inspiration/fetch-inspiration.js",
+  "scripts/jobs/inspiration/taxonomy.js",
+  "scripts/jobs/inspiration/curate-saved-tweets.js",
+  "scripts/jobs/inspiration/import-saved-tweets-to-sheet.js",
+  "scripts/jobs/carousel/build-carousel-plan.js",
+  "scripts/dev/archive-curator-server.js",
+  "tools/archivo-x-curator.html",
+  "docs/taxonomia-grupos.md"
 ];
 
 const CHECKED_JS_FILES = [
@@ -26,6 +33,11 @@ const CHECKED_JS_FILES = [
   "scripts/utils/pipeline-runner.js",
   "scripts/pipeline/register-from-form.js",
   "scripts/jobs/inspiration/fetch-inspiration.js",
+  "scripts/jobs/inspiration/taxonomy.js",
+  "scripts/jobs/inspiration/curate-saved-tweets.js",
+  "scripts/jobs/inspiration/import-saved-tweets-to-sheet.js",
+  "scripts/jobs/carousel/build-carousel-plan.js",
+  "scripts/dev/archive-curator-server.js",
   "scripts/jobs/single/render-single-from-sheet.js",
   "scripts/jobs/single/upload-single-from-sheet.js",
   "scripts/jobs/single/publish-single-from-sheet.js",
@@ -69,11 +81,15 @@ function checkPackageScripts() {
       "upload:carousel",
       "publish:single",
       "publish:carousel",
+      "build:carousel-plan",
       "sync-palettes",
       "check-palettes-sync",
       "doctor",
       "doctor:sheet",
-      "fetch:inspiration"
+      "fetch:inspiration",
+      "curate:saved-tweets",
+      "import:saved-tweets",
+      "curate:archivo-x"
     ]) {
       record(Boolean(scripts[scriptName]), `package script:${scriptName}`);
     }

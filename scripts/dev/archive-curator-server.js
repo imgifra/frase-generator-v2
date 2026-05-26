@@ -1,0 +1,319 @@
+require("dotenv").config();
+
+const express = require("express");
+const path = require("path");
+const { google } = require("googleapis");
+
+const { getSheetsAuth } = require("../auth/google-auth");
+const { colToLetter, nowIsoLocal } = require("../utils/common");
+const { DISPLAY_ORDER, TAXONOMY, normalizeGroupName } = require("../jobs/inspiration/taxonomy");
+
+const ROOT = path.resolve(__dirname, "..", "..");
+const SHEET_ID = process.env.SHEET_ID;
+const WORKSHEET_NAME = process.env.SAVED_TWEETS_WORKSHEET_NAME || "archivo_x";
+const PORT = Number(process.env.CURATOR_PORT || 5177);
+
+const REQUIRED_HEADERS = [
+  "sirve",
+  "estado",
+  "prioridad",
+  "grupo_carrusel",
+  "frase_final",
+  "frase_original",
+  "notas",
+  "accion",
+  "recomendacion_auto",
+  "calidad",
+  "riesgo",
+  "temporada",
+  "subtema",
+  "clasificado_manual",
+  "actualizado_en",
+  "id",
+  "fila_txt"
+];
+
+const EDITABLE_FIELDS = new Set([
+  "sirve",
+  "estado",
+  "grupo_carrusel",
+  "frase_final",
+  "notas",
+  "clasificado_manual",
+  "actualizado_en"
+]);
+
+function getPublicTaxonomy() {
+  return TAXONOMY
+    .map(({ name, hint }) => ({ name, hint }))
+    .sort((a, b) => {
+      const aIndex = DISPLAY_ORDER.indexOf(a.name);
+      const bIndex = DISPLAY_ORDER.indexOf(b.name);
+      const safeA = aIndex === -1 ? DISPLAY_ORDER.length : aIndex;
+      const safeB = bIndex === -1 ? DISPLAY_ORDER.length : bIndex;
+      return safeA - safeB;
+    });
+}
+
+if (!SHEET_ID) {
+  throw new Error("Falta SHEET_ID en el .env");
+}
+
+async function getSheetsClient() {
+  const auth = getSheetsAuth();
+  const authClient = await auth.getClient();
+  return google.sheets({ version: "v4", auth: authClient });
+}
+
+function normalizeValue(value) {
+  return String(value || "").trim();
+}
+
+function buildHeaderMap(headers) {
+  const map = {};
+
+  headers.forEach((header, index) => {
+    const key = normalizeValue(header);
+    if (!key) return;
+    if (map[key] !== undefined) throw new Error(`Encabezado duplicado: ${key}`);
+    map[key] = index;
+  });
+
+  return map;
+}
+
+async function readSheetRows(sheets) {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: `${WORKSHEET_NAME}!A:BZ`
+  });
+
+  return res.data.values || [];
+}
+
+async function ensureHeaders(sheets, rows) {
+  const currentHeaders = (rows[0] || []).map(normalizeValue);
+  const seen = new Set(currentHeaders.filter(Boolean));
+  const headers = [...currentHeaders];
+
+  for (const header of REQUIRED_HEADERS) {
+    if (!seen.has(header)) {
+      headers.push(header);
+      seen.add(header);
+    }
+  }
+
+  if (!rows.length || headers.length !== currentHeaders.length) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `${WORKSHEET_NAME}!A1:${colToLetter(headers.length)}1`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [headers] }
+    });
+  }
+
+  return [headers, ...rows.slice(1)];
+}
+
+function cell(row, headerMap, key) {
+  const index = headerMap[key];
+  if (index === undefined) return "";
+  return normalizeValue(row[index]);
+}
+
+function rowToPhrase(row, headerMap, rowNumber) {
+  const phrase = {
+    rowNumber
+  };
+
+  for (const header of Object.keys(headerMap)) {
+    phrase[header] = cell(row, headerMap, header);
+  }
+
+  phrase.grupo_carrusel = normalizeGroupName(phrase.grupo_carrusel);
+  return phrase;
+}
+
+function getSummary(items) {
+  const summary = {
+    total: items.length,
+    manual: 0,
+    pending: 0,
+    byGroup: {},
+    bySirve: {}
+  };
+
+  for (const item of items) {
+    const manual = item.clasificado_manual.toLowerCase() === "si";
+    if (manual) summary.manual += 1;
+    else summary.pending += 1;
+
+    const group = item.grupo_carrusel || "Sin grupo";
+    const sirve = item.sirve || "sin valor";
+    summary.byGroup[group] = (summary.byGroup[group] || 0) + 1;
+    summary.bySirve[sirve] = (summary.bySirve[sirve] || 0) + 1;
+  }
+
+  return summary;
+}
+
+async function loadArchive(sheets) {
+  const rows = await ensureHeaders(sheets, await readSheetRows(sheets));
+  const headerMap = buildHeaderMap(rows[0] || []);
+  const items = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const item = rowToPhrase(rows[i], headerMap, i + 1);
+    if (!item.frase_original) continue;
+    items.push(item);
+  }
+
+  return { headerMap, items };
+}
+
+function normalizeUse(value) {
+  const normalized = normalizeValue(value).toLowerCase();
+  const allowed = new Set(["si", "no", "reescribir", "revisar", "fecha"]);
+  return allowed.has(normalized) ? normalized : "";
+}
+
+function normalizeStatus(value, sirve) {
+  const normalized = normalizeValue(value).toLowerCase();
+  const allowed = new Set(["pendiente", "reescribir", "revisar", "listo", "descartada", "fecha"]);
+  if (allowed.has(normalized)) return normalized;
+
+  const use = normalizeUse(sirve);
+  if (use === "si") return "listo";
+  if (use === "no") return "descartada";
+  if (use === "fecha") return "fecha";
+  if (use === "reescribir") return "reescribir";
+  if (use === "revisar") return "revisar";
+  return "pendiente";
+}
+
+function buildUpdates(rowNumber, headerMap, patch) {
+  const updates = [];
+  const nextPatch = {
+    ...patch,
+    actualizado_en: nowIsoLocal()
+  };
+
+  if (patch.grupo_carrusel || patch.sirve || patch.estado) {
+    nextPatch.clasificado_manual = "si";
+  }
+
+  if (patch.sirve && !patch.estado) {
+    nextPatch.estado = normalizeStatus("", patch.sirve);
+  }
+
+  for (const [field, rawValue] of Object.entries(nextPatch)) {
+    if (!EDITABLE_FIELDS.has(field)) continue;
+    if (headerMap[field] === undefined) continue;
+
+    let value = rawValue;
+    if (field === "sirve") value = normalizeUse(rawValue) || rawValue;
+    if (field === "estado") value = normalizeStatus(rawValue, nextPatch.sirve);
+
+    updates.push({
+      range: `${WORKSHEET_NAME}!${colToLetter(headerMap[field] + 1)}${rowNumber}`,
+      values: [[value ?? ""]]
+    });
+  }
+
+  return updates;
+}
+
+async function updateRow(sheets, rowNumber, patch) {
+  let rows = await ensureHeaders(sheets, await readSheetRows(sheets));
+  let headerMap = buildHeaderMap(rows[0] || []);
+  const updates = buildUpdates(rowNumber, headerMap, patch);
+
+  if (updates.length) {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: {
+        valueInputOption: "USER_ENTERED",
+        data: updates
+      }
+    });
+  }
+
+  rows = await ensureHeaders(sheets, await readSheetRows(sheets));
+  headerMap = buildHeaderMap(rows[0] || []);
+  const row = rows[rowNumber - 1] || [];
+
+  return rowToPhrase(row, headerMap, rowNumber);
+}
+
+async function main() {
+  const app = express();
+  const sheets = await getSheetsClient();
+
+  app.use(express.json({ limit: "256kb" }));
+  app.use(express.static(path.join(ROOT, "tools")));
+
+  app.get("/api/taxonomy", (_req, res) => {
+    res.json({ taxonomy: getPublicTaxonomy() });
+  });
+
+  app.get("/api/phrases", async (_req, res, next) => {
+    try {
+      const { items } = await loadArchive(sheets);
+      res.json({
+        worksheet: WORKSHEET_NAME,
+        taxonomy: getPublicTaxonomy(),
+        summary: getSummary(items),
+        items
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.patch("/api/phrases/:rowNumber", async (req, res, next) => {
+    try {
+      const rowNumber = Number(req.params.rowNumber);
+      if (!Number.isInteger(rowNumber) || rowNumber < 2) {
+        res.status(400).json({ error: "rowNumber inválido" });
+        return;
+      }
+
+      if (req.body.grupo_carrusel) {
+        req.body.grupo_carrusel = normalizeGroupName(req.body.grupo_carrusel);
+      }
+
+      if (
+        req.body.grupo_carrusel &&
+        !TAXONOMY.some(item => item.name === req.body.grupo_carrusel)
+      ) {
+        res.status(400).json({ error: "grupo_carrusel no pertenece a la taxonomía" });
+        return;
+      }
+
+      const item = await updateRow(sheets, rowNumber, req.body || {});
+      res.json({ ok: true, item });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.use((_req, res) => {
+    res.sendFile(path.join(ROOT, "tools", "archivo-x-curator.html"));
+  });
+
+  app.use((err, _req, res, _next) => {
+    console.error(err);
+    res.status(500).json({ error: err.message || String(err) });
+  });
+
+  app.listen(PORT, () => {
+    console.log(`Curador archivo_x: http://localhost:${PORT}`);
+    console.log(`Pestaña: ${WORKSHEET_NAME}`);
+  });
+}
+
+main().catch(err => {
+  console.error("No se pudo iniciar el curador de archivo_x:");
+  console.error(err);
+  process.exit(1);
+});
