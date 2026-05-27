@@ -645,16 +645,35 @@
     // ─── stats ─────────────────────────────────────────────────────────────────
 
     function renderStats(summary) {
-      // El servidor devuelve summary.pendiente / .aprobada / .descartada
+      const stats = summary || getSummary(state.items);
+
       els.stats.innerHTML = [
-        ["Total",       summary?.total      ?? state.items.length],
-        ["Pendientes",  summary?.pendiente  ?? 0],
-        ["Aprobadas",   summary?.aprobada   ?? 0],
-        ["Descartadas", summary?.descartada ?? 0],
+        ["Total",       stats.total],
+        ["Pendientes",  stats.pendiente],
+        ["Aprobadas",   stats.aprobada],
+        ["Descartadas", stats.descartada],
         ["Vista",       state.filtered.length]
       ].map(([label, value]) =>
         `<span class="chip"><strong>${value}</strong>&nbsp;${label}</span>`
       ).join("");
+    }
+
+    function getSummary(items) {
+      return items.reduce((summary, item) => {
+        const decision = clean(item.decision_editorial).toLowerCase() || "pendiente";
+
+        summary.total += 1;
+        if (decision === "aprobada") summary.aprobada += 1;
+        else if (decision === "descartada") summary.descartada += 1;
+        else summary.pendiente += 1;
+
+        return summary;
+      }, {
+        total: 0,
+        pendiente: 0,
+        aprobada: 0,
+        descartada: 0
+      });
     }
 
     // ─── grupo (sidebar) ───────────────────────────────────────────────────────
