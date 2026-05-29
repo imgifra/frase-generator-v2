@@ -37,8 +37,10 @@ const HEADERS = [
   "capturado_en",
   "actualizado_en",
   "lote_importacion",
-  "fuente",
-  // Columnas legacy (deprecadas, mantenidas por compatibilidad)
+  "fuente"
+];
+
+const LEGACY_COLUMNS = [
   "sirve",
   "estado",
   "prioridad",
@@ -47,7 +49,8 @@ const HEADERS = [
   "calidad",
   "riesgo",
   "subtema",
-  "clasificado_manual"
+  "clasificado_manual",
+  "fila_txt"
 ];
 
 function parseBool(value, fallback) {
@@ -208,47 +211,51 @@ async function insertHeaderRow(sheets) {
   });
 }
 
-async function ensureHeaders(sheets, rows) {
+async function ensureArchiveContract(sheets, rows) {
   const currentHeaders = (rows[0] || []).map(header => String(header || "").trim());
+  const isCleanContract =
+    currentHeaders.length === HEADERS.length &&
+    HEADERS.every((header, index) => currentHeaders[index] === header);
 
-  if (rows.length > 0 && !hasExpectedHeaderRow(currentHeaders)) {
-    await insertHeaderRow(sheets);
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `${WORKSHEET_NAME}!A1:${colToLetter(HEADERS.length)}1`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [HEADERS]
-      }
-    });
-
-    return [HEADERS, ...rows];
+  if (isCleanContract) {
+    return rows;
   }
 
-  const existing = new Set(currentHeaders.filter(Boolean));
-  const mergedHeaders = [...currentHeaders];
+  const legacyFound = currentHeaders.filter(header => LEGACY_COLUMNS.includes(header));
+  if (legacyFound.length) {
+    logger.warn(
+      `archivo_x contiene columnas legacy: ${legacyFound.join(", ")}. ` +
+      "Se normaliza la pestaña para preservar solo las 12 columnas válidas."
+    );
+  }
 
-  for (const header of HEADERS) {
-    if (!existing.has(header)) {
-      mergedHeaders.push(header);
-      existing.add(header);
+  const hasHeaders = hasExpectedHeaderRow(currentHeaders);
+  const currentMap = hasHeaders ? buildHeaderMap(currentHeaders) : {};
+  const sourceRows = hasHeaders ? rows.slice(1) : rows;
+  const cleanRows = [
+    HEADERS,
+    ...sourceRows.map(row => HEADERS.map((header, fallbackIndex) => {
+      if (!hasHeaders) return row?.[fallbackIndex] ?? "";
+      const sourceIndex = currentMap[header];
+      return sourceIndex === undefined ? "" : row?.[sourceIndex] ?? "";
+    }))
+  ];
+
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: SHEET_ID,
+    range: `${WORKSHEET_NAME}!A:AZ`
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${WORKSHEET_NAME}!A1:${colToLetter(HEADERS.length)}${cleanRows.length}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: cleanRows
     }
-  }
+  });
 
-  if (rows.length === 0 || mergedHeaders.length !== currentHeaders.length) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `${WORKSHEET_NAME}!A1:${colToLetter(mergedHeaders.length)}1`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [mergedHeaders]
-      }
-    });
-
-    return [mergedHeaders, ...rows.slice(1)];
-  }
-
-  return rows;
+  return cleanRows;
 }
 
 function buildExistingIndexes(rows, headerMap) {
@@ -291,17 +298,6 @@ function buildRowEntry(originalText, headerMap, importBatch, capturedAt) {
   set("actualizado_en", "");
   set("lote_importacion", importBatch);
   set("fuente", "tweets-guardados-x");
-
-  // Columnas legacy (para compatibilidad, vacías)
-  set("sirve", "");
-  set("estado", "");
-  set("prioridad", "");
-  set("accion", "");
-  set("recomendacion_auto", "");
-  set("calidad", "");
-  set("riesgo", "");
-  set("subtema", "");
-  set("clasificado_manual", "");
 
   return values;
 }

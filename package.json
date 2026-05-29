@@ -19,9 +19,9 @@
     "fetch:inspiration": "node scripts/jobs/inspiration/fetch-inspiration.js",
     "analyze:phrases-offline": "node scripts/jobs/inspiration/curate-saved-tweets.js",
     "curate:saved-tweets": "node scripts/jobs/inspiration/curate-saved-tweets.js",
-    "import:saved-tweets": "node scripts/archive-x/import-saved-tweets-to-sheet.js",
-    "curate:archivo-x": "node scripts/archive-x/curator-server.js",
-    "start:archivo-x": "node scripts/archive-x/curator-server.js"
+    "import:saved-tweets": "node scripts/jobs/inspiration/import-saved-tweets-to-sheet.js",
+    "curate:archivo-x": "node scripts/dev/archive-curator-server.js",
+    "start:archivo-x": "node scripts/dev/archive-curator-server.js"
   },
   "repository": {
     "type": "git",

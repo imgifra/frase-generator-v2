@@ -15,7 +15,6 @@ const PORT = Number(process.env.CURATOR_PORT || 5177);
 const CURATOR_TOKEN = process.env.CURATOR_TOKEN;
 
 const REQUIRED_HEADERS = [
-  // Nueva estructura (flujo manual 100%)
   "id",
   "frase_original",
   "frase_final",
@@ -27,17 +26,7 @@ const REQUIRED_HEADERS = [
   "capturado_en",
   "actualizado_en",
   "lote_importacion",
-  "fuente",
-  // Legacy headers (deprecated, kept for compatibility)
-  "sirve",
-  "estado",
-  "prioridad",
-  "accion",
-  "recomendacion_auto",
-  "calidad",
-  "riesgo",
-  "subtema",
-  "clasificado_manual"
+  "fuente"
 ];
 
 const EDITABLE_FIELDS = new Set([
