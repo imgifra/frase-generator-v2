@@ -468,6 +468,31 @@ function layoutTextBalanced(text, boxWidth, boxHeight, ctxLocal, options) {
   }
 
   const n        = words.length;
+
+  // Para frases muy largas el DP O(n³) congela el browser.
+  // Con >18 palabras usamos greedy simple: llenamos líneas por ancho natural.
+  if (n > 18) {
+    const fontSize = cfg.minFont;
+    const lines = [];
+    let line = [];
+    for (const w of words) {
+      const probe = [...line, w];
+      const m = measureWords(probe, fontSize);
+      if (line.length && m.naturalWidth > boxWidth) {
+        const lm = measureWords(line, fontSize);
+        lines.push({ text: line.join(" "), words: line, fontSize, fillRatio: lm.naturalWidth / boxWidth });
+        line = [w];
+      } else {
+        line = probe;
+      }
+    }
+    if (line.length) {
+      const lm = measureWords(line, fontSize);
+      lines.push({ text: line.join(" "), words: line, fontSize, fillRatio: lm.naturalWidth / boxWidth });
+    }
+    return lines;
+  }
+
   let bestLayout = null, bestScore = Infinity;
   const minLines = n <= 2 ? 1 : Math.max(2, Math.ceil(n/5));
   const maxLines = Math.min(n, Math.max(minLines, Math.ceil(n/2)+2));
