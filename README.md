@@ -91,7 +91,7 @@ npm run build:carousel-plan  # genera output/carousel-plan.json y actualiza "pla
 
 # Desarrollo
 npm run render                               # preview rápido de una frase
-node scripts/dev/render-all-retro-colors.js # previsualiza las 26 paletas
+node scripts/dev/render-all-retro-colors.js # previsualiza las 30 paletas
 
 # Sincronizar paletas (después de editar retro-palettes.js)
 npm run sync-palettes
@@ -112,7 +112,7 @@ npm run analyze:phrases-offline -- archivo.txt  # evalúa un .txt local y genera
 
 ### Flujo editorial de archivo_x
 
-El flujo es **100% manual**. Ver documentación completa en [`docs/flujo-manual-archivo-x.md`](docs/flujo-manual-archivo-x.md).
+El flujo es **100% manual**. Ver referencia técnica completa en [`docs/arquitectura-proyecto.md`](docs/arquitectura-proyecto.md) — sección "Flujo Archivo X".
 
 #### 1. Importar frases crudas
 ```bash
@@ -197,12 +197,9 @@ publicar.html          # formulario de publicación (GitHub Pages)
 
 | Documento | Contenido |
 |---|---|
-| [`docs/arquitectura-proyecto.md`](docs/arquitectura-proyecto.md) | Mapa completo del sistema: cada archivo, cada capa, el modelo de datos en Sheets |
-| [`docs/flujo-manual-archivo-x.md`](docs/flujo-manual-archivo-x.md) | Flujo de curaduría 100% manual: columnas, decisiones, troubleshooting |
+| [`docs/arquitectura-proyecto.md`](docs/arquitectura-proyecto.md) | Mapa completo del sistema: cada archivo, cada capa, modelo de datos, flujo Archivo X |
 | [`docs/taxonomia-grupos.md`](docs/taxonomia-grupos.md) | Los 20 grupos válidos para `grupo_carrusel` |
 | [`docs/AI_CONTRACT.md`](docs/AI_CONTRACT.md) | Guía para IAs o devs que trabajen en el repo: reglas críticas, columnas del sheet, checklist |
-| [`docs/orden para ejecucion.txt`](docs/orden%20para%20ejecucion.txt) | Comandos para correr el pipeline localmente en desarrollo |
-| [`docs/Qué hacer en el futuro.txt`](docs/Qué%20hacer%20en%20el%20futuro.txt) | Roadmap e ideas pendientes |
 
 ---
 

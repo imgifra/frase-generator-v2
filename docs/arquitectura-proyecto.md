@@ -4,19 +4,21 @@
 
 Sistema automatizado de publicación de contenido para Instagram, Facebook y Threads. Toma frases (ingresadas manualmente vía formulario web), las renderiza como imágenes con estilo retro 3D, las sube a Cloudinary y las publica en las tres redes sociales. Corre 2 veces al día vía GitHub Actions.
 
+También tiene un flujo secundario de curaduría (**Archivo X**) para importar frases desde tweets guardados, revisarlas manualmente y armarlas en carruseles.
+
 ---
 
 ## Capas del sistema
 
 ```
-ENTRADA          PIPELINE              SERVICIOS EXTERNOS
-─────────        ─────────             ──────────────────
-formulario  ──►  render                Google Sheets (estado)
-  web            upload                Cloudinary (imágenes)
-  (GitHub        publish               Instagram API
-  Actions)       métricas              Facebook API
-                                       Threads API
-                                       Telegram (alertas)
+ENTRADA                   PIPELINE              SERVICIOS EXTERNOS
+──────────────────        ─────────             ──────────────────
+publicar.html ────────►   render                Google Sheets (estado)
+  (formulario web)        upload                Cloudinary (imágenes)
+                          publish               Instagram API
+archivo_x (sheet) ──►     build-carousel-plan   Facebook API
+  (curaduría manual)                            Threads API
+                          métricas              Telegram (alertas)
 ```
 
 ---
@@ -24,14 +26,17 @@ formulario  ──►  render                Google Sheets (estado)
 ## 1. Entrada: `publicar.html`
 
 Formulario web estático alojado en GitHub Pages. Permite:
-- Escribir frases (1 = single, 2-10 = carousel)
+- Escribir frases (1 = single, 2–10 = carousel)
 - Escribir caption
-- Elegir color de fondo (26 opciones + aleatorio)
+- Elegir color de fondo (30 paletas + aleatorio)
+- Ver un preview aproximado antes de enviar
 - Publicar ahora o solo guardar en sheet
 
 **Cómo funciona:** hace un POST a la API de GitHub para disparar el workflow `publish.yml` con los inputs del formulario.
 
 **No tiene backend propio** — todo lo maneja GitHub Actions.
+
+**Nota sobre el preview:** `publicar.html` tiene una copia inline del código de render (`mode-retro3d.js`, paletas, etc.) para mostrar el preview sin depender del servidor. Esta copia es una **aproximación** — no es la fuente de verdad. El render real lo hace Playwright sobre `index.html`. Si se cambia `js/mode-retro3d.js`, el preview no se actualiza automáticamente; el script `sync-palettes` actualiza las paletas pero el resto hay que sincronizarlo a mano si es necesario.
 
 ---
 
@@ -105,6 +110,8 @@ Decide qué tipo de pipeline correr según `TIPO_INPUT`:
 
 También soporta modo `publish-only`: saltea render y upload, va directo a publicar una fila específica.
 
+Llama a `releaseStaleLocks` al inicio de cada ciclo para liberar filas bloqueadas por procesos muertos.
+
 Después de cualquier fallo, lee las columnas `instagram_error`, `facebook_error`, `threads_error` del sheet y las incluye en la notificación de Telegram para identificar exactamente qué plataforma falló.
 
 ---
@@ -133,7 +140,7 @@ En modo formulario (form):
 | `render-carousel-from-sheet.js` | Lee filas pending del sheet, renderiza cada slide con Playwright, guarda PNG en `/output` |
 | `render-single-from-sheet.js` | Igual pero para una sola imagen |
 
-**Color:** usa el `background_color` del sheet si viene del formulario; si no, elige uno aleatorio diferente al último publicado.
+**Color:** usa el `background_color` del sheet si viene del formulario; si no, elige uno usando `render-utils.js` — que evita repetir colores similares a los últimos 6 posts publicados y respeta el ciclo de 30 paletas.
 
 **Render engine:** levanta un servidor HTTP local que sirve el generador web (`index.html`), abre Playwright, navega a `/?text=...&mode=retro3d&bg=...` y hace screenshot. El servidor maneja `SIGTERM` y `SIGINT` para cerrar limpiamente si GitHub Actions cancela el job.
 
@@ -172,7 +179,7 @@ Corre los domingos. Para cada post publicado en los últimos 30 días:
 | `render-lib.js` | Levanta servidor HTTP local + Playwright para renderizar imágenes. Maneja SIGTERM/SIGINT |
 | `upload-lib.js` | Sube y borra archivos en Cloudinary |
 | `telegram-lib.js` | Notificaciones al bot de Telegram. `notifyError` incluye errores por plataforma |
-| `retro-palettes.js` | FUENTE DE VERDAD de las 26 paletas. Nunca editar `js/palettes.js` directamente |
+| `retro-palettes.js` | FUENTE DE VERDAD de las 30 paletas. Nunca editar `js/palettes.js` directamente |
 
 ---
 
@@ -190,8 +197,9 @@ Corre los domingos. Para cada post publicado en los últimos 30 días:
 | Archivo | Responsabilidad |
 |---|---|
 | `pipeline-runner.js` | Ejecuta los steps render→upload→publish en orden, maneja errores |
-| `pipeline-utils.js` | `runStep`: ejecuta un script hijo con timeout de 4 minutos |
-| `carousel-utils.js` | Helpers para agrupar filas del sheet por `carousel_id` |
+| `pipeline-utils.js` | `runStep` (timeout 4 min, síncrono) + `releaseStaleLocks` (libera filas bloqueadas > 10 min) + `buildStepEnv` (pasa contexto del ciclo a scripts hijos) |
+| `render-utils.js` | Selección inteligente de color: evita repetir paletas similares, respeta el ciclo de 30 colores |
+| `carousel-utils.js` | Agrupa filas del sheet por `carousel_id`, valida coherencia (2–10 slides, sin órdenes duplicados) |
 | `common.js` | `nowIsoLocal()` y otros helpers de fecha/string |
 | `logger.js` | Logger estructurado JSON con contexto (cycleId, job, etc.) |
 
@@ -200,20 +208,81 @@ Corre los domingos. Para cada post publicado en los últimos 30 días:
 ## 12. Generador visual: `js/` + `index.html`
 
 App web estática que renderiza las frases. Es lo que Playwright abre para hacer los screenshots.
+**Esta es la fuente de verdad del render** — lo que produce aquí es lo que se publica.
 
 | Archivo | Responsabilidad |
 |---|---|
+| `app.js` | Orquesta los modos; lee params de URL (`?text=&mode=&bg=`); setea `window.renderReady = true` al terminar |
 | `mode-retro3d.js` | Modo activo: efecto 3D retro con sombras y colores neón |
-| `mode-brat.js` | Modo anterior (ya no se usa en producción) |
+| `mode-brat.js` | Modo legacy (no se usa en producción) |
 | `mode-normal.js` | Modo básico |
-| `palettes.js` | Paletas de color del frontend (espejo de `retro-palettes.js`) |
-| `config.js` | Configuración del generador |
-| `branding.js` | Marca de agua / logo |
-| `app.js` | Orquesta los modos, escucha `window.renderReady` |
+| `palettes.js` | Paletas de color del frontend — **espejo generado** de `retro-palettes.js`, nunca editar a mano |
+| `config.js` | Constantes del canvas y configuración visual |
+| `branding.js` | Logo y marca de agua |
+| `utils.js` | Helpers visuales (getBrightness, getContrastColor, hexToRgb…) |
 
 ---
 
-## 13. Estado en Google Sheets
+## 13. Flujo Archivo X (curaduría)
+
+Flujo secundario para construir carruseles a partir de material externo.
+
+```
+data/tweets-guardados-x.txt
+  ↓ npm run import:saved-tweets
+archivo_x (pestaña del sheet) — decision_editorial = pendiente
+  ↓ npm run curate:archivo-x  (http://localhost:5177)
+     → interfaz: tools/archivo-x-curator.html
+     → servidor: scripts/dev/archive-curator-server.js
+archivo_x — decision_editorial = aprobada + grupo_carrusel asignado
+  ↓ npm run build:carousel-plan
+output/carousel-plan.json + pestaña plan_carruseles en el sheet
+```
+
+### Columnas del sheet `archivo_x`
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `id` | ID único | SHA1 hash del texto normalizado |
+| `frase_original` | Texto | Frase cruda importada — solo lectura |
+| `frase_final` | Texto | Texto final / reescritura manual (opcional) |
+| `decision_editorial` | Enum | `pendiente` / `aprobada` / `descartada` — la única decisión que importa |
+| `grupo_carrusel` | Enum | Uno de los 20 grupos de taxonomía (ver `docs/taxonomia-grupos.md`) |
+| `notas` | Texto | Observaciones del curador |
+| `temporalidad` | Enum | `atemporal` / `temporada` / `coyuntural` / `fecha_especial` |
+| `temporada` | Texto | Ej: "San Valentín", "Navidad" — solo si temporalidad = `fecha_especial` |
+| `capturado_en` | DateTime | Timestamp de importación |
+| `actualizado_en` | DateTime | Última modificación |
+| `lote_importacion` | ID | Batch de importación |
+| `fuente` | Texto | Origen (ej: "tweets-guardados-x") |
+
+> Las columnas `sirve`, `estado`, `prioridad`, `calidad`, `riesgo`, `recomendacion_auto`, `accion` y `clasificado_manual` son **legacy**: se conservan en el sheet por compatibilidad pero el flujo actual no las usa ni las escribe.
+
+### Reglas de decisión editorial
+
+- Cambiar `grupo_carrusel` **no** aprueba la frase
+- Editar `frase_final` **no** aprueba la frase
+- Solo el botón "Aprobar" en la interfaz establece `decision_editorial = aprobada`
+- Solo frases con `decision_editorial = aprobada` **y** `grupo_carrusel` asignado entran al plan
+- `build:carousel-plan` requiere mínimo 8 frases aprobadas por grupo
+
+### Scripts del flujo Archivo X
+
+| Archivo | Rol |
+|---|---|
+| `scripts/jobs/inspiration/import-saved-tweets-to-sheet.js` | Importa frases crudas al sheet sin scoring |
+| `scripts/jobs/inspiration/fetch-inspiration.js` | Fetch de inspiración desde X/Bluesky |
+| `scripts/jobs/inspiration/curate-saved-tweets.js` | ⚠️ Deprecated — analizador offline, no escribe al sheet |
+| `scripts/jobs/inspiration/taxonomy.js` | Los 20 grupos válidos de `grupo_carrusel` |
+| `scripts/jobs/carousel/build-carousel-plan.js` | Genera plan de carruseles desde frases aprobadas |
+| `scripts/dev/archive-curator-server.js` | Servidor Express local (puerto 5177) para la interfaz de curaduría |
+| `tools/archivo-x-curator.html` | Interfaz web de curaduría manual |
+
+**Nota:** `scripts/archive-x/` es una carpeta **legacy** con versiones anteriores de estos scripts. No usar — los scripts activos están en `scripts/jobs/`.
+
+---
+
+## 14. Estado en Google Sheets
 
 Cada fila del sheet es un post (o un slide de carrusel). Las columnas clave:
 
@@ -234,12 +303,12 @@ Cada fila del sheet es un post (o un slide de carrusel). Las columnas clave:
 | `instagram_media_id` | ID del post en IG |
 | `instagram_error` / `facebook_error` / `threads_error` | Error específico por plataforma del último intento |
 | `likes`, `saves`, `reach`, `views` | Métricas |
-| `performance_score` | Score calculado (saves×3 + comments×2 + likes) / reach |
+| `performance_score` | Score calculado: (saves×3 + comments×2 + likes) / reach |
 | `updated_at` | ISO 8601 — usado por `releaseStaleLocks` para detectar filas viejas |
 
 ---
 
-## 14. Integraciones externas
+## 15. Integraciones externas
 
 | Servicio | Cómo se conecta | Secret en GitHub |
 |---|---|---|
@@ -267,9 +336,11 @@ publish.yml (workflow_dispatch)
   │    Exporta TARGET_CAROUSEL_ID al entorno
   │
   └─ run-once.js (FORM_MODE)
+       │  releaseStaleLocks() — libera filas bloqueadas > 10 min
        │
        ├─ render-carousel-from-sheet.js
-       │    Lee sheet → abre Playwright → screenshot × N slides
+       │    Lee sheet → abre Playwright sobre index.html → screenshot × N slides
+       │    Color elegido con render-utils.js (evita repetir paletas similares)
        │    Escribe output_file + background_color al sheet
        │
        ├─ upload-carousel-from-sheet.js
