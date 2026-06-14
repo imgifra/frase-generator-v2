@@ -164,6 +164,11 @@ async function main() {
       process.exit(10);
     }
 
+    // Slides cuyo estado_upload ya está (o queda) en done, ya sea de un ciclo
+    // anterior o de este mismo intento. No deben revertirse a error ni sumar
+    // un intento si otro slide del carrusel falla.
+    const completedRowNumbers = new Set();
+
     for (const item of groupRows) {
       const rowNumber = item.rowNumber;
       const row = item.values;
@@ -177,6 +182,7 @@ async function main() {
           rowNumber,
           estadoUpload: estadoUploadOriginal
         });
+        completedRowNumbers.add(rowNumber);
         continue;
       }
 
@@ -228,14 +234,29 @@ async function main() {
         mediaUrl: result.secureUrl,
         publicId: result.publicId
       });
+
+      completedRowNumbers.add(rowNumber);
     }
 
     groupLogger.info("Carrusel subido completo");
   } catch (err) {
+    const completedRows = groupRows.filter((item) => completedRowNumbers.has(item.rowNumber));
+    const failedRows    = groupRows.filter((item) => !completedRowNumbers.has(item.rowNumber));
+
+    // Los slides que ya quedaron con estado_upload = done no deben revertirse
+    // a error ni sumar un intento — solo liberar el lock tomado al inicio.
+    if (completedRows.length > 0) {
+      await updateCellsBatch(sheets, completedRows.map((item) => ({
+        row: item.rowNumber,
+        col: headerMap["lock_status"] + 1,
+        value: LOCK_STATUS.FREE
+      })));
+    }
+
     await markCarouselGroupAsError(
       sheets,
       headerMap,
-      groupRows,
+      failedRows,
       "upload",
       err.message || String(err),
       cycleId

@@ -175,6 +175,11 @@ async function main() {
 
   const carouselBg = resolveBackgroundColor(groupRows[0].values, rows, headerMap);
 
+  // Slides cuyo render ya está (o queda) en estado_render = done, ya sea de un
+  // ciclo anterior o de este mismo intento. No deben revertirse a error ni
+  // sumar un intento si otro slide del carrusel falla.
+  const completedRowNumbers = new Set();
+
   try {
     await markCarouselAsProcessing({ sheets, headerMap, groupRows, cycleId });
 
@@ -193,6 +198,7 @@ async function main() {
           rowNumber,
           estadoRender: estadoRenderOriginal
         });
+        completedRowNumbers.add(rowNumber);
         continue;
       }
 
@@ -217,15 +223,30 @@ async function main() {
         fileName: result.fileName
       });
 
+      completedRowNumbers.add(rowNumber);
+
       rowLogger.info("Slide renderizado correctamente", { outputFile: result.fileName });
     }
 
     groupLogger.info("Carrusel renderizado completo", { backgroundColor: carouselBg });
   } catch (error) {
+    const completedRows = groupRows.filter((item) => completedRowNumbers.has(item.rowNumber));
+    const failedRows    = groupRows.filter((item) => !completedRowNumbers.has(item.rowNumber));
+
+    // Los slides que ya quedaron con estado_render = done no deben revertirse
+    // a error ni sumar un intento — solo liberar el lock que tomó markCarouselAsProcessing.
+    if (completedRows.length > 0) {
+      await updateCellsBatch(sheets, completedRows.map((item) => ({
+        row: item.rowNumber,
+        col: headerMap["lock_status"] + 1,
+        value: LOCK_STATUS.FREE
+      })));
+    }
+
     await markCarouselGroupAsError(
       sheets,
       headerMap,
-      groupRows,
+      failedRows,
       "carousel-render",
       error.message || String(error),
       cycleId
