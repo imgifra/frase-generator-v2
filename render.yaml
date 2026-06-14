@@ -12,6 +12,8 @@ services:
         value: production
       - key: SHEET_ID
         sync: false
+      - key: WORKSHEET_NAME
+        sync: false
       - key: GOOGLE_SERVICE_ACCOUNT
         sync: false
       - key: CURATOR_TOKEN

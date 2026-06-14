@@ -7,10 +7,12 @@ const { google } = require("googleapis");
 const { getSheetsAuth } = require("../auth/google-auth");
 const { colToLetter, nowIsoLocal } = require("../utils/common");
 const { DISPLAY_ORDER, TAXONOMY, normalizeGroupName } = require("../jobs/inspiration/taxonomy");
+const { registerFrases } = require("../pipeline/register-from-form");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const SHEET_ID = process.env.SHEET_ID;
 const WORKSHEET_NAME = process.env.SAVED_TWEETS_WORKSHEET_NAME || "archivo_x";
+const CAROUSEL_PLAN_WORKSHEET = process.env.CAROUSEL_PLAN_WORKSHEET || "plan_carruseles";
 const PORT = Number(process.env.CURATOR_PORT || 5177);
 const CURATOR_TOKEN = process.env.CURATOR_TOKEN;
 
@@ -82,6 +84,20 @@ async function readSheetRows(sheets) {
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: `${WORKSHEET_NAME}!A:BZ`
+  });
+
+  return res.data.values || [];
+}
+
+// Lectura genérica de cualquier pestaña — usada para plan_carruseles.
+// Si la pestaña no existe todavía, devuelve [] en vez de lanzar.
+async function readWorksheetRows(sheets, worksheetName, range = "A:AZ") {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: `${worksheetName}!${range}`
+  }).catch((err) => {
+    if (err.code === 400 || err.code === 404) return { data: { values: [] } };
+    throw err;
   });
 
   return res.data.values || [];
@@ -183,6 +199,39 @@ function rowToPhrase(row, headerMap, rowNumber) {
 
   phrase.grupo_carrusel = normalizeGroupName(phrase.grupo_carrusel);
   return phrase;
+}
+
+function rowToPlanItem(row, headerMap, rowNumber) {
+  const item = { rowNumber };
+
+  for (const header of Object.keys(headerMap)) {
+    item[header] = cell(row, headerMap, header);
+  }
+
+  return item;
+}
+
+// Carga la pestaña plan_carruseles (generada por build-carousel-plan.js).
+// Columnas relevantes: "grupo" (= grupo_carrusel), "usar" (si/no/revisar,
+// decide si el slide se incluye), "estado" (pendiente/revisar/listo/...),
+// "frase_final" / "frase_original".
+async function loadPlanCarruseles(sheets) {
+  const rows = await readWorksheetRows(sheets, CAROUSEL_PLAN_WORKSHEET);
+
+  if (rows.length < 2) {
+    return { headerMap: {}, items: [] };
+  }
+
+  const headerMap = buildHeaderMap(rows[0]);
+  const items = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !row.length) continue;
+    items.push(rowToPlanItem(row, headerMap, i + 1));
+  }
+
+  return { headerMap, items };
 }
 
 function isHeaderLikeItem(item) {
@@ -363,6 +412,133 @@ async function main() {
 
       const item = await updateRow(sheets, rowNumber, patch);
       res.json({ ok: true, item });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/plan-carruseles", async (_req, res, next) => {
+    try {
+      const { items } = await loadPlanCarruseles(sheets);
+
+      const groups = {};
+
+      for (const item of items) {
+        if (normalizeValue(item.usar).toLowerCase() !== "si") continue;
+
+        const grupo = item.grupo || "Sin grupo";
+        if (!groups[grupo]) groups[grupo] = [];
+        groups[grupo].push(item);
+      }
+
+      res.json({ worksheet: CAROUSEL_PLAN_WORKSHEET, groups });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/plan-carruseles/registrar", async (req, res, next) => {
+    try {
+      const { rowNumbers, caption, color } = req.body || {};
+
+      if (!Array.isArray(rowNumbers) || rowNumbers.length < 1 || rowNumbers.length > 10) {
+        res.status(400).json({ error: "rowNumbers debe ser un array de 1 a 10 elementos" });
+        return;
+      }
+
+      const uniqueRowNumbers = [...new Set(rowNumbers.map(Number))];
+
+      if (uniqueRowNumbers.some((n) => !Number.isInteger(n) || n < 2)) {
+        res.status(400).json({ error: "rowNumbers debe contener enteros >= 2 (fila 1 es el encabezado)" });
+        return;
+      }
+
+      const planRows = await readWorksheetRows(sheets, CAROUSEL_PLAN_WORKSHEET);
+
+      if (planRows.length < 2) {
+        res.status(400).json({ error: `La pestaña "${CAROUSEL_PLAN_WORKSHEET}" está vacía` });
+        return;
+      }
+
+      const planHeaderMap = buildHeaderMap(planRows[0]);
+      const requiredPlanHeaders = ["grupo", "frase_final", "frase_original", "usar", "estado"];
+
+      for (const header of requiredPlanHeaders) {
+        if (planHeaderMap[header] === undefined) {
+          res.status(500).json({ error: `Falta la columna "${header}" en "${CAROUSEL_PLAN_WORKSHEET}"` });
+          return;
+        }
+      }
+
+      const selected = [];
+
+      for (const rowNumber of uniqueRowNumbers) {
+        const row = planRows[rowNumber - 1];
+
+        if (!row) {
+          res.status(400).json({ error: `No existe la fila ${rowNumber} en "${CAROUSEL_PLAN_WORKSHEET}"` });
+          return;
+        }
+
+        selected.push(rowToPlanItem(row, planHeaderMap, rowNumber));
+      }
+
+      const grupos = new Set(selected.map((item) => item.grupo));
+
+      if (grupos.size > 1) {
+        res.status(400).json({
+          error: `Todas las filas deben pertenecer al mismo grupo_carrusel. Recibidos: ${[...grupos].join(", ")}`
+        });
+        return;
+      }
+
+      const frases = selected.map((item) => item.frase_final || item.frase_original);
+
+      if (frases.some((frase) => !frase)) {
+        res.status(400).json({ error: "Alguna fila seleccionada no tiene frase_final ni frase_original" });
+        return;
+      }
+
+      const tipo = frases.length === 1 ? "single" : "carousel";
+
+      const result = await registerFrases(sheets, {
+        tipo,
+        frases,
+        caption: caption || "",
+        colorInput: color || "",
+        allowDuplicate: false
+      });
+
+      // Marcar las filas usadas en plan_carruseles para no reusarlas en un
+      // próximo registro. build-carousel-plan.js preserva estos valores
+      // manuales (usar/estado) entre regeneraciones via clave_plan.
+      const markUpdates = uniqueRowNumbers.flatMap((rowNumber) => [
+        {
+          range: `${CAROUSEL_PLAN_WORKSHEET}!${colToLetter(planHeaderMap["usar"] + 1)}${rowNumber}`,
+          values: [["no"]]
+        },
+        {
+          range: `${CAROUSEL_PLAN_WORKSHEET}!${colToLetter(planHeaderMap["estado"] + 1)}${rowNumber}`,
+          values: [["registrado"]]
+        }
+      ]);
+
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: {
+          valueInputOption: "USER_ENTERED",
+          data: markUpdates
+        }
+      });
+
+      res.json({
+        success: true,
+        tipo,
+        carouselId: result.carouselId,
+        nextRow: result.nextRow,
+        rowIds: result.rowIds,
+        registeredRows: uniqueRowNumbers
+      });
     } catch (err) {
       next(err);
     }
