@@ -66,6 +66,11 @@ function getCellValue(row, headerMap, key) {
   return normalizeValue(row?.[headerMap[key]]);
 }
 
+function getCellValueSoft(row, headerMap, key) {
+  if (!(key in headerMap)) return "";
+  return normalizeValue(row?.[headerMap[key]]) ?? "";
+}
+
 async function readRows(sheets) {
   const readRes = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
@@ -119,6 +124,7 @@ module.exports = {
   buildHeaderMap,
   requireHeaders,
   getCellValue,
+  getCellValueSoft,
   readRows,
   updateCellsBatch
 };

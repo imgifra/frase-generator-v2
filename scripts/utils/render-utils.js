@@ -1,5 +1,6 @@
 const { STATUS, GENERAL_STATUS } = require("../core/status");
 const { RETRO_PALETTES } = require("../libs/retro-palettes");
+const { getCellValueSoft } = require("../core/sheets");
 
 const RANDOM_HISTORY_SIZE = 6;
 const COLOR_DISTANCE_THRESHOLD = 85;
@@ -9,14 +10,6 @@ const PALETTES_IN_CYCLE = RETRO_PALETTES.filter(p => p.inCycle !== false);
 const PALETTE_BY_BG = new Map(
   PALETTES_IN_CYCLE.map(p => [p.bg.toLowerCase(), p])
 );
-
-function getCellValue(row, headerMap, key) {
-  if (!(key in headerMap)) {
-    return "";
-  }
-
-  return (row?.[headerMap[key]] || "").toString().trim();
-}
 
 function getPaletteIdByBg(bg) {
   const normalizedBg = (bg || "").toLowerCase().trim();
@@ -62,7 +55,7 @@ function areSimilarColors(candidateBg, recentBg) {
 
 function getRowTimestamp(row, headerMap, isPublished) {
   const field = isPublished ? "fecha_publicado" : "fecha_generado";
-  const value = getCellValue(row, headerMap, field);
+  const value = getCellValueSoft(row, headerMap, field);
 
   if (!value) return NaN;
 
@@ -70,7 +63,7 @@ function getRowTimestamp(row, headerMap, isPublished) {
 }
 
 function getPostKey(row, headerMap, postTipo, fallbackIndex) {
-  const carouselId = getCellValue(row, headerMap, "carousel_id");
+  const carouselId = getCellValueSoft(row, headerMap, "carousel_id");
 
   if (postTipo === "carousel" && carouselId) {
     return `carousel:${carouselId}`;
@@ -85,11 +78,11 @@ function getUsedBgHistory(rows, headerMap, limit = Infinity) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
 
-    const postTipo = getCellValue(row, headerMap, "post_tipo").toLowerCase();
-    const bg = getCellValue(row, headerMap, "background_color");
-    const estadoGeneral = getCellValue(row, headerMap, "estado_general").toLowerCase();
-    const estadoRender = getCellValue(row, headerMap, "estado_render").toLowerCase();
-    const estadoPublish = getCellValue(row, headerMap, "estado_publish").toLowerCase();
+    const postTipo = getCellValueSoft(row, headerMap, "post_tipo").toLowerCase();
+    const bg = getCellValueSoft(row, headerMap, "background_color");
+    const estadoGeneral = getCellValueSoft(row, headerMap, "estado_general").toLowerCase();
+    const estadoRender = getCellValueSoft(row, headerMap, "estado_render").toLowerCase();
+    const estadoPublish = getCellValueSoft(row, headerMap, "estado_publish").toLowerCase();
 
     if (!["single", "carousel"].includes(postTipo)) continue;
     if (!bg) continue;

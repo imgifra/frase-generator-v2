@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const { renderPhrase, stopServer } = require("../../libs/render-lib");
+const { renderPhrase } = require("../../libs/render-lib");
 const {
   getSheetsClient,
   buildHeaderMap,
@@ -23,7 +23,13 @@ const {
   validateCarouselRows,
   markCarouselGroupAsError
 } = require("../../utils/carousel-utils");
-const { getNextBackgroundColor } = require("../../utils/render-utils");
+const {
+  runRenderJob,
+  buildProcessingUpdates,
+  buildRenderedUpdates,
+  resolveBackgroundColor,
+  extractPhraseFields
+} = require("../../utils/render-job-utils");
 
 function hasCarouselAwaitingPublish(rows, headerMap) {
   const seenCarousels = new Map();
@@ -72,15 +78,7 @@ async function markCarouselAsProcessing({ sheets, headerMap, groupRows, cycleId 
   const lockUpdates = [];
 
   for (const item of groupRows) {
-    lockUpdates.push(
-      { row: item.rowNumber, col: headerMap["estado_general"] + 1, value: GENERAL_STATUS.PROCESSING },
-      { row: item.rowNumber, col: headerMap["estado_render"]  + 1, value: STATUS.PROCESSING },
-      { row: item.rowNumber, col: headerMap["lock_status"]    + 1, value: LOCK_STATUS.LOCKED },
-      { row: item.rowNumber, col: headerMap["last_cycle_id"]  + 1, value: cycleId },
-      { row: item.rowNumber, col: headerMap["updated_at"]     + 1, value: lockTs },
-      { row: item.rowNumber, col: headerMap["error_step"]     + 1, value: "" },
-      { row: item.rowNumber, col: headerMap["error_message"]  + 1, value: "" }
-    );
+    lockUpdates.push(...buildProcessingUpdates(headerMap, item.rowNumber, cycleId, lockTs));
   }
 
   await updateCellsBatch(sheets, lockUpdates);
@@ -89,19 +87,7 @@ async function markCarouselAsProcessing({ sheets, headerMap, groupRows, cycleId 
 async function markSlideAsRendered({ sheets, headerMap, rowNumber, carouselBg, fileName }) {
   const doneTs = nowIsoLocal();
 
-  await updateCellsBatch(sheets, [
-    { row: rowNumber, col: headerMap["background_color"] + 1, value: carouselBg },
-    { row: rowNumber, col: headerMap["output_file"]      + 1, value: fileName },
-    { row: rowNumber, col: headerMap["fecha_generado"]   + 1, value: doneTs },
-    { row: rowNumber, col: headerMap["estado_render"]    + 1, value: STATUS.DONE },
-
-    // Liberamos cada slide al terminar su render para que upload-carousel pueda tomarlo.
-    { row: rowNumber, col: headerMap["lock_status"]   + 1, value: LOCK_STATUS.FREE },
-
-    { row: rowNumber, col: headerMap["updated_at"]    + 1, value: doneTs },
-    { row: rowNumber, col: headerMap["error_step"]    + 1, value: "" },
-    { row: rowNumber, col: headerMap["error_message"] + 1, value: "" }
-  ]);
+  await updateCellsBatch(sheets, buildRenderedUpdates(headerMap, rowNumber, carouselBg, fileName, doneTs));
 }
 
 async function main() {
@@ -187,8 +173,7 @@ async function main() {
 
   groupLogger.info("Carrusel seleccionado para render");
 
-  const sheetBg       = getCellValue(groupRows[0].values, headerMap, "background_color");
-  const carouselBg    = sheetBg ? sheetBg : getNextBackgroundColor(rows, headerMap);
+  const carouselBg = resolveBackgroundColor(groupRows[0].values, rows, headerMap);
 
   try {
     await markCarouselAsProcessing({ sheets, headerMap, groupRows, cycleId });
@@ -197,11 +182,7 @@ async function main() {
       const rowNumber = item.rowNumber;
       const row       = item.values;
 
-      const rowId          = getCellValue(row, headerMap, "row_id");
-      const fraseOriginal  = getCellValue(row, headerMap, "frase_original");
-      const fraseCorregida = getCellValue(row, headerMap, "frase_corregida");
-      const mode           = getCellValue(row, headerMap, "modo") || "retro3d";
-      const textToRender   = fraseCorregida || fraseOriginal;
+      const { rowId, mode, textToRender } = extractPhraseFields(row, headerMap);
       const estadoRenderOriginal = getCellValue(row, headerMap, "estado_render").toLowerCase();
 
       if (
@@ -256,20 +237,4 @@ async function main() {
   }
 }
 
-// FIX: usar finally para garantizar que stopServer() siempre se llama,
-// incluso si main() resuelve correctamente pero stopServer() lanza.
-// El patrón anterior (.then + .catch separados) dejaba stopServer() sin
-// try/catch en el camino feliz, lo que producía unhandled rejections.
-main()
-  .catch((err) => {
-    logger.error("Error en render-carousel-from-sheet", {}, err);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    try {
-      await stopServer();
-    } catch (stopError) {
-      logger.warn("No se pudo cerrar el servidor de render", {}, stopError);
-    }
-    process.exit(process.exitCode ?? 0);
-  });
+runRenderJob("render-carousel-from-sheet", main);
